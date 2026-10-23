@@ -4,7 +4,7 @@ An open-source harness that attacks AI agents with prompt injection and tool-abu
 
 Think phishing simulation, but the target is an agent instead of an employee.
 
-> Status: Phase 2 (attack library) is complete; Phase 3 (judge and report) is in progress.
+> Status: v1.0.0. Runs locally against Anthropic and Ollama targets; see [Known gaps](#known-gaps) for what lands in v1.1.
 
 ![lure run against claude-haiku-5-5, then lure report on the Opus-judged baseline](docs/demo.gif)
 
@@ -55,7 +55,7 @@ Lure attacks agents, so it is built to be safe by design.
 
 ## Quickstart
 
-Needs Python 3.12 and an Anthropic API key, or a local [Ollama](https://ollama.com) server. An OpenAI-compatible adapter is planned for v1.
+Needs Python 3.12 and an Anthropic API key, or a local [Ollama](https://ollama.com) server. An OpenAI-compatible adapter is planned for v1.1.
 
 ```bash
 git clone https://github.com/Err0ric/lure.git && cd lure
@@ -146,13 +146,22 @@ An attack's rules only define harm for that attack. `lure.yaml` adds an org-wide
 | Judge | Scores the run from the tool-call log (rules first, LLM judge second) |
 | Reporter | Builds the static HTML report: exec summary, ATLAS heatmap, category table, exposure and findings |
 
+## Known gaps
+
+- **Targets:** Anthropic and Ollama only. The OpenAI-compatible adapter is planned for v1.1.
+- **Results store:** one JSON file per run. `lure report` and `lure compare` read folders of them; the DuckDB store is planned for v1.1.
+- **Static fixtures:** nothing new arrives in response to the agent's sends, so multi-step attacks such as ipi-007 run against a fixed inbox. Reactive fixtures are planned for v1.1.
+- **LLM judge:** injected text in a reply can reach the judge; see [How a run is scored](#how-a-run-is-scored).
+- **Sample size:** the published baselines are 3 runs per attack, so per-attack rates are marked low sample.
+
 ## Roadmap
 
 - [x] Phase 0: Kickoff
 - [x] Phase 1: One attack, end to end
 - [x] Phase 2: Attack library v1 (21 attacks, mock files, HTTP and payments tools, verified IDs)
-- [ ] Phase 3: Judge and report (LLM judge, HTML report and exec summary are done; DuckDB store and reactive fixtures to go)
-- [ ] Phase 4: Ship v1.0 (security review, CI, demo, tag v1.0)
+- [x] Phase 3: Judge and report (LLM judge, HTML report, exec summary; DuckDB store and reactive fixtures moved to v1.1)
+- [x] Phase 4: Ship v1.0 (security review, CI, demo, tag v1.0)
+- [ ] v1.1: DuckDB store, reactive fixtures, OpenAI-compatible adapter
 - [ ] Phase 5: Stretch (multi-agent targets, vetting checklist for employee-built AI tools)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).
