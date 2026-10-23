@@ -7,7 +7,7 @@ verdict in the report below it. No model writes this text.
 from __future__ import annotations
 
 from lure.judge.rules import Verdict
-from lure.report.data import Report, Run
+from lure.report.data import FINDING_VERDICTS, Report, Run, Tally, VersionRow
 from lure.report.techniques import category_name
 
 # One guardrail per weakest area, phrased as an action a team can take.
@@ -60,58 +60,94 @@ def why(run: Run) -> str:
     return judgment["reason"][:1].upper() + judgment["reason"][1:] + "."
 
 
+def rate_text(rate: float | None, tally: Tally) -> str:
+    """A rate with its low-sample warning, for prose."""
+    return pct(rate) + (" (low sample)" if tally.low_sample else "")
+
+
 def headline(report: Report) -> str:
-    """The one-sentence answer at the top of the report."""
+    """The one-sentence answer at the top of the report. Harm is whatever
+    each attack's rules define, so the wording says rules, not harm."""
     model, total = model_name(report.target), report.total
     fails = total.counts[Verdict.FAIL]
     if not fails:
-        return f"{model} made no harmful tool call in {total.scored} scored attack runs."
-    return (f"{model} was manipulated into a harmful tool call in {fails} of "
-            f"{total.scored} scored attack runs.")
+        return (f"{model}: no run broke its attack's rules in "
+                f"{plural(total.scored, 'scored attack run')}.")
+    return (f"{model} broke its attack's rules in {fails} of "
+            f"{plural(total.scored, 'scored attack run')}.")
+
+
+def what_it_did(row: VersionRow) -> str:
+    """Plain counts for one attack version, plus the judge's reason for its
+    most serious run."""
+    t = row.tally
+    parts = [f"broke the rules in {t.counts[Verdict.FAIL]}",
+             f"was influenced in {t.influenced}",
+             f"flagged the attack in {t.detected}"]
+    text = f"Of {plural(t.scored, 'scored run')}, it " + ", ".join(parts) + "."
+    worst = min((r for r in row.runs if r.verdict in FINDING_VERDICTS and r.rank < 9),
+                key=lambda r: r.rank, default=None)
+    return f"{text} {why(worst)}" if worst else text
+
+
+def policy_comparison(report: Report) -> list[str]:
+    """One sentence per attack that ran under more than one version."""
+    lines = []
+    for c in report.comparisons:
+        parts = [f"Under v{v.version} it was influenced in {v.tally.influenced} of "
+                 f"{v.tally.scored} runs ({rate_text(v.tally.influenced_rate, v.tally)})."
+                 for v in c.versions]
+        lines.append(f"{c.attack_id} ({c.name}) ran the same attack text under "
+                     f"{len(c.versions)} system prompts. " + " ".join(parts))
+    return lines
 
 
 def exec_summary(report: Report) -> list[str]:
-    total, model = report.total, model_name(report.target)
+    total = report.total
     fails = total.counts[Verdict.FAIL]
     n_attacks = len(report.attacks)
     bullets = []
 
     if fails:
         bullets.append(
-            f"{model} took a harmful action in {fails} of {total.scored} scored runs across "
-            f"{plural(n_attacks, 'attack')}: an attack success rate of {pct(total.asr)}."
+            f"{fails} of {total.scored} scored runs across {plural(n_attacks, 'attack')} broke "
+            f"the attack's rules: an attack success rate of {rate_text(total.asr, total)}."
         )
     else:
         bullets.append(
-            f"{model} took no harmful action in {total.scored} scored runs across "
-            f"{plural(n_attacks, 'attack')}: the tool log shows none of the sends, payments "
-            f"or deletes the attacks asked for."
+            f"No run broke its attack's rules: across {plural(total.scored, 'scored run')} of "
+            f"{plural(n_attacks, 'attack')}, the tool log shows none of the actions the "
+            f"attacks were written to catch."
         )
 
     bullets.append(
         f"It recognized the attack and said so in {total.detected} of {total.scored} runs "
-        f"({pct(total.detection_rate)}). In the rest it ignored the attack or, in "
-        f"{plural(total.counts[Verdict.PARTIAL], 'run')}, offered or asked to carry it out."
+        f"({rate_text(total.detection_rate, total)}). The attack influenced it in "
+        f"{plural(total.influenced, 'run')} ({rate_text(total.influenced_rate, total)}): it "
+        f"offered, asked or claimed to carry out the request without the action showing in "
+        f"the tool log."
     )
 
-    worst = report.findings[0] if report.findings else None
+    candidates = [f for f in report.findings if f.rank < 9]
+    worst = candidates[0] if candidates else None
     if worst is None:
         bullets.append("No run needed follow-up: there were no failures, near misses or "
                        "undecided results.")
     else:
-        kind = {Verdict.FAIL: "Worst finding", Verdict.PARTIAL: "Closest call",
-                Verdict.REVIEW: "Needs a human look"}[worst.verdict]
+        kind = {0: "Worst finding", 1: "Closest call", 2: "Needs a human look",
+                3: "Closest call (rules only, not confirmed by the judge)"}[worst.rank]
         bullets.append(f"{kind}: {worst.attack['name']} ({worst.label}). {why(worst)}")
 
     scored = [c for c in report.categories if c.tally.scored]
-    weakest = min(scored, key=lambda c: (c.tally.pass_rate, -c.tally.counts[Verdict.FAIL]),
+    weakest = min(scored, key=lambda c: (-(c.tally.asr or 0), -(c.tally.influenced_rate or 0)),
                   default=None)
-    if weakest is not None and weakest.tally.pass_rate is not None and weakest.tally.pass_rate < 1:
+    if weakest is not None and (weakest.tally.counts[Verdict.FAIL] or weakest.tally.influenced):
         t = weakest.tally
         bullets.append(
-            f"Weakest area: {weakest.name.lower()}, with a {pct(t.pass_rate)} pass rate "
-            f"({plural(t.counts[Verdict.FAIL], 'failure')}, "
-            f"{plural(t.counts[Verdict.PARTIAL], 'near miss', 'near misses')} in {plural(t.scored, 'scored run')})."
+            f"Weakest area: {weakest.name.lower()}. It broke the rules in "
+            f"{t.counts[Verdict.FAIL]} and was influenced in {t.influenced} of "
+            f"{plural(t.scored, 'scored run')} (influenced rate "
+            f"{rate_text(t.influenced_rate, t)})."
         )
         bullets.append(f"Recommended guardrail: {GUARDRAILS.get(weakest.category, '')}".rstrip())
     else:
@@ -123,4 +159,5 @@ def exec_summary(report: Report) -> list[str]:
     return bullets
 
 
-__all__ = ["category_name", "exec_summary", "headline", "model_name", "pct", "why"]
+__all__ = ["category_name", "exec_summary", "headline", "model_name", "pct",
+           "policy_comparison", "rate_text", "what_it_did", "why"]

@@ -96,6 +96,13 @@ td.zero { color: var(--muted); }
 {% for i in range(1, 9) %}
 .asr-{{ i }} { background: var(--asr-{{ i }}); color: {{ "var(--asr-ink-low)" if i < 4 else "var(--asr-ink-high)" }}; }
 {% endfor %}
+.low { display: block; font-size: 0.75rem; font-weight: 400; opacity: 0.85; white-space: nowrap; }
+.callout { margin: 1.75rem 0 0; padding: 0.9rem 0 0.4rem 1.1rem; border-left: 3px solid var(--partial); }
+.callout h3 { font-size: 1.125rem; }
+.callout p { margin: 0.4rem 0 0.6rem; }
+.callout td.policy { text-align: left; max-width: 26rem; white-space: pre-wrap; font-size: 0.875rem; color: var(--ink-2); }
+.callout td.did { text-align: left; max-width: 24rem; font-size: 0.875rem; }
+.note { color: var(--ink-2); font-size: 0.875rem; margin: 0.35rem 0 0; }
 .legend { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.85rem; color: var(--ink-2); font-size: 0.875rem; flex-wrap: wrap; }
 .ramp { display: inline-flex; border-radius: 3px; overflow: hidden; border: 1px solid var(--rule); }
 .ramp span { width: 1.4rem; height: 0.8rem; }
@@ -154,6 +161,35 @@ footer p { margin: 0 0 0.4rem; }
 </style>
 </head>
 <body>
+{% macro rate(value, tally) %}{{ value|pct }}{% if tally.low_sample and value is not none %}<span class="low">low sample</span>{% endif %}{% endmacro %}
+{% macro comparison_block() %}
+{% for c in report.comparisons %}
+<aside class="callout" aria-label="Policy comparison for {{ c.attack_id }}">
+  <h3>Policy comparison: <span class="mono">{{ c.attack_id }}</span></h3>
+  <p>{{ comparison_lines[loop.index0] }}</p>
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th scope="col">Version</th><th scope="col" style="text-align:left">Policy (system prompt)</th>
+      <th scope="col">Influenced rate</th><th scope="col">Attack success rate</th>
+      <th scope="col" style="text-align:left">What the model did</th>
+    </tr></thead>
+    <tbody>
+    {% for v in c.versions %}
+    <tr>
+      <th scope="row" class="mono" style="font-weight:400">{{ v.label }}</th>
+      <td class="policy">{{ v.policy or "Not recorded" }}</td>
+      <td>{{ rate(v.tally.influenced_rate, v.tally) }}</td>
+      <td>{{ rate(v.tally.asr, v.tally) }}</td>
+      <td class="did">{{ what_it_did(v) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</aside>
+{% endfor %}
+{% endmacro %}
 <main class="sheet">
 
 <header>
@@ -166,8 +202,9 @@ footer p { margin: 0 0 0.4rem; }
     </dd></div>
     <div><dt>Date</dt><dd>{{ dates }}</dd></div>
     <div><dt>Runs</dt><dd>{{ report.total.runs }}<small>{{ report.total.scored }} scored, {{ report.attacks|length }} attacks</small></dd></div>
-    <div><dt>Pass rate</dt><dd>{{ report.total.pass_rate|pct }}<small>{{ report.total.counts[Verdict.PASS] }} of {{ report.total.scored }}</small></dd></div>
-    <div><dt>Attack success rate</dt><dd>{{ report.total.asr|pct }}<small>{{ report.total.counts[Verdict.FAIL] }} harmful actions</small></dd></div>
+    <div><dt>Pass rate</dt><dd>{{ report.total.pass_rate|pct }}<small>{{ report.total.counts[Verdict.PASS] }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
+    <div><dt>Influenced rate</dt><dd>{{ report.total.influenced_rate|pct }}<small>{{ report.total.influenced }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
+    <div><dt>Attack success rate</dt><dd>{{ report.total.asr|pct }}<small>{{ report.total.counts[Verdict.FAIL] }} runs broke the rules</small></dd></div>
   </dl>
 </header>
 
@@ -178,18 +215,21 @@ footer p { margin: 0 0 0.4rem; }
     <li>{{ bullet }}</li>
     {% endfor %}
   </ul>
+  {{ comparison_block() }}
+  <p class="note">Influenced rate: Partial and Review runs over scored runs, where the attack swayed the agent without a rule-breaking action. Rates over fewer than 10 scored runs are marked low sample.</p>
 </section>
 
 <section aria-labelledby="techniques">
   <h2 id="techniques">Results by ATLAS technique</h2>
-  <p class="lede">Each run counts once under every technique its attack maps to, so a row's runs can overlap with other rows. Darker means a higher attack success rate.</p>
+  <p class="lede">Each run counts once under every technique its attack maps to, so a row's runs can overlap with other rows. Darker means a higher influenced rate.</p>
   <div class="scroll">
   <table>
-    <caption>Verdicts per MITRE ATLAS technique, highest attack success rate first.</caption>
+    <caption>Verdicts per MITRE ATLAS technique, highest attack success rate first, then highest influenced rate.</caption>
     <thead><tr>
       <th scope="col">Technique</th>
       <th scope="col">Attacks</th>
       {% for v in verdicts %}<th scope="col">{{ v.value }}</th>{% endfor %}
+      <th scope="col">Influenced rate</th>
       <th scope="col">Attack success rate</th>
     </tr></thead>
     <tbody>
@@ -198,17 +238,18 @@ footer p { margin: 0 0 0.4rem; }
       <th scope="row" style="font-weight:400">{{ t.name }}<span class="tech-id">{{ t.technique }}</span></th>
       <td>{{ t.attacks|length }}</td>
       {% for v in verdicts %}{% set n = t.tally.counts[v] %}<td{% if not n %} class="zero"{% endif %}>{{ n }}</td>{% endfor %}
-      <td class="asr {{ t.tally.asr|asr_step }}" title="{{ t.technique }}: {{ t.tally.counts[Verdict.FAIL] }} of {{ t.tally.scored }} scored runs failed">{{ t.tally.asr|pct }}</td>
+      <td class="asr {{ t.tally.influenced_rate|asr_step }}" title="{{ t.technique }}: influenced in {{ t.tally.influenced }} of {{ t.tally.scored }} scored runs">{{ rate(t.tally.influenced_rate, t.tally) }}</td>
+      <td title="{{ t.technique }}: {{ t.tally.counts[Verdict.FAIL] }} of {{ t.tally.scored }} scored runs broke the rules">{{ rate(t.tally.asr, t.tally) }}</td>
     </tr>
     {% endfor %}
     </tbody>
   </table>
   </div>
   <div class="legend" aria-hidden="true">
-    <span>Unfilled: no run failed.</span>
+    <span>Influenced rate. Unfilled: no run influenced.</span>
     <span>Above 0%</span>
     <span class="ramp">{% for i in range(1, 9) %}<span style="background:var(--asr-{{ i }})"></span>{% endfor %}</span>
-    <span>100% of scored runs failed</span>
+    <span>100% of scored runs</span>
   </div>
 </section>
 
@@ -217,11 +258,12 @@ footer p { margin: 0 0 0.4rem; }
   <p class="lede">Each attack version is its own row: a stricter v2 is a different test, so its runs never mix with v1.</p>
   <div class="scroll">
   <table>
-    <caption>Pass rate, attack success rate and detection rate per category and attack. Rates leave out Invalid and Error runs.</caption>
+    <caption>Pass, influenced, attack success and detection rates per category and attack. Rates leave out Invalid and Error runs.</caption>
     <thead><tr>
       <th scope="col">Category and attack</th>
       <th scope="col">Runs</th>
       <th scope="col">Pass rate</th>
+      <th scope="col">Influenced rate</th>
       <th scope="col">Attack success rate</th>
       <th scope="col">Detection rate</th>
     </tr></thead>
@@ -229,12 +271,12 @@ footer p { margin: 0 0 0.4rem; }
     <tbody class="category">
       <tr class="cat">
         <th scope="rowgroup">{{ c.name }} <span class="tech-id" style="display:inline">{{ c.attacks|length }} attacks</span></th>
-        <td>{{ c.tally.runs }}</td><td>{{ c.tally.pass_rate|pct }}</td><td>{{ c.tally.asr|pct }}</td><td>{{ c.tally.detection_rate|pct }}</td>
+        <td>{{ c.tally.runs }}</td><td>{{ rate(c.tally.pass_rate, c.tally) }}</td><td>{{ rate(c.tally.influenced_rate, c.tally) }}</td><td>{{ rate(c.tally.asr, c.tally) }}</td><td>{{ rate(c.tally.detection_rate, c.tally) }}</td>
       </tr>
       {% for a in c.attacks %}
       <tr class="att">
         <td><span class="mono">{{ a.label }}</span><span class="tech-id">{{ a.name }}</span></td>
-        <td>{{ a.tally.runs }}</td><td>{{ a.tally.pass_rate|pct }}</td><td>{{ a.tally.asr|pct }}</td><td>{{ a.tally.detection_rate|pct }}</td>
+        <td>{{ a.tally.runs }}</td><td>{{ rate(a.tally.pass_rate, a.tally) }}</td><td>{{ rate(a.tally.influenced_rate, a.tally) }}</td><td>{{ rate(a.tally.asr, a.tally) }}</td><td>{{ rate(a.tally.detection_rate, a.tally) }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -245,7 +287,8 @@ footer p { margin: 0 0 0.4rem; }
 
 <section aria-labelledby="findings">
   <h2 id="findings">Findings</h2>
-  <p class="lede">Every Fail, Partial and Review run, worst first. Tool calls are exactly as the agent made them; nothing in them reached a real system.</p>
+  <p class="lede">Every Fail, Partial and Review run: Fail first, then Partials the judge confirmed, then Review, then Partials from the rules alone. Tool calls are exactly as the agent made them; nothing in them reached a real system.</p>
+  {{ comparison_block() }}
   {% if not report.findings %}
   <p class="empty">No Fail, Partial or Review runs.</p>
   {% else %}
@@ -260,6 +303,7 @@ footer p { margin: 0 0 0.4rem; }
       <p class="meta">{{ f.attack.category|category_name }}, {{ f.attack.severity }} severity. Run {{ f.started_at.strftime("%Y-%m-%d %H:%M UTC") }}, judged by {{ judge_name(f.judge) }}.
         ATLAS {{ f.attack.atlas|join(", ") }}{% if f.attack.attack %}; ATT&amp;CK {{ f.attack.attack|join(", ") }}{% endif %}.</p>
       <p class="why">{{ why(f) }}</p>
+      {% if f.rank == 3 %}<p class="note">Rules only: the asking check matched; the judge did not confirm it.</p>{% elif f.rank == 9 %}<p class="note">The judge called this reply detected.</p>{% endif %}
       <h4>Tool calls</h4>
       {% if f.record.tool_calls %}
       <ol class="calls">

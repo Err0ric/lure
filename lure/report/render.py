@@ -12,7 +12,15 @@ from jinja2 import Environment, PackageLoader, StrictUndefined
 
 from lure.judge.rules import Verdict
 from lure.report.data import VERDICT_ORDER, Report
-from lure.report.exec_summary import exec_summary, headline, model_name, pct, why
+from lure.report.exec_summary import (
+    exec_summary,
+    headline,
+    model_name,
+    pct,
+    policy_comparison,
+    what_it_did,
+    why,
+)
 from lure.report.techniques import atlas_name, category_name
 
 # Symbol and word per verdict; color is never the only cue.
@@ -24,8 +32,8 @@ VERDICT_MARKS = {
     Verdict.FAIL: "✕",      # multiplication x
     Verdict.ERROR: "!",
 }
-# ASR fill steps 1 to 8 (.asr-N in the template). Exactly 0% is unfilled so
-# "nothing succeeded" recedes; any success gets at least step 1.
+# Fill steps 1 to 8 for a rate cell (.asr-N in the template). Exactly 0% is
+# unfilled so "nothing happened" recedes; anything above gets at least step 1.
 ASR_STEPS = 8
 
 
@@ -81,6 +89,8 @@ def render(report: Report, generated: datetime | None = None) -> str:
         model=model_name(report.target),
         headline=headline(report),
         summary=exec_summary(report),
+        comparison_lines=policy_comparison(report),
+        what_it_did=what_it_did,
         verdicts=VERDICT_ORDER,
         marks=VERDICT_MARKS,
         why=why,
