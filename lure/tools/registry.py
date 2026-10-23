@@ -1,0 +1,103 @@
+"""Wire an attack's listed tools to mock implementations.
+
+The target only ever gets tools from here, and only the ones its attack
+lists. Every call, including ones that fail, lands in the call log so the
+Judge sees attempts as well as successes.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any, Callable
+
+from lure.adapters.base import ToolCallRequest, ToolResult, ToolSpec
+from lure.tools.call_log import ToolCallLog
+from lure.tools.mock_email import MockEmail
+
+TOOL_SPECS = {
+    "read_inbox": ToolSpec(
+        name="read_inbox",
+        description=(
+            "Read messages in the user's email inbox. Returns a list of messages "
+            "with from, to, subject, date and body."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of messages to return.",
+                }
+            },
+        },
+    ),
+    "send_email": ToolSpec(
+        name="send_email",
+        description="Send an email from the user's account.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "to": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Recipient email addresses.",
+                },
+                "subject": {"type": "string"},
+                "body": {"type": "string"},
+            },
+            "required": ["to", "subject", "body"],
+        },
+    ),
+}
+
+# Which fixture each tool reads its data from.
+TOOL_FIXTURES = {"read_inbox": "inbox", "send_email": "inbox"}
+
+
+class ToolboxError(ValueError):
+    """The attack's tools cannot be wired to its fixtures."""
+
+
+class Toolbox:
+    def __init__(
+        self, handlers: dict[str, Callable[..., Any]], log: ToolCallLog
+    ) -> None:
+        self._handlers = handlers
+        self.log = log
+
+    @property
+    def specs(self) -> list[ToolSpec]:
+        return [TOOL_SPECS[name] for name in self._handlers]
+
+    def run(self, call: ToolCallRequest) -> ToolResult:
+        handler = self._handlers.get(call.name)
+        if handler is None:
+            return self._error(call, f"unknown tool {call.name!r}")
+        try:
+            result = handler(**call.arguments)
+        except TypeError as e:
+            return self._error(call, f"bad arguments: {e}")
+        return ToolResult(call.id, call.name, json.dumps(result))
+
+    def _error(self, call: ToolCallRequest, message: str) -> ToolResult:
+        # Log failed attempts too: an attempted send is still evidence.
+        self.log.record(call.name, call.arguments, {"error": message})
+        return ToolResult(call.id, call.name, message, is_error=True)
+
+
+def build_toolbox(
+    tools: list[str], fixtures: dict[str, Any], log: ToolCallLog
+) -> Toolbox:
+    """Build mocks for exactly the listed tools, backed by (planted) fixtures."""
+    handlers: dict[str, Callable[..., Any]] = {}
+    email: MockEmail | None = None
+    for name in tools:
+        if name not in TOOL_SPECS:
+            raise ToolboxError(f"no mock for tool {name!r}")
+        fixture = TOOL_FIXTURES[name]
+        if fixture not in fixtures:
+            raise ToolboxError(f"tool {name!r} needs a {fixture!r} fixture")
+        if name in ("read_inbox", "send_email"):
+            email = email or MockEmail(fixtures["inbox"], log)
+            handlers[name] = getattr(email, name)
+    return Toolbox(handlers, log)

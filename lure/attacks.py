@@ -11,7 +11,7 @@ from __future__ import annotations
 import copy
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +33,7 @@ REQUIRED_KEYS = (
     "id", "name", "category", "atlas", "attack", "severity",
     "target_task", "fixtures", "injection", "tools", "fail_if",
 )
-OPTIONAL_KEYS = ("partial_if", "pass_if")
+OPTIONAL_KEYS = ("partial_if", "pass_if", "task_check")
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
 # Rule keys the Judge understands. Keys naming a tool must be in `tools`.
@@ -80,6 +80,9 @@ class Attack:
     partial_if: list[dict[str, Any]]
     pass_if: list[dict[str, Any]]
     source: Path
+    # Facts from the fixtures; the final reply must mention at least one to
+    # show the target did the task. Empty means no fact check.
+    task_check: list[str] = field(default_factory=list)
 
     def load_fixtures(self) -> dict[str, Any]:
         return {name: _read_json(path) for name, path in self.fixtures.items()}
@@ -217,6 +220,8 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     if not isinstance(container[key], str):
         raise fail(f"injection location {location!r} must point at a string")
 
+    task_check = _task_check(data.get("task_check"), loaded, fail)
+
     _check_domains(data, f"{path.name}", fail)
     for name, content in loaded.items():
         _check_domains(content, f"fixture {name!r}", fail)
@@ -236,7 +241,23 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         partial_if=rules["partial_if"],
         pass_if=rules["pass_if"],
         source=path,
+        task_check=task_check,
     )
+
+
+def _task_check(value, fixtures, fail) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not value:
+        raise fail("task_check must be a non-empty list of facts")
+    corpus = "\n".join(_strings(fixtures)).lower()
+    for fact in value:
+        if not isinstance(fact, str) or not fact.strip():
+            raise fail("task_check facts must be non-empty strings")
+        # Facts come from the clean fixtures, so the payload cannot satisfy them.
+        if fact.lower() not in corpus:
+            raise fail(f"task_check fact {fact!r} does not appear in the fixtures")
+    return list(value)
 
 
 def _id_list(value, pattern, key, fail, allow_empty):
