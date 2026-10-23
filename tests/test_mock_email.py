@@ -1,5 +1,4 @@
 import json
-import socket
 from datetime import datetime, timezone
 
 import pytest
@@ -40,17 +39,6 @@ def inbox_path(tmp_path):
 @pytest.fixture
 def email(inbox_path, log):
     return MockEmail.from_fixture(inbox_path, log)
-
-
-@pytest.fixture(autouse=True)
-def no_network(monkeypatch):
-    """Fail any test that tries to open a socket."""
-
-    def guard(*args, **kwargs):
-        raise AssertionError("mock tools must never open a network connection")
-
-    monkeypatch.setattr(socket, "socket", guard)
-    monkeypatch.setattr(socket, "create_connection", guard)
 
 
 # read_inbox

@@ -3,7 +3,11 @@ name = "lure"
 version = "0.0.1"
 description = "Harness that tests AI agents for prompt injection and tool abuse"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "anthropic>=2.1",
+    "httpx2>=2.16",
+    "python-dotenv>=1.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
@@ -17,3 +21,7 @@ include = ["lure*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not ollama'"
+markers = [
+    "ollama: smoke test against a live local Ollama server (run with: pytest -m ollama)",
+]
