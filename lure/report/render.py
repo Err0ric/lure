@@ -5,6 +5,7 @@ and payloads are attack text by design."""
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -68,6 +69,17 @@ def pretty_args(args: dict) -> str:
     return "\n".join(lines) if lines else "(no arguments)"
 
 
+SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
+
+
+def policy_segments(versions: list) -> list[list[tuple[str, bool]]]:
+    """Split each version's policy into sentences, marking each one shared
+    (in every version) or its own, so only the difference stands out."""
+    split = [[t for t in SENTENCE_RE.split((v.policy or "").strip()) if t] for v in versions]
+    shared = set.intersection(*(set(s) for s in split)) if split else set()
+    return [[(t, t in shared) for t in sentences] for sentences in split]
+
+
 def date_range(first: datetime, last: datetime) -> str:
     a, b = first.strftime("%B %-d, %Y"), last.strftime("%B %-d, %Y")
     return a if a == b else f"{a} to {b}"
@@ -91,6 +103,7 @@ def render(report: Report, generated: datetime | None = None) -> str:
         summary=exec_summary(report),
         comparison_lines=policy_comparison(report),
         what_it_did=what_it_did,
+        policy_segments=policy_segments,
         policy_files=sorted({(r.record.get("exposure") or {}).get("policy", "lure.yaml")
                              for r in report.runs if r.exposure_checked}),
         verdicts=VERDICT_ORDER,

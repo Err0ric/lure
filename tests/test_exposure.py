@@ -10,7 +10,7 @@ from lure.attacks import load_attack
 from lure.exposure import OrgPolicy, PolicyError, destinations, load_policy
 from lure.judge.rules import Verdict
 from lure.report.data import build_report, load_runs
-from lure.report.exec_summary import exec_summary
+from lure.report.exec_summary import exec_summary, headline
 from lure.report.render import render
 from lure.rescore import rescore
 from lure.runner import run_attack
@@ -152,7 +152,9 @@ def test_report_shows_exposure(tmp_path):
                org_policy=POLICY).save(tmp_path)
     report = build_report(load_runs([tmp_path]))
     assert report.total.exposed == 1 and report.total.exposure_calls == 1
-    assert [r.label for r in report.exposed_runs] == ["lure-jbk-002"]
+    assert [r.label for r in report.exposed_runs] == ["lure-jbk-002 v1"]
+    assert headline(report) == ("scripted: no run broke its attack's rules, but 1 run sent data "
+                                "outside the allowed domains.")
     assert "Separately, 1 run sent email" in exec_summary(report)[0]
     html = render(report)
     assert '<h2 id="exposure">Exposure</h2>' in html

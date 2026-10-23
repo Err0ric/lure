@@ -101,8 +101,11 @@ td.zero { color: var(--muted); }
 .callout { margin: 1.75rem 0 0; padding: 0.9rem 0 0.4rem 1.1rem; border-left: 3px solid var(--partial); }
 .callout h3 { font-size: 1.125rem; }
 .callout p { margin: 0.4rem 0 0.6rem; }
-.callout td.policy { text-align: left; max-width: 26rem; white-space: pre-wrap; font-size: 0.875rem; color: var(--ink-2); }
-.callout td.did { text-align: left; max-width: 24rem; font-size: 0.875rem; }
+.callout td.policy { text-align: left; max-width: 34rem; font-size: 0.875rem; }
+.callout td.policy .shared { color: var(--muted); }
+.callout mark.diff { background: color-mix(in srgb, var(--partial) 32%, transparent); color: var(--ink); font-weight: 600; padding: 0 0.15em; border-radius: 2px; }
+.callout tr.did-row td { text-align: left; padding-left: 0; font-size: 0.875rem; }
+.callout tbody.version tr:first-child th, .callout tbody.version tr:first-child td { border-bottom: 0; }
 .note { color: var(--ink-2); font-size: 0.875rem; margin: 0.35rem 0 0; }
 .legend { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.85rem; color: var(--ink-2); font-size: 0.875rem; flex-wrap: wrap; }
 .ramp { display: inline-flex; border-radius: 3px; overflow: hidden; border: 1px solid var(--rule); }
@@ -151,11 +154,33 @@ footer p { margin: 0 0 0.4rem; }
   .facts div:nth-child(n+3) { border-top: 1px solid var(--rule); }
   .sheet { border: 0; border-radius: 0; padding-top: 2rem; }
 }
+@page { margin: 14mm 12mm; }
 @media print {
-  html, body { background: #fff; }
-  .sheet { border: 0; padding: 0; }
+  /* Paper is always light, whatever the viewer's theme. */
+  :root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
+    color-scheme: light;
+    --page: #ffffff; --sheet: #ffffff; --ink: #18202e; --ink-2: #4a5568; --muted: #646d7a;
+    --rule: #d5dbe3; --rule-strong: #a9b3c1; --code-bg: #f1f4f8;
+    --asr-1: #b7d3f6; --asr-2: #86b6ef; --asr-3: #5598e7;
+    --asr-4: #3987e5; --asr-5: #2a78d6; --asr-6: #1c5cab; --asr-7: #104281; --asr-8: #0d366b;
+    --asr-ink-low: #18202e; --asr-ink-high: #ffffff;
+  }
+  html, body { background: #fff; padding: 0; }
+  body { font-size: 10pt; }
+  .sheet { border: 0; padding: 0; max-width: none; background: #fff; }
+  /* Every table fits the page: no scroll boxes, headers and cells wrap. */
+  .scroll { overflow: visible; }
+  table { width: 100%; font-size: 8.5pt; }
+  th, td { padding: 0.3rem 0.3rem; white-space: normal; overflow-wrap: break-word; }
+  thead th { white-space: normal; font-size: 8pt; hyphens: manual; }
+  .asr { min-width: 0; }
+  .low { white-space: normal; }
+  .callout td.policy { max-width: none; }
+  tr, .callout, .finding header { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
   details { display: block; }
-  pre { max-height: none; }
+  pre { max-height: none; overflow: visible; font-size: 8pt; }
+  .asr, .verdict::before, mark.diff, .ramp span { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 @media (forced-colors: active) {
   .verdict::before { forced-color-adjust: none; border: 1px solid CanvasText; }
@@ -172,26 +197,27 @@ footer p { margin: 0 0 0.4rem; }
   <h3>Policy comparison: <span class="mono">{{ c.attack_id }}</span></h3>
   <p>{{ comparison_lines[loop.index0] }}</p>
   <div class="scroll">
-  <table>
+  <table class="compare">
     <thead><tr>
       <th scope="col">Version</th><th scope="col" style="text-align:left">Policy (system prompt)</th>
       <th scope="col">Influenced rate</th><th scope="col">Attack success rate</th>
       <th scope="col">Exposure</th>
-      <th scope="col" style="text-align:left">What the model did</th>
     </tr></thead>
-    <tbody>
+    {% set segments = policy_segments(c.versions) %}
     {% for v in c.versions %}
+    <tbody class="version">
     <tr>
-      <th scope="row" class="mono" style="font-weight:400">{{ v.label }}</th>
-      <td class="policy">{{ v.policy or "Not recorded" }}</td>
+      <th scope="row" class="mono" style="font-weight:400">v{{ v.version }}</th>
+      <td class="policy">{% if v.policy %}{% for text, shared in segments[loop.index0] %}{% if shared %}<span class="shared">{{ text }}</span>{% else %}<mark class="diff">{{ text }}</mark>{% endif %}{% if not loop.last %} {% endif %}{% endfor %}{% else %}Not recorded{% endif %}</td>
       <td>{{ rate(v.tally.influenced_rate, v.tally) }}</td>
       <td>{{ rate(v.tally.asr, v.tally) }}</td>
       <td>{{ exposure_cell(v.tally) }}</td>
-      <td class="did">{{ what_it_did(v) }}</td>
     </tr>
-    {% endfor %}
+    <tr class="did-row"><td colspan="5" class="did"><strong>What the model did ({{ v.label }}):</strong> {{ what_it_did(v) }}</td></tr>
     </tbody>
+    {% endfor %}
   </table>
+  <p class="note">Highlighted: the sentences that differ between versions. Muted: text every version shares.</p>
   </div>
 </aside>
 {% endfor %}

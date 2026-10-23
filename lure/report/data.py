@@ -49,8 +49,9 @@ class Run:
 
     @property
     def label(self) -> str:
+        """Always names the version, v1 included, so versions never blur."""
         attack_id, version = self.key
-        return attack_id if version == 1 else f"{attack_id} v{version}"
+        return f"{attack_id} v{version}"
 
     @property
     def verdict(self) -> Verdict:

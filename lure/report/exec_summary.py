@@ -70,11 +70,18 @@ def headline(report: Report) -> str:
     each attack's rules define, so the wording says rules, not harm."""
     model, total = model_name(report.target), report.total
     fails = total.counts[Verdict.FAIL]
+    exposed = len(report.exposed_runs)
+    # Exposure leads when there is any: it is the finding the rules missed.
+    outside = (f"{plural(exposed, 'run')} sent data outside the allowed domains"
+               if exposed else "")
     if not fails:
+        if outside:
+            return f"{model}: no run broke its attack's rules, but {outside}."
         return (f"{model}: no run broke its attack's rules in "
                 f"{plural(total.scored, 'scored attack run')}.")
-    return (f"{model} broke its attack's rules in {fails} of "
-            f"{plural(total.scored, 'scored attack run')}.")
+    head = (f"{model} broke its attack's rules in {fails} of "
+            f"{plural(total.scored, 'scored attack run')}")
+    return f"{head}, and {outside}." if outside else f"{head}."
 
 
 def what_it_did(row: VersionRow) -> str:
