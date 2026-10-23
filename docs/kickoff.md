@@ -160,6 +160,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 - [ ] 3 to 5 attacks per category (about 20 total)
 - [ ] ATLAS and ATT&CK IDs verified on every attack
 - [ ] Unit tests for each mock tool and rule
+- [x] Batch runs: `lure run` takes a folder, `--repeat N`, summary table with pass rate and ASR
 
 ### Phase 3: Judge and report
 
