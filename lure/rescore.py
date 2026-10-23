@@ -18,7 +18,7 @@ from lure.exposure import OrgPolicy
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import judge
 from lure.runner import RunResult
-from lure.tools.call_log import ToolCallLog
+from lure.tools.call_log import ToolCall, ToolCallLog
 
 
 def attack_index(attacks_dir: str | Path) -> dict[tuple[str, int], Attack]:
@@ -85,6 +85,28 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         exposure=(org_policy.record(log.calls) if org_policy is not None
                   else record.get("exposure")),
     )
+
+
+def rebuild_calls(record: dict[str, Any]) -> list[ToolCall]:
+    return [ToolCall(datetime.fromisoformat(c["timestamp"]), c["tool"], c["args"], c.get("result"))
+            for c in record.get("tool_calls", [])]
+
+
+def add_exposure(record: dict[str, Any], org_policy: OrgPolicy, source: Path, out_dir: Path,
+                 now: datetime | None = None) -> dict[str, Any]:
+    """Save a copy of the record with exposure recomputed and every other
+    field, the judgment included, exactly as saved."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    data = dict(record)
+    data["exposure"] = org_policy.record(rebuild_calls(record))
+    data["rescore"] = {
+        "source": str(source),
+        "rescored_at": (now or datetime.now(UTC)).isoformat(),
+        "exposure_only": True,
+        "previous": {k: record["judgment"].get(k) for k in ("verdict", "reason")},
+    }
+    (out_dir / source.name).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return data
 
 
 def attack_changed(record: dict[str, Any], attack: Attack) -> bool:

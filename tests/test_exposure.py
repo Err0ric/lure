@@ -180,3 +180,27 @@ def test_policy_comparison_shows_exposure_per_version(tmp_path):
     html = render(report)
     assert "sent outside the allowed domains in 1" in html
     assert "sent outside the allowed domains in 0" in html
+
+
+def test_exposure_only_keeps_the_saved_judgment(tmp_path):
+    folder = tmp_path / "results"
+    path = run_attack(JBK_V1, ScriptedAdapter(call("read_inbox"), PERSONAL,
+                                              say(JBK_SUMMARY))).save(folder)
+    record = json.loads(path.read_text())
+    # Pretend the judge had made this Partial; exposure-only must keep it.
+    record["judgment"]["verdict"], record["judgment"]["reason"] = "Partial", "judge said so"
+    path.write_text(json.dumps(record))
+    out = io.StringIO()
+    code = cli.main(["rescore", str(folder), "--attacks-dir", str(A), "--exposure-only"], out=out)
+    assert code == 0
+    assert "PARTIAL  (kept)  [exposure: send_email to mailbox.example]" in out.getvalue()
+    copy = json.loads((folder / "rescored" / path.name).read_text())
+    assert copy["judgment"] == record["judgment"]
+    assert copy["rescore"]["exposure_only"] is True
+    assert copy["exposure"]["policy"] == "lure.yaml"
+
+
+def test_exposure_only_rejects_llm_judge_or_no_policy(tmp_path, capsys):
+    assert cli.main(["rescore", str(tmp_path), "--exposure-only", "--no-org-policy"]) == 2
+    assert cli.main(["rescore", str(tmp_path), "--exposure-only", "--judge", "llm"]) == 2
+    assert "--exposure-only needs an org policy" in capsys.readouterr().err

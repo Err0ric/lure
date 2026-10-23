@@ -12,6 +12,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TextIO
 
 from dotenv import find_dotenv, load_dotenv
@@ -23,6 +24,7 @@ from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError, load_poli
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
 from lure.rescore import (
+    add_exposure,
     attack_changed,
     attack_index,
     record_key,
@@ -88,6 +90,9 @@ def build_parser() -> argparse.ArgumentParser:
     rescore_cmd.add_argument("--version", type=_positive_int, help="only runs of this attack version")
     _judge_args(rescore_cmd)
     _policy_args(rescore_cmd)
+    rescore_cmd.add_argument("--exposure-only", action="store_true",
+                             help="keep every saved verdict as is; only recompute exposure "
+                                  "with the org policy (no judge calls)")
     rescore_cmd.add_argument("--out", help="folder for rescored copies (default <first folder>/rescored)")
 
     report_cmd = sub.add_parser("report", help="build a static HTML report from saved runs")
@@ -205,6 +210,9 @@ def rescore_main(args, out: TextIO) -> int:
     except (AttackError, AdapterError, FileNotFoundError, PolicyError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
+    if args.exposure_only and (org_policy is None or args.judge != "rules"):
+        print("lure: --exposure-only needs an org policy and no --judge llm", file=sys.stderr)
+        return EXIT_BAD_INPUT
     first_dir = next((Path(p) for p in args.results if Path(p).is_dir()), Path("results"))
     out_dir = Path(args.out) if args.out else first_dir / "rescored"
 
@@ -226,6 +234,8 @@ def rescore_main(args, out: TextIO) -> int:
         print("lure: no matching results to rescore", file=sys.stderr)
         return EXIT_BAD_INPUT
 
+    if args.exposure_only:
+        return _exposure_only(picked, org_policy, out_dir, out)
     results: list[RunResult] = []
     width = len(str(len(picked)))
     for i, (path, record, attack) in enumerate(picked, 1):
@@ -245,6 +255,27 @@ def rescore_main(args, out: TextIO) -> int:
     print(f"Rescored copies: {out_dir}", file=out)
     print(file=out)
     print_summary(summarize(results), out)
+    return EXIT_OK
+
+
+def _exposure_only(picked, org_policy: OrgPolicy, out_dir: Path, out: TextIO) -> int:
+    rows = []
+    width = len(str(len(picked)))
+    for i, (path, record, attack) in enumerate(picked, 1):
+        data = add_exposure(record, org_policy, path, out_dir)
+        calls = data["exposure"]["calls"]
+        verdict = str(record["judgment"]["verdict"]).upper()
+        where = "; ".join(f"{c['tool']} to {', '.join(c['outside'])}" for c in calls)
+        print(f"[{i:>{width}}/{len(picked)}] {path.name}  {attack.id} v{attack.version}  "
+              f"{verdict:<8} (kept)" + (f"  [exposure: {where}]" if calls else ""), file=out)
+        rows.append(SimpleNamespace(
+            attack=SimpleNamespace(id=attack.id, version=attack.version),
+            judgment=SimpleNamespace(verdict=Verdict(record["judgment"]["verdict"]),
+                                     reason=record["judgment"]["reason"])))
+    print(file=out)
+    print(f"Rescored copies: {out_dir}", file=out)
+    print(file=out)
+    print_summary(summarize(rows), out)
     return EXIT_OK
 
 
