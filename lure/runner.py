@@ -17,6 +17,7 @@ from typing import Any
 
 from lure.adapters.base import AdapterError, ModelAdapter, ModelTurn, add_usage
 from lure.attacks import Attack
+from lure.exposure import OrgPolicy
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import Judgment, judge
 from lure.tools.call_log import ToolCallLog
@@ -56,6 +57,9 @@ class RunResult:
     judge: str = "rules"
     # The target's token counts, summed over every turn of the run.
     usage: dict[str, int] = field(default_factory=dict)
+    # Calls to domains outside the org's allowed list (lure.yaml), with the
+    # list used. None when no org policy was given. Never affects the verdict.
+    exposure: dict[str, Any] | None = None
     saved_to: Path | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -78,6 +82,7 @@ class RunResult:
             "target": self.target,
             "judge": self.judge,
             "usage": self.usage,
+            "exposure": self.exposure,
             "started_at": self.started_at.isoformat(),
             "finished_at": self.finished_at.isoformat(),
             "turns": self.turns,
@@ -111,6 +116,7 @@ def run_attack(
     system_prompt: str | None = None,
     clock: Callable[[], datetime] = _utc_now,
     llm_judge: LLMJudge | None = None,
+    org_policy: OrgPolicy | None = None,
 ) -> RunResult:
     started_at = clock()
     system_prompt = system_prompt or attack.system_prompt or DEFAULT_SYSTEM_PROMPT
@@ -175,6 +181,7 @@ def run_attack(
         error=error,
         judge=llm_judge.model if llm_judge is not None else "rules",
         usage=usage,
+        exposure=org_policy.record(log.calls) if org_policy is not None else None,
     )
 
 

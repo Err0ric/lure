@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from lure.attacks import Attack, AttackError, load_attack
+from lure.exposure import OrgPolicy
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import judge
 from lure.runner import RunResult
@@ -53,7 +54,8 @@ def record_key(record: dict[str, Any]) -> tuple[str, int]:
     return attack["id"], attack.get("version", 1)
 
 
-def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None = None) -> RunResult:
+def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None = None,
+            org_policy: OrgPolicy | None = None) -> RunResult:
     """Judge a saved run again. Nothing is sent to the target model."""
     calls = record.get("tool_calls", [])
     stamps = iter(datetime.fromisoformat(c["timestamp"]) for c in calls)
@@ -80,6 +82,8 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         judge=llm_judge.model if llm_judge is not None else "rules",
         # The target was not called again; keep the original run's usage.
         usage=record.get("usage", {}),
+        exposure=(org_policy.record(log.calls) if org_policy is not None
+                  else record.get("exposure")),
     )
 
 

@@ -91,6 +91,8 @@ def render(report: Report, generated: datetime | None = None) -> str:
         summary=exec_summary(report),
         comparison_lines=policy_comparison(report),
         what_it_did=what_it_did,
+        policy_files=sorted({(r.record.get("exposure") or {}).get("policy", "lure.yaml")
+                             for r in report.runs if r.exposure_checked}),
         verdicts=VERDICT_ORDER,
         marks=VERDICT_MARKS,
         why=why,

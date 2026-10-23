@@ -19,6 +19,7 @@ from dotenv import find_dotenv, load_dotenv
 from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacks import AttackError, load_attack
 from lure.batch import SummaryRow, collect_attack_paths, summarize
+from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError, load_policy
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
 from lure.rescore import (
@@ -76,6 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--repeat", type=_positive_int, default=1,
                      help="run each attack N times (default 1)")
     _judge_args(run)
+    _policy_args(run)
     run.add_argument("--results-dir", default="results")
 
     rescore_cmd = sub.add_parser("rescore", help="re-judge saved runs; the target is not called")
@@ -85,6 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     rescore_cmd.add_argument("--attack", help="only runs of this attack id")
     rescore_cmd.add_argument("--version", type=_positive_int, help="only runs of this attack version")
     _judge_args(rescore_cmd)
+    _policy_args(rescore_cmd)
     rescore_cmd.add_argument("--out", help="folder for rescored copies (default <first folder>/rescored)")
 
     report_cmd = sub.add_parser("report", help="build a static HTML report from saved runs")
@@ -103,6 +106,23 @@ def _judge_args(parser: argparse.ArgumentParser) -> None:
                         help="provider for the LLM judge (default anthropic)")
     parser.add_argument("--judge-model",
                         help="LLM judge model (default claude-haiku-5-5 on anthropic)")
+
+
+def _policy_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--org-policy", help="org policy file with allowed_outbound_domains "
+                                             f"(default {DEFAULT_POLICY_FILE} if present)")
+    parser.add_argument("--no-org-policy", action="store_true",
+                        help="skip the exposure check")
+
+
+def _org_policy(args) -> OrgPolicy | None:
+    """The explicit --org-policy file, else lure.yaml in the current folder if
+    it exists. A file that is named but missing or invalid is an error."""
+    if args.no_org_policy:
+        return None
+    if args.org_policy:
+        return load_policy(args.org_policy)
+    return load_policy(DEFAULT_POLICY_FILE) if Path(DEFAULT_POLICY_FILE).is_file() else None
 
 
 def _llm_judge(args) -> LLMJudge | None:
@@ -136,14 +156,16 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
             build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
         adapter = make_adapter(args.target, args.model)
         llm_judge = _llm_judge(args)
-    except (AttackError, ToolboxError, AdapterError) as e:
+        org_policy = _org_policy(args)
+    except (AttackError, ToolboxError, AdapterError, PolicyError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
     batch = Path(args.attack).is_dir() or args.repeat > 1
     plan = [(a, n) for a in attacks for n in range(1, args.repeat + 1)]
     results: list[RunResult] = []
     for i, (attack, n) in enumerate(plan, 1):
-        result = run_attack(attack, adapter, max_turns=args.max_turns, llm_judge=llm_judge)
+        result = run_attack(attack, adapter, max_turns=args.max_turns, llm_judge=llm_judge,
+                            org_policy=org_policy)
         result.save(args.results_dir)
         results.append(result)
         if batch:
@@ -179,7 +201,8 @@ def rescore_main(args, out: TextIO) -> int:
         index = attack_index(args.attacks_dir)
         paths = record_paths(args.results)
         llm_judge = _llm_judge(args)
-    except (AttackError, AdapterError, FileNotFoundError) as e:
+        org_policy = _org_policy(args)
+    except (AttackError, AdapterError, FileNotFoundError, PolicyError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
     first_dir = next((Path(p) for p in args.results if Path(p).is_dir()), Path("results"))
@@ -206,12 +229,13 @@ def rescore_main(args, out: TextIO) -> int:
     results: list[RunResult] = []
     width = len(str(len(picked)))
     for i, (path, record, attack) in enumerate(picked, 1):
-        result = rescore(record, attack, llm_judge)
+        result = rescore(record, attack, llm_judge, org_policy)
         save_rescored(result, record, path, out_dir)
         results.append(result)
         old = str(record["judgment"].get("verdict", "?")).upper()
         new = result.judgment.verdict.value.upper()
         notes = [n for n, on in (("llm-judged", result.judgment.llm_judged),
+                                 ("exposure", bool(result.exposure and result.exposure["calls"])),
                                  ("attack changed since run", attack_changed(record, attack)))
                  if on]
         note = f"  [{', '.join(notes)}]" if notes else ""
@@ -231,7 +255,9 @@ def print_progress(result: RunResult, i: int, total: int, n: int, repeat: int, o
     notes = [n for n, on in (("detected", j.reason == DETECTED),
                              ("task incomplete", j.task_incomplete),
                              ("llm-judged", j.llm_judged),
-                             ("llm judge failed", bool(j.llm) and not j.llm_judged)) if on]
+                             ("llm judge failed", bool(j.llm) and not j.llm_judged),
+                             ("exposure", bool(result.exposure and result.exposure["calls"])))
+             if on]
     note = f"  [{', '.join(notes)}]" if notes else ""
     print(f"[{i:>{width}}/{total}] {result.attack.id}  run {n}/{repeat}  "
           f"{verdict:<8}  {result.saved_to}{note}", file=out)

@@ -84,6 +84,8 @@ def what_it_did(row: VersionRow) -> str:
     parts = [f"broke the rules in {t.counts[Verdict.FAIL]}",
              f"was influenced in {t.influenced}",
              f"flagged the attack in {t.detected}"]
+    if any(r.exposure_checked for r in row.runs):
+        parts.append(f"sent outside the allowed domains in {t.exposed}")
     text = f"Of {plural(t.scored, 'scored run')}, it " + ", ".join(parts) + "."
     worst = min((r for r in row.runs if r.verdict in FINDING_VERDICTS and r.rank < 9),
                 key=lambda r: r.rank, default=None)
@@ -109,16 +111,19 @@ def exec_summary(report: Report) -> list[str]:
     bullets = []
 
     if fails:
-        bullets.append(
-            f"{fails} of {total.scored} scored runs across {plural(n_attacks, 'attack')} broke "
-            f"the attack's rules: an attack success rate of {rate_text(total.asr, total)}."
-        )
+        first = (f"{fails} of {total.scored} scored runs across {plural(n_attacks, 'attack')} "
+                 f"broke the attack's rules: an attack success rate of "
+                 f"{rate_text(total.asr, total)}.")
     else:
-        bullets.append(
-            f"No run broke its attack's rules: across {plural(total.scored, 'scored run')} of "
-            f"{plural(n_attacks, 'attack')}, the tool log shows none of the actions the "
-            f"attacks were written to catch."
-        )
+        first = (f"No run broke its attack's rules: across {plural(total.scored, 'scored run')} "
+                 f"of {plural(n_attacks, 'attack')}, the tool log shows none of the actions the "
+                 f"attacks were written to catch.")
+    if report.exposure_checked:
+        exposed = len(report.exposed_runs)
+        first += (f" Separately, {plural(exposed, 'run')} sent email or made a request to a "
+                  f"domain outside the org's allowed list." if exposed else
+                  " No run sent email or made a request outside the org's allowed domains.")
+    bullets.append(first)
 
     bullets.append(
         f"It recognized the attack and said so in {total.detected} of {total.scored} runs "

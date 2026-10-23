@@ -162,6 +162,7 @@ footer p { margin: 0 0 0.4rem; }
 </head>
 <body>
 {% macro rate(value, tally) %}{{ value|pct }}{% if tally.low_sample and value is not none %}<span class="low">low sample</span>{% endif %}{% endmacro %}
+{% macro exposure_cell(tally) %}{% if report.exposure_checked %}{{ tally.exposed }} of {{ tally.runs }}{% else %}n/a{% endif %}{% endmacro %}
 {% macro comparison_block() %}
 {% for c in report.comparisons %}
 <aside class="callout" aria-label="Policy comparison for {{ c.attack_id }}">
@@ -172,6 +173,7 @@ footer p { margin: 0 0 0.4rem; }
     <thead><tr>
       <th scope="col">Version</th><th scope="col" style="text-align:left">Policy (system prompt)</th>
       <th scope="col">Influenced rate</th><th scope="col">Attack success rate</th>
+      <th scope="col">Exposure</th>
       <th scope="col" style="text-align:left">What the model did</th>
     </tr></thead>
     <tbody>
@@ -181,6 +183,7 @@ footer p { margin: 0 0 0.4rem; }
       <td class="policy">{{ v.policy or "Not recorded" }}</td>
       <td>{{ rate(v.tally.influenced_rate, v.tally) }}</td>
       <td>{{ rate(v.tally.asr, v.tally) }}</td>
+      <td>{{ exposure_cell(v.tally) }}</td>
       <td class="did">{{ what_it_did(v) }}</td>
     </tr>
     {% endfor %}
@@ -205,6 +208,7 @@ footer p { margin: 0 0 0.4rem; }
     <div><dt>Pass rate</dt><dd>{{ report.total.pass_rate|pct }}<small>{{ report.total.counts[Verdict.PASS] }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
     <div><dt>Influenced rate</dt><dd>{{ report.total.influenced_rate|pct }}<small>{{ report.total.influenced }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
     <div><dt>Attack success rate</dt><dd>{{ report.total.asr|pct }}<small>{{ report.total.counts[Verdict.FAIL] }} runs broke the rules</small></dd></div>
+    <div><dt>Exposure</dt><dd>{% if report.exposure_checked %}{{ report.total.exposed }} runs<small>{{ report.total.exposure_calls }} calls outside allowed domains</small>{% else %}Not checked<small>no org policy</small>{% endif %}</dd></div>
   </dl>
 </header>
 
@@ -231,6 +235,7 @@ footer p { margin: 0 0 0.4rem; }
       {% for v in verdicts %}<th scope="col">{{ v.value }}</th>{% endfor %}
       <th scope="col">Influenced rate</th>
       <th scope="col">Attack success rate</th>
+      <th scope="col">Exposure</th>
     </tr></thead>
     <tbody>
     {% for t in report.techniques %}
@@ -240,6 +245,7 @@ footer p { margin: 0 0 0.4rem; }
       {% for v in verdicts %}{% set n = t.tally.counts[v] %}<td{% if not n %} class="zero"{% endif %}>{{ n }}</td>{% endfor %}
       <td class="asr {{ t.tally.influenced_rate|asr_step }}" title="{{ t.technique }}: influenced in {{ t.tally.influenced }} of {{ t.tally.scored }} scored runs">{{ rate(t.tally.influenced_rate, t.tally) }}</td>
       <td title="{{ t.technique }}: {{ t.tally.counts[Verdict.FAIL] }} of {{ t.tally.scored }} scored runs broke the rules">{{ rate(t.tally.asr, t.tally) }}</td>
+      <td{% if not t.tally.exposed %} class="zero"{% endif %}>{{ exposure_cell(t.tally) }}</td>
     </tr>
     {% endfor %}
     </tbody>
@@ -266,17 +272,18 @@ footer p { margin: 0 0 0.4rem; }
       <th scope="col">Influenced rate</th>
       <th scope="col">Attack success rate</th>
       <th scope="col">Detection rate</th>
+      <th scope="col">Exposure</th>
     </tr></thead>
     {% for c in report.categories %}
     <tbody class="category">
       <tr class="cat">
         <th scope="rowgroup">{{ c.name }} <span class="tech-id" style="display:inline">{{ c.attacks|length }} attacks</span></th>
-        <td>{{ c.tally.runs }}</td><td>{{ rate(c.tally.pass_rate, c.tally) }}</td><td>{{ rate(c.tally.influenced_rate, c.tally) }}</td><td>{{ rate(c.tally.asr, c.tally) }}</td><td>{{ rate(c.tally.detection_rate, c.tally) }}</td>
+        <td>{{ c.tally.runs }}</td><td>{{ rate(c.tally.pass_rate, c.tally) }}</td><td>{{ rate(c.tally.influenced_rate, c.tally) }}</td><td>{{ rate(c.tally.asr, c.tally) }}</td><td>{{ rate(c.tally.detection_rate, c.tally) }}</td><td{% if not c.tally.exposed %} class="zero"{% endif %}>{{ exposure_cell(c.tally) }}</td>
       </tr>
       {% for a in c.attacks %}
       <tr class="att">
         <td><span class="mono">{{ a.label }}</span><span class="tech-id">{{ a.name }}</span></td>
-        <td>{{ a.tally.runs }}</td><td>{{ rate(a.tally.pass_rate, a.tally) }}</td><td>{{ rate(a.tally.influenced_rate, a.tally) }}</td><td>{{ rate(a.tally.asr, a.tally) }}</td><td>{{ rate(a.tally.detection_rate, a.tally) }}</td>
+        <td>{{ a.tally.runs }}</td><td>{{ rate(a.tally.pass_rate, a.tally) }}</td><td>{{ rate(a.tally.influenced_rate, a.tally) }}</td><td>{{ rate(a.tally.asr, a.tally) }}</td><td>{{ rate(a.tally.detection_rate, a.tally) }}</td><td{% if not a.tally.exposed %} class="zero"{% endif %}>{{ exposure_cell(a.tally) }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -284,6 +291,34 @@ footer p { margin: 0 0 0.4rem; }
   </table>
   </div>
 </section>
+
+{% if report.exposure_checked %}
+<section aria-labelledby="exposure">
+  <h2 id="exposure">Exposure</h2>
+  <p class="lede">Calls to a domain outside the org's allowed list ({{ policy_files|join(", ") }}), whatever the attack's own rules say. Exposure never changes a verdict.</p>
+  {% if not report.exposed_runs %}
+  <p class="empty">No run sent email or made a request outside the allowed domains.</p>
+  {% else %}
+  <ol class="findings">
+    {% for r in report.exposed_runs %}
+    <li class="finding">
+      <header>
+        <span class="verdict v-{{ r.verdict.value|lower }}"><span aria-hidden="true">{{ marks[r.verdict] }}</span>{{ r.verdict.value }}</span>
+        <h3><span class="mono">{{ r.label }}</span> {{ r.attack.name }}</h3>
+      </header>
+      <p class="meta">Run {{ r.started_at.strftime("%Y-%m-%d %H:%M UTC") }}.</p>
+      <ol class="calls">
+        {% for c in r.exposure_calls %}
+        <li><span class="tool mono">{{ c.tool }}</span> to {{ c.outside|join(", ") }}{% if c.failed %} <span class="err">failed</span>{% endif %}
+          <pre>{{ c.args|pretty_args }}</pre></li>
+        {% endfor %}
+      </ol>
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+</section>
+{% endif %}
 
 <section aria-labelledby="findings">
   <h2 id="findings">Findings</h2>

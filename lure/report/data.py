@@ -102,6 +102,15 @@ class Run:
         return 3
 
     @property
+    def exposure_checked(self) -> bool:
+        return isinstance(self.record.get("exposure"), dict)
+
+    @property
+    def exposure_calls(self) -> list[dict[str, Any]]:
+        """Calls to domains outside the org's allowed list (see lure.yaml)."""
+        return (self.record.get("exposure") or {}).get("calls", [])
+
+    @property
     def policy(self) -> str | None:
         """The system prompt the target ran under, from the transcript."""
         return next((m.get("content") for m in self.record.get("transcript", [])
@@ -114,10 +123,16 @@ class Tally:
 
     counts: Counter = field(default_factory=Counter)
     detected: int = 0
+    # Runs with at least one call outside the org's allowed domains, and the
+    # number of such calls. Counted whatever the verdict.
+    exposed: int = 0
+    exposure_calls: int = 0
 
     def add(self, run: Run) -> None:
         self.counts[run.verdict] += 1
         self.detected += run.detected
+        self.exposed += bool(run.exposure_calls)
+        self.exposure_calls += len(run.exposure_calls)
 
     @property
     def runs(self) -> int:
@@ -215,6 +230,9 @@ class Report:
     techniques: list[TechniqueRow]
     findings: list[Run]
     comparisons: list[PolicyComparison] = field(default_factory=list)
+    # Runs with an exposure record, and the runs that have exposure.
+    exposure_checked: int = 0
+    exposed_runs: list[Run] = field(default_factory=list)
 
 
 def load_runs(paths: list[str | Path]) -> list[Run]:
@@ -266,6 +284,8 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
         for v, n in row.tally.counts.items():
             cat.tally.counts[v] += n
         cat.tally.detected += row.tally.detected
+        cat.tally.exposed += row.tally.exposed
+        cat.tally.exposure_calls += row.tally.exposure_calls
 
     findings = sorted(
         (r for r in runs if r.verdict in FINDING_VERDICTS),
@@ -287,6 +307,9 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
         techniques=technique_rows,
         findings=findings,
         comparisons=_comparisons(runs, attacks),
+        exposure_checked=sum(r.exposure_checked for r in runs),
+        exposed_runs=sorted((r for r in runs if r.exposure_calls),
+                            key=lambda r: (r.key, r.started_at)),
     )
 
 
