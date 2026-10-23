@@ -155,4 +155,4 @@ Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).
 
 ## License
 
-TBD. A license will be added before the first public release.
+Apache License 2.0. See [`LICENSE`](LICENSE).
