@@ -63,8 +63,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--repeat", type=_positive_int, default=1,
                      help="run each attack N times (default 1)")
     run.add_argument("--judge", choices=JUDGES, default="rules",
-                     help="rules (default), or llm: ask a judge model about runs "
-                          "the rules mark Partial, Review or heuristic")
+                     help="rules (default), or llm: ask a judge model about every "
+                          "run with a reply except Fail and confirmed Partial")
     run.add_argument("--judge-target", choices=TARGETS, default="anthropic",
                      help="provider for the LLM judge (default anthropic)")
     run.add_argument("--judge-model",
