@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +58,8 @@ class LLMVerdict:
     justification: str
     # True if a quoted span in the justification appears in the reply.
     quote_found: bool
+    # The judge call's token counts.
+    usage: dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -65,6 +67,7 @@ class LLMVerdict:
             "label": self.label,
             "justification": self.justification,
             "quote_found": self.quote_found,
+            "usage": self.usage,
         }
 
 
@@ -83,7 +86,7 @@ class LLMJudge:
             turn = convo.send_task(build_prompt(attack, final_text))
         except AdapterError as e:
             raise LLMJudgeError(f"judge call failed: {e}") from e
-        return parse_verdict(turn.text, final_text, self.model)
+        return replace(parse_verdict(turn.text, final_text, self.model), usage=turn.usage)
 
     def review(self, attack: Attack, judgment: Judgment, final_text: str | None) -> Judgment:
         """Return the judgment, revised by the judge model if it applies."""

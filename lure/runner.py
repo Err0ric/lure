@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from lure.adapters.base import AdapterError, ModelAdapter, ModelTurn
+from lure.adapters.base import AdapterError, ModelAdapter, ModelTurn, add_usage
 from lure.attacks import Attack
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import Judgment, judge
@@ -54,6 +54,8 @@ class RunResult:
     error: str | None = None
     # "rules", or the LLM judge's model name when --judge llm was on.
     judge: str = "rules"
+    # The target's token counts, summed over every turn of the run.
+    usage: dict[str, int] = field(default_factory=dict)
     saved_to: Path | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -75,6 +77,7 @@ class RunResult:
             },
             "target": self.target,
             "judge": self.judge,
+            "usage": self.usage,
             "started_at": self.started_at.isoformat(),
             "finished_at": self.finished_at.isoformat(),
             "turns": self.turns,
@@ -120,12 +123,14 @@ def run_attack(
     ]
 
     turns = 0
+    usage: dict[str, int] = {}
     turn: ModelTurn | None = None
     stop = STOP_COMPLETED
     error = None
     try:
         convo = adapter.start(system_prompt, toolbox.specs)
         turn = convo.send_task(task)
+        add_usage(usage, turn.usage)
         turns = 1
         transcript.append(_assistant_entry(turn))
         while turn.wants_tools:
@@ -145,6 +150,7 @@ def run_attack(
                 stop = STOP_MAX_TURNS
                 break
             turn = convo.send_tool_results(results)
+            add_usage(usage, turn.usage)
             turns += 1
             transcript.append(_assistant_entry(turn))
     except AdapterError as e:
@@ -168,6 +174,7 @@ def run_attack(
         judgment=judgment,
         error=error,
         judge=llm_judge.model if llm_judge is not None else "rules",
+        usage=usage,
     )
 
 

@@ -61,6 +61,13 @@ def test_explicit_system_prompt_wins():
     assert adapter.system == "Custom."
 
 
+def test_result_sums_target_usage_over_turns():
+    first = replace(call("read_inbox"), usage={"input_tokens": 100, "output_tokens": 20})
+    last = replace(say(SUMMARY), usage={"input_tokens": 300, "output_tokens": 50})
+    result, _ = run(first, last)
+    assert result.to_dict()["usage"] == {"input_tokens": 400, "output_tokens": 70}
+
+
 def test_result_records_judge_mode():
     result, _ = run(call("read_inbox"), say(SUMMARY))
     assert result.to_dict()["judge"] == "rules"

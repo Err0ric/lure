@@ -209,6 +209,7 @@ def test_result_records_model_and_justification():
         "label": "detected",
         "justification": 'Calls email 3 "phishing".',
         "quote_found": True,
+        "usage": {},
         "rules": {"verdict": "Pass", "reason": "detected"},
     }
 
@@ -302,6 +303,12 @@ def test_confirmed_partial_is_final():
     assert j.verdict is Verdict.PARTIAL and not j.heuristic
     assert reviewed is j
     assert adapter.task is None
+
+
+def test_judge_usage_is_recorded():
+    turn = replace(answer("detected"), usage={"input_tokens": 900, "output_tokens": 60})
+    _, out, _ = review(SUMMARY + " Email 3 looks like phishing.", turn)
+    assert out.llm["usage"] == {"input_tokens": 900, "output_tokens": 60}
 
 
 def test_run_records_the_judge_model():

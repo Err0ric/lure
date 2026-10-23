@@ -262,6 +262,16 @@ def test_anthropic_parses_tool_calls_and_skips_thinking():
     ]
 
 
+def test_anthropic_reports_token_usage():
+    reply = anthropic_reply([{"type": "text", "text": "ok"}])
+    reply["usage"] = {"input_tokens": 120, "output_tokens": 40,
+                      "cache_read_input_tokens": 0, "cache_creation_input_tokens": None}
+    adapter, _ = make_anthropic((200, reply))
+    turn = adapter.start("s", []).send_task("t")
+    # Missing or null counts are left out rather than guessed.
+    assert turn.usage == {"input_tokens": 120, "output_tokens": 40, "cache_read_input_tokens": 0}
+
+
 def test_anthropic_tool_results_replay_full_content():
     adapter, rec = make_anthropic(
         (200, anthropic_reply([THINKING, TOOL_USE], "tool_use")),

@@ -19,6 +19,7 @@ import httpx2
 from dotenv import find_dotenv, load_dotenv
 
 from lure.adapters.base import (
+    USAGE_KEYS,
     AdapterError,
     Conversation,
     ModelAdapter,
@@ -133,4 +134,10 @@ class AnthropicConversation(Conversation):
             ],
             stop_reason=response.stop_reason,
             raw=response.to_dict(),
+            usage=_usage(response),
         )
+
+
+def _usage(response: Any) -> dict[str, int]:
+    usage = getattr(response, "usage", None)
+    return {k: v for k in USAGE_KEYS if isinstance(v := getattr(usage, k, None), int)}

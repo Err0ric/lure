@@ -53,10 +53,25 @@ class ModelTurn:
     tool_calls: list[ToolCallRequest] = field(default_factory=list)
     stop_reason: str | None = None
     raw: dict[str, Any] = field(default_factory=dict)
+    # Token counts for this response, e.g. input_tokens and output_tokens.
+    # Empty when the provider does not report them.
+    usage: dict[str, int] = field(default_factory=dict)
 
     @property
     def wants_tools(self) -> bool:
         return bool(self.tool_calls)
+
+
+USAGE_KEYS = (
+    "input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens",
+)
+
+
+def add_usage(total: dict[str, int], usage: dict[str, int]) -> dict[str, int]:
+    """Sum token counts key by key."""
+    for k, v in usage.items():
+        total[k] = total.get(k, 0) + v
+    return total
 
 
 class Conversation(ABC):

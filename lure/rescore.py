@@ -78,6 +78,8 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         judgment=judgment,
         error=error,
         judge=llm_judge.model if llm_judge is not None else "rules",
+        # The target was not called again; keep the original run's usage.
+        usage=record.get("usage", {}),
     )
 
 
