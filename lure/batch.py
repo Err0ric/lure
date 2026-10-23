@@ -6,7 +6,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from lure.attacks import AttackError
+from lure.attacks import PINNED_RE, AttackError
 from lure.judge.rules import Verdict
 from lure.runner import RunResult
 
@@ -15,12 +15,17 @@ UNSCORED = (Verdict.INVALID, Verdict.ERROR)
 
 
 def collect_attack_paths(path: str | Path) -> list[Path]:
-    """Return [path] for a file, or every *.yaml under a folder, sorted."""
+    """Return [path] for a file, or every *.yaml under a folder, sorted.
+
+    A folder run skips pinned older versions (<id>-v<N>.yaml) so it tests
+    the current attacks only; pass a pinned file directly to run it.
+    """
     path = Path(path)
     if path.is_file():
         return [path]
     if path.is_dir():
-        found = sorted(p for p in path.rglob("*.yaml") if p.is_file())
+        found = sorted(p for p in path.rglob("*.yaml")
+                       if p.is_file() and not PINNED_RE.match(p.stem))
         if not found:
             raise AttackError(f"no attack files (*.yaml) found under {path}")
         return found

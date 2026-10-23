@@ -29,6 +29,14 @@ def test_folder_is_recursive_sorted_and_yaml_only(tmp_path):
     assert found == ["a/lure-ipi-003.yaml", "b/lure-ipi-002.yaml", "lure-dpi-001.yaml"]
 
 
+def test_folder_skips_pinned_versions_but_a_file_runs(tmp_path):
+    for name in ["lure-jbk-002.yaml", "lure-jbk-002-v1.yaml"]:
+        (tmp_path / name).write_text("x")
+    assert [p.name for p in collect_attack_paths(tmp_path)] == ["lure-jbk-002.yaml"]
+    pinned = tmp_path / "lure-jbk-002-v1.yaml"
+    assert collect_attack_paths(pinned) == [pinned]
+
+
 def test_empty_folder(tmp_path):
     (tmp_path / ".gitkeep").write_text("")
     with pytest.raises(AttackError, match="no attack files"):

@@ -495,3 +495,19 @@ def test_version_loads(repo):
 def test_version_invalid(repo, bad):
     with pytest.raises(AttackError, match="version must be a whole number"):
         load_attack(write(repo, variant(version=bad)))
+
+
+def test_pinned_version_file_loads(repo):
+    path = write(repo, variant(version=1), name="lure-ipi-900-v1")
+    a = load_attack(path)
+    assert (a.id, a.version) == ("lure-ipi-900", 1)
+
+
+@pytest.mark.parametrize("name, version, match", [
+    ("lure-ipi-900-v1", 2, "file name says v1 but version is 2"),
+    ("lure-ipi-901-v1", 1, "file name must match id"),
+    ("lure-ipi-900-x1", 1, "file name must match id"),
+])
+def test_pinned_version_file_invalid(repo, name, version, match):
+    with pytest.raises(AttackError, match=match):
+        load_attack(write(repo, variant(version=version), name=name))

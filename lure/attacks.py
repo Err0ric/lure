@@ -60,6 +60,8 @@ RULE_KEYS = {
 }
 
 ID_RE = re.compile(r"^lure-[a-z]+-\d{3}$")
+# A pinned older version: lure-jbk-002-v1
+PINNED_RE = re.compile(r"^(lure-[a-z]+-\d{3})-v(\d+)$")
 ATLAS_RE = re.compile(r"^AML\.T\d{4}(\.\d{3})?$")
 ATTACK_RE = re.compile(r"^T\d{4}(\.\d{3})?$")
 LOCATION_RE = re.compile(r"^[A-Za-z_]\w*(\[\d+\]|\.[A-Za-z_]\w*)*$")
@@ -208,8 +210,11 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     attack_id = data["id"]
     if not isinstance(attack_id, str) or not ID_RE.match(attack_id):
         raise fail(f"id {attack_id!r} must look like lure-xxx-001")
-    if path.stem != attack_id:
-        raise fail(f"file name must match id {attack_id!r}")
+    # <id>.yaml is the current version; <id>-v<N>.yaml pins an older one so
+    # its findings stay reproducible.
+    pinned = PINNED_RE.match(path.stem)
+    if path.stem != attack_id and not (pinned and pinned.group(1) == attack_id):
+        raise fail(f"file name must match id {attack_id!r} (or {attack_id}-v<N> for a pinned version)")
 
     for key in ("name", "target_task"):
         if not isinstance(data[key], str) or not data[key].strip():
@@ -217,6 +222,8 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     version = data.get("version", 1)
     if isinstance(version, bool) or not isinstance(version, int) or version < 1:
         raise fail("version must be a whole number of at least 1")
+    if pinned and int(pinned.group(2)) != version:
+        raise fail(f"file name says v{pinned.group(2)} but version is {version}")
     system_prompt = data.get("system_prompt")
     if system_prompt is not None and (
         not isinstance(system_prompt, str) or not system_prompt.strip()
