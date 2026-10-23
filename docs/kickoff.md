@@ -175,7 +175,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 
 ### Phase 4: Ship v1.0
 
-- [ ] Security review of the repo itself
+- [x] Security review of the repo itself
 - [ ] CI on every PR
 - [ ] Quickstart, demo GIF, sample report in the README
 - [ ] Tag v1.0 and publish the release
