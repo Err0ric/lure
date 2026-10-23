@@ -30,9 +30,15 @@ def collect_attack_paths(path: str | Path) -> list[Path]:
 @dataclass
 class SummaryRow:
     attack_id: str
+    version: int = 1
     counts: Counter = field(default_factory=Counter)
     # (verdict, reason) -> runs, for Invalid and Error runs.
     unscored_reasons: Counter = field(default_factory=Counter)
+
+    @property
+    def label(self) -> str:
+        """The attack id, plus the version when it is past v1."""
+        return self.attack_id if self.version == 1 else f"{self.attack_id} v{self.version}"
 
     @property
     def runs(self) -> int:
@@ -53,10 +59,12 @@ class SummaryRow:
 
 
 def summarize(results: list[RunResult]) -> list[SummaryRow]:
-    """One row per attack id, in first-seen order."""
-    rows: dict[str, SummaryRow] = {}
+    """One row per attack id and version, in first-seen order. Versions are
+    never mixed: a stricter v2 is a different test from v1."""
+    rows: dict[tuple[str, int], SummaryRow] = {}
     for r in results:
-        row = rows.setdefault(r.attack.id, SummaryRow(r.attack.id))
+        key = (r.attack.id, r.attack.version)
+        row = rows.setdefault(key, SummaryRow(*key))
         row.counts[r.judgment.verdict] += 1
         if r.judgment.verdict in UNSCORED:
             row.unscored_reasons[(r.judgment.verdict, r.judgment.reason)] += 1

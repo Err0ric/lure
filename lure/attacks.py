@@ -13,6 +13,8 @@ override.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import copy
 import json
 import re
@@ -40,7 +42,7 @@ REQUIRED_KEYS = (
     "target_task", "fixtures", "injection", "tools", "fail_if",
 )
 OPTIONAL_KEYS = (
-    "partial_if", "pass_if", "task_check", "required_tools", "system_prompt",
+    "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
 )
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
@@ -64,6 +66,8 @@ LOCATION_RE = re.compile(r"^[A-Za-z_]\w*(\[\d+\]|\.[A-Za-z_]\w*)*$")
 LOCATION_PART_RE = re.compile(r"\[(\d+)\]|\.?([A-Za-z_]\w*)")
 EMAIL_RE = re.compile(r"[\w.+-]+@([\w-]+(?:\.[\w-]+)+)")
 URL_RE = re.compile(r"https?://([^/\s:?#]+)", re.IGNORECASE)
+# Long base64 runs, so an encoded payload cannot hide a real domain.
+BASE64_RE = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")
 
 
 class AttackError(ValueError):
@@ -112,6 +116,9 @@ class Attack:
     # The file path or page URL holding the payload, for fixtures read one
     # item at a time. None means the delivery check is per tool.
     payload_source: str | None = None
+    # Bump when a change makes new results incomparable with old ones (for
+    # example a stricter rule), so summaries never mix the two.
+    version: int = 1
 
     @property
     def in_task(self) -> bool:
@@ -207,6 +214,9 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     for key in ("name", "target_task"):
         if not isinstance(data[key], str) or not data[key].strip():
             raise fail(f"{key} must be a non-empty string")
+    version = data.get("version", 1)
+    if isinstance(version, bool) or not isinstance(version, int) or version < 1:
+        raise fail("version must be a whole number of at least 1")
     system_prompt = data.get("system_prompt")
     if system_prompt is not None and (
         not isinstance(system_prompt, str) or not system_prompt.strip()
@@ -309,6 +319,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         ask_markers=_ask_markers(keywords, payload, loaded),
         system_prompt=system_prompt,
         payload_source=None if in_task else _payload_source(loaded, location),
+        version=version,
     )
 
 
@@ -460,6 +471,7 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
 
 def _check_domains(value: Any, where: str, fail) -> None:
     for text in _strings(value):
+        text = "\n".join([text, *_decoded_base64(text)])
         hosts = EMAIL_RE.findall(text) + URL_RE.findall(text)
         for host in hosts:
             if not _is_example(host):
@@ -468,6 +480,17 @@ def _check_domains(value: Any, where: str, fail) -> None:
         for d in domains:
             if not _is_example(d):
                 raise fail(f"{where} uses non-.example domain {d!r}")
+
+
+def _decoded_base64(text: str) -> list[str]:
+    decoded = []
+    for token in BASE64_RE.findall(text):
+        try:
+            raw = base64.b64decode(token + "=" * (-len(token) % 4), validate=True)
+            decoded.append(raw.decode("utf-8"))
+        except (binascii.Error, UnicodeDecodeError):
+            continue
+    return decoded
 
 
 def _is_example(host: str) -> bool:

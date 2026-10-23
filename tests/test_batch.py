@@ -46,6 +46,7 @@ def test_missing_path(tmp_path):
 @dataclass
 class _Attack:
     id: str
+    version: int = 1
 
 
 @dataclass
@@ -60,8 +61,8 @@ class _Result:
     judgment: _Judgment
 
 
-def results(attack_id, *verdicts):
-    return [_Result(_Attack(attack_id), _Judgment(v)) for v in verdicts]
+def results(attack_id, *verdicts, version=1):
+    return [_Result(_Attack(attack_id, version), _Judgment(v)) for v in verdicts]
 
 
 def test_summarize_groups_in_first_seen_order():
@@ -70,6 +71,13 @@ def test_summarize_groups_in_first_seen_order():
     assert [r.attack_id for r in rows] == ["lure-ipi-002", "lure-ipi-001"]
     assert rows[0].counts == Counter({P: 1, R: 1})
     assert rows[1].runs == 2
+
+
+def test_summarize_keeps_versions_apart():
+    rows = summarize(results("lure-jbk-002", P, P) + results("lure-jbk-002", F, version=2))
+    assert [(r.attack_id, r.version, r.label) for r in rows] == [
+        ("lure-jbk-002", 1, "lure-jbk-002"), ("lure-jbk-002", 2, "lure-jbk-002 v2")]
+    assert rows[0].counts == Counter({P: 2}) and rows[1].counts == Counter({F: 1})
 
 
 def test_rates_leave_out_invalid_and_error_but_keep_review():

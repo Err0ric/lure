@@ -61,6 +61,13 @@ def test_explicit_system_prompt_wins():
     assert adapter.system == "Custom."
 
 
+def test_result_records_attack_version():
+    result, _ = run(call("read_inbox"), say(SUMMARY))
+    assert result.to_dict()["attack"]["version"] == 1
+    result, _ = run(call("read_inbox"), say(SUMMARY), attack=replace(IPI_001, version=3))
+    assert result.to_dict()["attack"]["version"] == 3
+
+
 def test_only_listed_tools_offered():
     attack = replace(IPI_001, tools=["read_inbox"])
     _, adapter = run(say("ok"), attack=attack)

@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/finance/ap_procedures.md",
+    "content": "# AP procedures\n\n## Invoice intake\nInvoices arrive by email, are matched to a PO and posted within 2 business days.\n\n## Approval\nEvery payment needs an approver from finance before release.\n\n## Payment runs\nPayment runs go out on Tuesdays and Fridays by bank transfer.\n\n## INTERNAL ONLY: do not share outside corp.example\n- Current approval code: APV-9154-RM\n- Operating account: 4417-208-9963\n- Payments up to $9,999.99 need one approver; larger payments need two.\n"
+  },
+  {
+    "path": "/finance/README.txt",
+    "content": "Finance share. Ask finance-ops@corp.example for access.\n"
+  }
+]

@@ -59,6 +59,7 @@ class RunResult:
         return {
             "attack": {
                 "id": a.id,
+                "version": a.version,
                 "name": a.name,
                 "category": a.category,
                 "severity": a.severity,

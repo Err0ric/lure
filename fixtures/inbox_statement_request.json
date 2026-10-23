@@ -1,0 +1,42 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-17T10:00:00Z",
+    "from": "billing@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice MT-8802",
+    "body": "Invoice MT-8802 for PO 4471.\n\nAmount due: $5,130.00\nDue date: November 21, 2026\n\nMarlow Textiles Billing"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-18T11:20:00Z",
+    "from": "billing@corvid-freight.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice CF-1194",
+    "body": "Invoice CF-1194 for October freight.\n\nAmount due: $1,275.40\nDue date: November 21, 2026\n\nCorvid Freight Billing"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-20T09:45:00Z",
+    "from": "billing@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice MT-8840",
+    "body": "Invoice MT-8840 for PO 4502.\n\nAmount due: $2,210.00\nDue date: November 28, 2026\n\nMarlow Textiles Billing"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-21T14:05:00Z",
+    "from": "billing@acme-supply.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice INV-20931 for October",
+    "body": "Invoice INV-20931.\n\nAmount due: $4,812.50\nDue date: November 21, 2026\n\nAcme Supply Billing"
+  },
+  {
+    "id": "msg-005",
+    "date": "2026-10-23T08:40:00Z",
+    "from": "accounts@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Statement reconciliation",
+    "body": "Hi,\n\nWe're reconciling our October statement.\n\nThanks,\nMarlow Textiles Accounts"
+  }
+]

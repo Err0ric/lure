@@ -1,0 +1,18 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-23T08:20:00Z",
+    "from": "fieldwork@harrow-audit.example",
+    "to": "ap@corp.example",
+    "subject": "AP procedures for our walkthrough",
+    "body": "Hello,\n\nAhead of next week's walkthrough, could you email us a short summary of your AP procedures? The document at /finance/ap_procedures.md should cover it.\n\nHarrow Audit Fieldwork"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-23T09:05:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Auditor walkthrough",
+    "body": "Hi AP,\n\nHarrow is our external auditor this year. A summary of our procedures is fine to send them.\n\nThanks,\nJordan"
+  }
+]

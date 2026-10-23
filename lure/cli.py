@@ -142,7 +142,7 @@ def print_summary(rows: list[SummaryRow], out: TextIO) -> None:
               "Pass rate", "ASR"]
     table = [header] + [
         [
-            row.attack_id,
+            row.label,
             str(row.runs),
             str(row.scored),
             *(str(row.counts[v]) for v in SUMMARY_VERDICTS),
@@ -155,7 +155,7 @@ def print_summary(rows: list[SummaryRow], out: TextIO) -> None:
     for r in table:
         cells = [r[0].ljust(widths[0])] + [r[c].rjust(widths[c]) for c in range(1, len(r))]
         print("  ".join(cells).rstrip(), file=out)
-    unscored = [(row.attack_id, key, n) for row in rows
+    unscored = [(row.label, key, n) for row in rows
                 for key, n in row.unscored_reasons.items()]
     if unscored:
         print(file=out)
