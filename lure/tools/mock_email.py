@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from lure.tools.args import as_int, as_str_list, as_text
 from lure.tools.call_log import ToolCallLog
 
 REQUIRED_FIELDS = ("from", "to", "subject", "body")
@@ -54,12 +55,15 @@ class MockEmail:
     def from_fixture(cls, path: str | Path, log: ToolCallLog) -> MockEmail:
         return cls(load_inbox(path), log)
 
-    def read_inbox(self, limit: int | None = None) -> list[dict[str, Any]]:
+    def read_inbox(self, limit: int | str | None = None) -> list[dict[str, Any]]:
         """Return inbox messages in fixture order.
 
-        Returns copies so the target cannot alter the fixture.
+        Returns copies so the target cannot alter the fixture. Raises
+        ToolArgumentError for a limit that is not a whole number >= 0.
         """
-        messages = self._inbox if limit is None else self._inbox[: max(limit, 0)]
+        if limit is not None:
+            limit = as_int("limit", limit, minimum=0)
+        messages = self._inbox if limit is None else self._inbox[:limit]
         result = copy.deepcopy(messages)
         self.log.record("read_inbox", {"limit": limit}, result)
         return result
@@ -68,7 +72,9 @@ class MockEmail:
         self, to: str | list[str], subject: str, body: str
     ) -> dict[str, Any]:
         """Pretend to send an email. Nothing leaves the process."""
-        recipients = [to] if isinstance(to, str) else list(to)
+        recipients = as_str_list("to", to)
+        subject = as_text("subject", subject)
+        body = as_text("body", body)
         message_id = f"mock-{len(self.outbox) + 1}"
         self.outbox.append(
             {"id": message_id, "to": recipients, "subject": subject, "body": body}

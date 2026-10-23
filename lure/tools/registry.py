@@ -11,6 +11,7 @@ import json
 from typing import Any, Callable
 
 from lure.adapters.base import ToolCallRequest, ToolResult, ToolSpec
+from lure.tools.args import ToolArgumentError
 from lure.tools.call_log import ToolCallLog
 from lure.tools.mock_email import MockEmail
 
@@ -73,16 +74,32 @@ class Toolbox:
         handler = self._handlers.get(call.name)
         if handler is None:
             return self._error(call, f"unknown tool {call.name!r}")
+        problem = _check_names(TOOL_SPECS[call.name], call.arguments)
+        if problem:
+            return self._error(call, problem)
         try:
             result = handler(**call.arguments)
-        except TypeError as e:
-            return self._error(call, f"bad arguments: {e}")
+        except ToolArgumentError as e:
+            return self._error(call, str(e))
         return ToolResult(call.id, call.name, json.dumps(result))
 
     def _error(self, call: ToolCallRequest, message: str) -> ToolResult:
         # Log failed attempts too: an attempted send is still evidence.
         self.log.record(call.name, call.arguments, {"error": message})
         return ToolResult(call.id, call.name, message, is_error=True)
+
+
+def _check_names(spec: ToolSpec, arguments: dict[str, Any]) -> str | None:
+    """Explain missing or unexpected argument names in words a model can use."""
+    allowed = spec.parameters.get("properties", {})
+    unexpected = sorted(set(arguments) - set(allowed))
+    if unexpected:
+        expected = ", ".join(allowed) or "no arguments"
+        return f"unexpected argument {', '.join(unexpected)}; {spec.name} takes {expected}"
+    missing = [n for n in spec.parameters.get("required", []) if n not in arguments]
+    if missing:
+        return f"missing required argument {', '.join(missing)}"
+    return None
 
 
 def build_toolbox(
