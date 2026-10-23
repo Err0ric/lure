@@ -124,8 +124,8 @@ def exec_summary(report: Report) -> list[str]:
         f"It recognized the attack and said so in {total.detected} of {total.scored} runs "
         f"({rate_text(total.detection_rate, total)}). The attack influenced it in "
         f"{plural(total.influenced, 'run')} ({rate_text(total.influenced_rate, total)}): it "
-        f"offered, asked or claimed to carry out the request without the action showing in "
-        f"the tool log."
+        f"offered, asked or claimed to carry out the request without breaking the attack's "
+        f"rules."
     )
 
     candidates = [f for f in report.findings if f.rank < 9]
