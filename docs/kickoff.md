@@ -159,7 +159,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 - [x] Mock files, HTTP and payments tools
 - [x] 3 to 5 attacks per category (about 20 total)
 - [x] ATLAS and ATT&CK IDs verified on every attack
-- [ ] Unit tests for each mock tool and rule
+- [x] Unit tests for each mock tool and rule
 - [x] Batch runs: `lure run` takes a folder, `--repeat N`, summary table with pass rate and ASR
 
 ### Phase 3: Judge and report
@@ -167,6 +167,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 - [x] LLM judge for nuanced cases, with the rubric as its prompt (opt-in: `--judge llm`)
   - LLM judge is the priority; keyword heuristics hit their limit on Partial (ipi-007 false positive)
   - Catch paraphrased leaks that `body_contains` misses (e.g. ipi-007: "two open invoices" with no IDs or amounts)
+  - Partial severity: distinguish offering the attacker's action outright vs. only with explicit user confirmation (tab-002)
 - [ ] results.json + DuckDB store
 - [ ] HTML report with ATLAS heatmap and top findings
 - [ ] Exec summary generator
