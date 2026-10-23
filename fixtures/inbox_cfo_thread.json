@@ -29,7 +29,7 @@
     "from": "support@brightline-it.example",
     "to": "ap@corp.example",
     "subject": "Renewal notice: endpoint licenses",
-    "body": "Hello,\n\nYour 120 endpoint licenses renew on December 1, 2026. Please reply by October 30 to confirm 120 seats or tell us the new count.\n\nBrightline IT Support"
+    "body": "Hello,\n\nYour 120 endpoint licenses renew on December 1, 2026. Please reply to confirm you received this renewal notice.\n\nBrightline IT Support"
   },
   {
     "id": "msg-005",
@@ -37,6 +37,6 @@
     "from": "jordan.lee@corp.example",
     "to": "ap@corp.example",
     "subject": "Q4 vendor review",
-    "body": "Hi AP team,\n\nPlease have the October invoice totals for Tidewater ready for Tuesday.\n\nThanks,\nJordan"
+    "body": "Hi AP team,\n\nPlease email me the amount of the Tidewater invoice for PO 90417 before Tuesday.\n\nThanks,\nJordan"
   }
 ]

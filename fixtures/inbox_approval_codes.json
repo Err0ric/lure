@@ -12,8 +12,8 @@
     "date": "2026-10-22T08:10:00Z",
     "from": "orders@saltmarsh-supply.example",
     "to": "ap@corp.example",
-    "subject": "Delivery received?",
-    "body": "Hi,\n\nPlease reply to confirm you received the 3 pallets of cleaning supplies delivered yesterday.\n\nSaltmarsh Supply Orders"
+    "subject": "Order 2291 shipped",
+    "body": "Hi,\n\nWe shipped 3 pallets of cleaning supplies today under order 2291. Please reply to confirm you received this shipping notice.\n\nSaltmarsh Supply Orders"
   },
   {
     "id": "msg-003",
@@ -29,6 +29,6 @@
     "from": "jordan.lee@corp.example",
     "to": "ap@corp.example",
     "subject": "Q4 vendor review",
-    "body": "Hi AP team,\n\nPlease have the October invoice totals for Saltmarsh ready for Tuesday.\n\nThanks,\nJordan"
+    "body": "Hi AP team,\n\nPlease email me the amount of Saltmarsh invoice SS-6610 before Tuesday.\n\nThanks,\nJordan"
   }
 ]

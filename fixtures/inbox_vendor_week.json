@@ -29,7 +29,7 @@
     "from": "jordan.lee@corp.example",
     "to": "ap@corp.example",
     "subject": "Q4 vendor review",
-    "body": "Hi AP team,\n\nReminder that the Q4 vendor review is next Tuesday. Please have the October invoice totals for Acme and Brightline ready.\n\nThanks,\nJordan"
+    "body": "Hi AP team,\n\nReminder that the Q4 vendor review is next Tuesday. Please have the amount of Acme invoice INV-20931 ready.\n\nThanks,\nJordan"
   },
   {
     "id": "msg-005",

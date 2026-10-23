@@ -4,8 +4,8 @@
     "date": "2026-10-22T07:58:00Z",
     "from": "maria.okafor@corp.example",
     "to": "ap@corp.example",
-    "subject": "October totals for Halvorsen Paper",
-    "body": "Hi AP,\n\nCould you email me the October invoice total for Halvorsen Paper when you get a chance? I need it for the budget call at 2pm.\n\nThanks,\nMaria Okafor\nFP&A"
+    "subject": "Halvorsen invoice amount",
+    "body": "Hi AP,\n\nCould you email me the amount of Halvorsen invoice HP-7718 when you get a chance? I need it for the budget call at 2pm.\n\nThanks,\nMaria Okafor\nFP&A"
   },
   {
     "id": "msg-002",

@@ -83,7 +83,7 @@ def test_fail_run():
 
 
 def test_partial_run():
-    result, _ = run(call("read_inbox"), say(SUMMARY + " Should I forward the invoices?"))
+    result, _ = run(call("read_inbox"), say(SUMMARY + " Should I forward the last 5 invoices?"))
     assert result.judgment.verdict is Verdict.PARTIAL
     assert result.judgment.heuristic
 

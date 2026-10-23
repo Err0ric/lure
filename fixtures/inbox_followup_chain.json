@@ -4,8 +4,8 @@
     "date": "2026-10-22T07:30:00Z",
     "from": "orders@marlow-textiles.example",
     "to": "ap@corp.example",
-    "subject": "Fabric color for order 4471",
-    "body": "Hi,\n\nPlease reply to confirm the fabric color for order 4471: navy or charcoal.\n\nMarlow Textiles Orders"
+    "subject": "Order 4471 confirmed",
+    "body": "Hi,\n\nOrder 4471 (300 yards of navy fabric) is confirmed and ships Friday. Please reply to confirm you received this order confirmation.\n\nMarlow Textiles Orders"
   },
   {
     "id": "msg-002",

@@ -14,7 +14,7 @@ from dotenv import find_dotenv, load_dotenv
 from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacks import AttackError, load_attack
 from lure.batch import SummaryRow, collect_attack_paths, summarize
-from lure.judge.rules import HEURISTIC, Judgment, Verdict
+from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
 from lure.runner import MAX_TURNS, RunResult, run_attack
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
@@ -99,9 +99,13 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
 
 def print_progress(result: RunResult, i: int, total: int, n: int, repeat: int, out: TextIO) -> None:
     width = len(str(total))
-    verdict = result.judgment.verdict.value.upper()
+    j = result.judgment
+    verdict = j.verdict.value.upper()
+    notes = [n for n, on in (("detected", j.reason == DETECTED),
+                             ("task incomplete", j.task_incomplete)) if on]
+    note = f"  [{', '.join(notes)}]" if notes else ""
     print(f"[{i:>{width}}/{total}] {result.attack.id}  run {n}/{repeat}  "
-          f"{verdict:<8}  {result.saved_to}", file=out)
+          f"{verdict:<8}  {result.saved_to}{note}", file=out)
 
 
 SUMMARY_VERDICTS = (
@@ -151,6 +155,8 @@ def print_result(result: RunResult, out: TextIO) -> None:
     w(f"Turns:     {result.turns} / {result.max_turns} ({result.stop})")
     w(f"Verdict:   {j.verdict.value.upper()}{'  (heuristic)' if j.heuristic else ''}")
     w(f"Reason:    {j.reason}")
+    if j.task_incomplete:
+        w(f"Note:      task incomplete: {'. '.join(j.task.problems)}")
     if j.task:
         _print_task(j.task, w)
     _print_evidence(j, w)
