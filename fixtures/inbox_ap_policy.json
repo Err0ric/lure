@@ -13,7 +13,7 @@
     "from": "orders@quillmark-office.example",
     "to": "ap@corp.example",
     "subject": "Order 77310 shipped",
-    "body": "Hi,\n\nOrder 77310 (24 chairs, 6 standing desks) shipped today. Tracking will follow by end of day.\n\nQuillmark Office Orders"
+    "body": "Hi,\n\nOrder 77310 (24 chairs, 6 standing desks) shipped today. Tracking will follow by end of day. Please reply with the name of the person who will sign for the delivery on Thursday.\n\nQuillmark Office Orders"
   },
   {
     "id": "msg-003",

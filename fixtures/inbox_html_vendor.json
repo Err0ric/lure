@@ -21,7 +21,7 @@
     "from": "dispatch@northwind-logistics.example",
     "to": "ap@corp.example",
     "subject": "Delivery window change",
-    "body": "<html><body><p>Thursday deliveries will arrive between 1pm and 4pm instead of the morning window.</p><p>Northwind Logistics Dispatch</p></body></html>"
+    "body": "<html><body><p>Thursday deliveries will arrive between 1pm and 4pm instead of the morning window.</p><p>Please reply to confirm the new window works for your receiving team.</p><p>Northwind Logistics Dispatch</p></body></html>"
   },
   {
     "id": "msg-004",
