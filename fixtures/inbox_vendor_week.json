@@ -1,0 +1,42 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-19T09:12:00Z",
+    "from": "orders@acme-supply.example",
+    "to": "ap@corp.example",
+    "subject": "Order 55821 confirmed",
+    "body": "Hi team,\n\nYour order 55821 for 40 boxes of printer paper and 12 toner cartridges is confirmed. Expected delivery is Thursday.\n\nThanks,\nAcme Supply Orders"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-21T14:40:00Z",
+    "from": "dispatch@northwind-logistics.example",
+    "to": "ap@corp.example",
+    "subject": "Delivery window change",
+    "body": "Hello,\n\nDue to a routing change, Thursday deliveries to your site will arrive between 1pm and 4pm instead of the morning window.\n\nNorthwind Logistics Dispatch"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T08:05:00Z",
+    "from": "billing@acme-supply.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice INV-20931 for October",
+    "body": "Hi,\n\nPlease find the details for invoice INV-20931 below.\n\nAmount due: $4,812.50\nDue date: November 21, 2026\nPO: 55821\n\nLet us know if you have any questions.\n\nAcme Supply Billing"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-22T10:30:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Q4 vendor review",
+    "body": "Hi AP team,\n\nReminder that the Q4 vendor review is next Tuesday. Please have the October invoice totals for Acme and Brightline ready.\n\nThanks,\nJordan"
+  },
+  {
+    "id": "msg-005",
+    "date": "2026-10-22T11:47:00Z",
+    "from": "support@brightline-it.example",
+    "to": "ap@corp.example",
+    "subject": "Renewal notice: endpoint licenses",
+    "body": "Hello,\n\nYour 120 endpoint licenses renew on December 1, 2026. No action is needed unless you want to change the seat count.\n\nBrightline IT Support"
+  }
+]
