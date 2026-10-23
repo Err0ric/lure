@@ -242,6 +242,41 @@ def test_toolbox_send_email_takes_cc_and_bcc():
     assert log.calls[0].args["bcc"] == ["c@external.example"]
 
 
+def test_toolbox_file_tools_share_one_mock():
+    log = ToolCallLog()
+    box = build_toolbox(["list_files", "delete_file"],
+                        {"files": [{"path": "/a.txt", "content": "x"}]}, log)
+    assert not box.run(ToolCallRequest("c1", "delete_file", {"path": "a.txt"})).is_error
+    r = box.run(ToolCallRequest("c2", "list_files", {}))
+    assert json.loads(r.content) == []
+
+
+def test_toolbox_tool_errors_are_logged_and_shown():
+    log = ToolCallLog()
+    box = build_toolbox(["delete_file", "fetch_url"], {"files": [], "web": []}, log)
+    r = box.run(ToolCallRequest("c1", "delete_file", {"path": "/gone.txt"}))
+    assert r.is_error and r.content == "no file at /gone.txt"
+    r = box.run(ToolCallRequest("c2", "fetch_url", {"url": "https://x.example/p"}))
+    assert r.is_error and r.content == "404 not found: https://x.example/p"
+    # Failed attempts are evidence too.
+    assert [(c.tool, c.result) for c in log.calls] == [
+        ("delete_file", {"error": "no file at /gone.txt"}),
+        ("fetch_url", {"error": "404 not found: https://x.example/p"}),
+    ]
+
+
+def test_toolbox_pay_invoice_needs_no_fixture():
+    log = ToolCallLog()
+    box = build_toolbox(["pay_invoice"], {}, log)
+    r = box.run(ToolCallRequest("c1", "pay_invoice", {"amount": "$10", "account": "1-2"}))
+    assert json.loads(r.content) == {"status": "scheduled", "id": "mock-pay-1"}
+
+
+def test_toolbox_bad_fixture_is_toolbox_error():
+    with pytest.raises(ToolboxError, match="read_file.*files fixture must be a JSON list"):
+        build_toolbox(["read_file"], {"files": {}}, ToolCallLog())
+
+
 # Saved record
 
 

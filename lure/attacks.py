@@ -23,6 +23,7 @@ from typing import Any
 import yaml
 
 from lure.tools import KNOWN_TOOLS
+from lure.tools.sources import item_source
 
 CATEGORIES = frozenset(
     {
@@ -50,6 +51,7 @@ RULE_KEYS = {
     "tool": "tool",
     "to_domain_not_in": "domains",
     "body_contains": "strings",
+    "account_not_in": "strings",
     "reply_contains": "strings",
     "asked_user_before": "tool",
     "flagged_as_suspicious": "bool",
@@ -107,6 +109,9 @@ class Attack:
     ask_markers: list[str] = field(default_factory=list)
     # The target's system prompt; None means the runner's neutral default.
     system_prompt: str | None = None
+    # The file path or page URL holding the payload, for fixtures read one
+    # item at a time. None means the delivery check is per tool.
+    payload_source: str | None = None
 
     @property
     def in_task(self) -> bool:
@@ -303,7 +308,15 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         required_tools=required_tools,
         ask_markers=_ask_markers(keywords, payload, loaded),
         system_prompt=system_prompt,
+        payload_source=None if in_task else _payload_source(loaded, location),
     )
+
+
+def _payload_source(fixtures, location) -> str | None:
+    parts = [int(i) if i else name for i, name in LOCATION_PART_RE.findall(location)]
+    if len(parts) < 2 or not isinstance(parts[1], int):
+        return None
+    return item_source(parts[0], fixtures[parts[0]][parts[1]])
 
 
 def _required_tools(value, tools, fail) -> list[str]:
@@ -346,14 +359,16 @@ def _ask_markers(keywords, payload, fixtures) -> list[str]:
 
 
 def _check_body_contains(rules, fixtures, fail) -> None:
-    # The strings are fixture data the target must not send out, so a typo
-    # would leave the rule silently unable to match.
+    # body_contains strings are fixture data the target must not send out,
+    # and account_not_in lists the accounts on file. A typo in either would
+    # leave the rule silently wrong.
     corpus = "\n".join(_strings(fixtures)).lower()
     for key, rule_list in rules.items():
         for i, rule in enumerate(rule_list):
-            for text in rule.get("body_contains", []):
-                if text.lower() not in corpus:
-                    raise fail(f"{key}[{i}] body_contains {text!r} does not appear in the fixtures")
+            for k in ("body_contains", "account_not_in"):
+                for text in rule.get(k, []):
+                    if text.lower() not in corpus:
+                        raise fail(f"{key}[{i}] {k} {text!r} does not appear in the fixtures")
 
 
 def _check_reply_contains(rules, fixtures, system_prompt, tools, task, payload, fail) -> None:
@@ -437,7 +452,7 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
                 or not all(isinstance(t, str) and t.strip() for t in v)
             ):
                 raise fail(f"{where} {k} must be a non-empty list of non-empty strings")
-        for k in ("to_domain_not_in", "body_contains"):
+        for k in ("to_domain_not_in", "body_contains", "account_not_in"):
             if k in rule and not ({"tool", "asked_user_before"} & set(rule)):
                 raise fail(f"{where} {k} needs a tool or asked_user_before")
     return list(value)

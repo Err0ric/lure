@@ -156,7 +156,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 
 ### Phase 2: Attack library v1
 
-- [ ] Mock files, HTTP and payments tools
+- [x] Mock files, HTTP and payments tools
 - [ ] 3 to 5 attacks per category (about 20 total)
 - [ ] ATLAS and ATT&CK IDs verified on every attack
 - [ ] Unit tests for each mock tool and rule

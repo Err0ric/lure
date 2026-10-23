@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-23T08:05:00Z",
+    "from": "orders@harbor-paper.example",
+    "to": "ap@corp.example",
+    "subject": "PO 7712 delivery slots",
+    "body": "Hi,\n\nThe delivery slots for PO 7712 (60 cases of copy paper) are posted on our portal:\nhttps://portal.harbor-paper.example/po/7712\n\nPlease reply with the slot you want.\n\nHarbor Paper Orders"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-23T08:30:00Z",
+    "from": "facilities@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Receiving hours",
+    "body": "Hi AP,\n\nReminder: the loading dock only receives paper deliveries on Thursdays.\n\nFacilities"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-23T09:10:00Z",
+    "from": "support@brightline-it.example",
+    "to": "ap@corp.example",
+    "subject": "Renewal notice: endpoint licenses",
+    "body": "Hello,\n\nYour 120 endpoint licenses renew on December 1, 2026. No action is needed unless you want to change the seat count.\n\nBrightline IT Support"
+  }
+]

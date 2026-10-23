@@ -12,9 +12,12 @@ from collections.abc import Callable
 from typing import Any
 
 from lure.adapters.base import ToolCallRequest, ToolResult, ToolSpec
-from lure.tools.args import ToolArgumentError
+from lure.tools.args import ToolError
 from lure.tools.call_log import ToolCallLog
-from lure.tools.mock_email import MockEmail
+from lure.tools.mock_email import FixtureError, MockEmail
+from lure.tools.mock_files import MockFiles
+from lure.tools.mock_http import MockHttp
+from lure.tools.mock_payments import MockPayments
 
 TOOL_SPECS = {
     "read_inbox": ToolSpec(
@@ -60,10 +63,86 @@ TOOL_SPECS = {
             "required": ["to", "subject", "body"],
         },
     ),
+    "list_files": ToolSpec(
+        name="list_files",
+        description="List file paths on the team's file share.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "prefix": {
+                    "type": "string",
+                    "description": "Only list files under this folder (optional).",
+                }
+            },
+        },
+    ),
+    "read_file": ToolSpec(
+        name="read_file",
+        description="Read a file from the team's file share.",
+        parameters={
+            "type": "object",
+            "properties": {"path": {"type": "string", "description": "File path."}},
+            "required": ["path"],
+        },
+    ),
+    "write_file": ToolSpec(
+        name="write_file",
+        description="Create or overwrite a file on the team's file share.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path."},
+                "content": {"type": "string"},
+            },
+            "required": ["path", "content"],
+        },
+    ),
+    "delete_file": ToolSpec(
+        name="delete_file",
+        description="Delete a file from the team's file share.",
+        parameters={
+            "type": "object",
+            "properties": {"path": {"type": "string", "description": "File path."}},
+            "required": ["path"],
+        },
+    ),
+    "fetch_url": ToolSpec(
+        name="fetch_url",
+        description="Fetch a web page. Returns its url, status, title and body text.",
+        parameters={
+            "type": "object",
+            "properties": {"url": {"type": "string", "description": "Page address."}},
+            "required": ["url"],
+        },
+    ),
+    "pay_invoice": ToolSpec(
+        name="pay_invoice",
+        description="Pay an invoice by bank transfer from the company account.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "amount": {"type": "number", "description": "Amount in USD."},
+                "account": {
+                    "type": "string",
+                    "description": "Bank account number to pay.",
+                },
+                "invoice": {
+                    "type": "string",
+                    "description": "Invoice number (optional).",
+                },
+            },
+            "required": ["amount", "account"],
+        },
+    ),
 }
 
-# Which fixture each tool reads its data from.
-TOOL_FIXTURES = {"read_inbox": "inbox", "send_email": "inbox"}
+# Which fixture each tool reads its data from; None needs no fixture.
+TOOL_FIXTURES = {
+    "read_inbox": "inbox", "send_email": "inbox",
+    "list_files": "files", "read_file": "files", "write_file": "files", "delete_file": "files",
+    "fetch_url": "web",
+    "pay_invoice": None,
+}
 
 
 class ToolboxError(ValueError):
@@ -90,7 +169,7 @@ class Toolbox:
             return self._error(call, problem)
         try:
             result = handler(**call.arguments)
-        except ToolArgumentError as e:
+        except ToolError as e:
             return self._error(call, str(e))
         return ToolResult(call.id, call.name, json.dumps(result))
 
@@ -118,14 +197,24 @@ def build_toolbox(
 ) -> Toolbox:
     """Build mocks for exactly the listed tools, backed by (planted) fixtures."""
     handlers: dict[str, Callable[..., Any]] = {}
-    email: MockEmail | None = None
+    # One mock per fixture, shared by its tools (a delete shows in a later list).
+    mocks: dict[str, Any] = {}
+    factories = {
+        "inbox": lambda: MockEmail(fixtures["inbox"], log),
+        "files": lambda: MockFiles(fixtures["files"], log),
+        "web": lambda: MockHttp(fixtures["web"], log),
+        None: lambda: MockPayments(log),
+    }
     for name in tools:
         if name not in TOOL_SPECS:
             raise ToolboxError(f"no mock for tool {name!r}")
         fixture = TOOL_FIXTURES[name]
-        if fixture not in fixtures:
+        if fixture is not None and fixture not in fixtures:
             raise ToolboxError(f"tool {name!r} needs a {fixture!r} fixture")
-        if name in ("read_inbox", "send_email"):
-            email = email or MockEmail(fixtures["inbox"], log)
-            handlers[name] = getattr(email, name)
+        if fixture not in mocks:
+            try:
+                mocks[fixture] = factories[fixture]()
+            except FixtureError as e:
+                raise ToolboxError(f"tool {name!r}: {e}") from e
+        handlers[name] = getattr(mocks[fixture], name)
     return Toolbox(handlers, log)

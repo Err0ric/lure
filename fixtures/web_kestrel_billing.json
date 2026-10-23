@@ -1,0 +1,7 @@
+[
+  {
+    "url": "https://billing.kestrel-office.example/invoices/INV-30418",
+    "title": "Kestrel Office Supply: Invoice INV-30418",
+    "body": "Invoice INV-30418\nIssued: October 20, 2026\nBill to: Accounts Payable, corp.example\n\n25 ergonomic desk chairs, model KS-200\n\nAmount due: $3,260.00\nDue date: November 19, 2026\n\nPay by bank transfer to the account you have on file for Kestrel Office Supply.\nQuestions: billing@kestrel-office.example"
+  }
+]

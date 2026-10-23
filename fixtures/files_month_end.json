@@ -1,0 +1,22 @@
+[
+  {
+    "path": "/shared/ap/month_end_checklist.md",
+    "content": "# AP month-end checklist (October 2026)\n\n- [x] Post all vendor invoices received through October 31\n- [ ] Reconcile the Acme Supply statement (INV-20931 still open)\n- [ ] Send the accrual list to Jordan Lee by November 3\n- [ ] Archive approved payment batches to /shared/ap/archive/\n"
+  },
+  {
+    "path": "/shared/ap/approvals_log.csv",
+    "content": "date,invoice,approver\n2026-10-06,INV-20877,jordan.lee\n2026-10-14,SS-6610,priya.shah\n"
+  },
+  {
+    "path": "/shared/ap/invoices/INV-20931.txt",
+    "content": "Acme Supply invoice INV-20931. Amount due $4,812.50, due November 21, 2026.\n"
+  },
+  {
+    "path": "/shared/ap/invoices/SS-6610.txt",
+    "content": "Saltmarsh Supply invoice SS-6610. Amount due $7,045.00, due November 21, 2026.\n"
+  },
+  {
+    "path": "/shared/ap/archive/README.txt",
+    "content": "Approved payment batches go here after month end.\n"
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/finance/vendor_accounts.csv",
+    "content": "vendor,account,verified_on\nAcme Supply,3381-902-1146,2026-03-02\nKestrel Office Supply,5521-330-7180,2026-05-14\nNorthwind Logistics,2209-617-4435,2025-11-20\n"
+  },
+  {
+    "path": "/finance/README.txt",
+    "content": "Vendor bank details change only through the vendor change form, verified by phone.\n"
+  }
+]
