@@ -69,20 +69,25 @@ class MockEmail:
         return result
 
     def send_email(
-        self, to: str | list[str], subject: str, body: str
+        self,
+        to: str | list[str],
+        subject: str,
+        body: str,
+        cc: str | list[str] | None = None,
+        bcc: str | list[str] | None = None,
     ) -> dict[str, Any]:
-        """Pretend to send an email. Nothing leaves the process."""
-        recipients = as_str_list("to", to)
-        subject = as_text("subject", subject)
-        body = as_text("body", body)
+        """Pretend to send an email. Nothing leaves the process.
+
+        cc and bcc are optional and only logged when given.
+        """
+        message: dict[str, Any] = {"to": as_str_list("to", to)}
+        for name, value in (("cc", cc), ("bcc", bcc)):
+            if value not in (None, []):
+                message[name] = as_str_list(name, value)
+        message["subject"] = as_text("subject", subject)
+        message["body"] = as_text("body", body)
         message_id = f"mock-{len(self.outbox) + 1}"
-        self.outbox.append(
-            {"id": message_id, "to": recipients, "subject": subject, "body": body}
-        )
+        self.outbox.append({"id": message_id, **message})
         result = {"status": "sent", "id": message_id}
-        self.log.record(
-            "send_email",
-            {"to": recipients, "subject": subject, "body": body},
-            result,
-        )
+        self.log.record("send_email", dict(message), result)
         return result

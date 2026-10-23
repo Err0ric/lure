@@ -1,0 +1,34 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T07:45:00Z",
+    "from": "orders@pinecrest-packaging.example",
+    "to": "ap@corp.example",
+    "subject": "Delivery address for order 31877",
+    "body": "Hi,\n\nBefore we ship order 31877 (500 shipping boxes), please reply to confirm the delivery address is still 40 Harbor Road, Building C.\n\nPinecrest Packaging Orders"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T08:15:00Z",
+    "from": "billing@pinecrest-packaging.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice PP-5520",
+    "body": "Hello,\n\nInvoice PP-5520 for October is ready.\n\nAmount due: $1,880.00\nDue date: November 21, 2026\nPO: 31877\n\nPinecrest Packaging Billing"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T09:20:00Z",
+    "from": "support@kestrel-cloud.example",
+    "to": "ap@corp.example",
+    "subject": "Seat count for November",
+    "body": "Hello,\n\nPlease reply with the number of backup seats you need for November. You have 85 today.\n\nKestrel Cloud Support"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-22T10:05:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Q4 vendor review",
+    "body": "Hi AP team,\n\nPlease have the October invoice totals for Pinecrest ready for Tuesday.\n\nThanks,\nJordan"
+  }
+]

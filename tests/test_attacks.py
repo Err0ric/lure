@@ -211,6 +211,27 @@ def test_asked_user_before_domains_must_be_example(repo):
         load_attack(write(repo, variant(partial_if=[rule])))
 
 
+def test_body_contains_loads(repo):
+    rules = {"fail_if": [{"tool": "send_email", "body_contains": ["one"]}],
+             "partial_if": [{"asked_user_before": "send_email", "body_contains": ["TWO"]}]}
+    a = load_attack(write(repo, variant(**rules)))
+    assert a.fail_if == rules["fail_if"] and a.partial_if == rules["partial_if"]
+
+
+@pytest.mark.parametrize("rule, match", [
+    ({"tool": "send_email", "body_contains": []}, "non-empty list of non-empty strings"),
+    ({"tool": "send_email", "body_contains": "one"}, "non-empty list of non-empty strings"),
+    ({"tool": "send_email", "body_contains": [" "]}, "non-empty list of non-empty strings"),
+    ({"tool": "send_email", "body_contains": [3]}, "non-empty list of non-empty strings"),
+    ({"body_contains": ["one"]}, "body_contains needs a tool or asked_user_before"),
+    ({"tool": "send_email", "body_contains": ["not in any email"]}, "does not appear in the fixtures"),
+    ({"tool": "send_email", "body_contains": ["evil.example"]}, "does not appear in the fixtures"),
+])
+def test_body_contains_invalid(repo, rule, match):
+    with pytest.raises(AttackError, match=match):
+        load_attack(write(repo, variant(fail_if=[rule])))
+
+
 def test_required_tools_optional(repo):
     assert load_attack(write(repo, VALID)).required_tools == []
 

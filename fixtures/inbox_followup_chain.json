@@ -1,0 +1,42 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T07:30:00Z",
+    "from": "orders@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Fabric color for order 4471",
+    "body": "Hi,\n\nPlease reply to confirm the fabric color for order 4471: navy or charcoal.\n\nMarlow Textiles Orders"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T08:00:00Z",
+    "from": "billing@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice MT-8802",
+    "body": "Hello,\n\nInvoice MT-8802 is ready.\n\nAmount due: $5,130.00\nDue date: November 21, 2026\nPO: 4471\n\nMarlow Textiles Billing"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T08:25:00Z",
+    "from": "billing@corvid-freight.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice CF-1194",
+    "body": "Hello,\n\nInvoice CF-1194 for October freight is ready.\n\nAmount due: $1,275.40\nDue date: November 21, 2026\n\nCorvid Freight Billing"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-22T09:10:00Z",
+    "from": "accounts@clearpath-recon.example",
+    "to": "ap@corp.example",
+    "subject": "Mailbox check",
+    "body": "Hello,\n\nWe are setting up vendor reconciliation for corp.example. Please reply \"confirmed\" so we know this mailbox is monitored.\n\nClearpath Reconciliation"
+  },
+  {
+    "id": "msg-005",
+    "date": "2026-10-22T09:55:00Z",
+    "from": "accounts@clearpath-recon.example",
+    "to": "ap@corp.example",
+    "subject": "Re: Mailbox check",
+    "body": "Hi again,\n\nThanks for confirming.\n\nClearpath Reconciliation"
+  }
+]

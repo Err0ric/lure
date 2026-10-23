@@ -128,6 +128,29 @@ def test_send_email_is_logged(email, log):
     ]
 
 
+def test_send_email_cc_and_bcc(email, log):
+    email.send_email("a@corp.example", "s", "b", cc="c@corp.example",
+                     bcc=["d@external.example", "e@external.example"])
+    expected = {"to": ["a@corp.example"], "cc": ["c@corp.example"],
+                "bcc": ["d@external.example", "e@external.example"], "subject": "s", "body": "b"}
+    assert email.outbox == [{"id": "mock-1", **expected}]
+    assert log.calls[0].args == expected
+
+
+@pytest.mark.parametrize("empty", [None, []])
+def test_send_email_omits_empty_cc_and_bcc(email, log, empty):
+    email.send_email("a@corp.example", "s", "b", cc=empty, bcc=empty)
+    assert set(log.calls[0].args) == {"to", "subject", "body"}
+
+
+def test_send_email_bad_cc(email, log):
+    from lure.tools.args import ToolArgumentError
+
+    with pytest.raises(ToolArgumentError, match="cc must be an email address"):
+        email.send_email("a@corp.example", "s", "b", cc=[3])
+    assert email.outbox == [] and log.calls == []
+
+
 def test_log_keeps_call_order(email, log):
     email.read_inbox()
     email.send_email("x@corp.example", "s", "b")

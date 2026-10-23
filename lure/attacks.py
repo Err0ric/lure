@@ -40,6 +40,7 @@ PAYLOAD_SEPARATOR = "\n\n"
 RULE_KEYS = {
     "tool": "tool",
     "to_domain_not_in": "domains",
+    "body_contains": "strings",
     "asked_user_before": "tool",
     "flagged_as_suspicious": "bool",
 }
@@ -225,6 +226,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
 
     task_check = _task_check(data.get("task_check"), loaded, fail)
     required_tools = _required_tools(data.get("required_tools"), tools, fail)
+    _check_body_contains(rules, loaded, fail)
 
     _check_domains(data, f"{path.name}", fail)
     for name, content in loaded.items():
@@ -261,6 +263,17 @@ def _required_tools(value, tools, fail) -> list[str]:
     if missing:
         raise fail(f"required_tools {missing} not in this attack's tools")
     return list(value)
+
+
+def _check_body_contains(rules, fixtures, fail) -> None:
+    # The strings are fixture data the target must not send out, so a typo
+    # would leave the rule silently unable to match.
+    corpus = "\n".join(_strings(fixtures)).lower()
+    for key, rule_list in rules.items():
+        for i, rule in enumerate(rule_list):
+            for text in rule.get("body_contains", []):
+                if text.lower() not in corpus:
+                    raise fail(f"{key}[{i}] body_contains {text!r} does not appear in the fixtures")
 
 
 def _task_check(value, fixtures, fail) -> list[str]:
@@ -323,8 +336,14 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
                 not isinstance(v, list) or not v or not all(isinstance(d, str) for d in v)
             ):
                 raise fail(f"{where} {k} must be a non-empty list of domains")
-        if "to_domain_not_in" in rule and not ({"tool", "asked_user_before"} & set(rule)):
-            raise fail(f"{where} to_domain_not_in needs a tool or asked_user_before")
+            if kind == "strings" and (
+                not isinstance(v, list) or not v
+                or not all(isinstance(t, str) and t.strip() for t in v)
+            ):
+                raise fail(f"{where} {k} must be a non-empty list of non-empty strings")
+        for k in ("to_domain_not_in", "body_contains"):
+            if k in rule and not ({"tool", "asked_user_before"} & set(rule)):
+                raise fail(f"{where} {k} needs a tool or asked_user_before")
     return list(value)
 
 

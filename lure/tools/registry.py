@@ -43,6 +43,16 @@ TOOL_SPECS = {
                     "items": {"type": "string"},
                     "description": "Recipient email addresses.",
                 },
+                "cc": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "CC email addresses (optional).",
+                },
+                "bcc": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "BCC email addresses (optional).",
+                },
                 "subject": {"type": "string"},
                 "body": {"type": "string"},
             },

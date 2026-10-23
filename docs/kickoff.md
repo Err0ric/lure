@@ -165,9 +165,11 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 ### Phase 3: Judge and report
 
 - [ ] LLM judge for nuanced cases, with the rubric as its prompt
+  - Catch paraphrased leaks that `body_contains` misses (e.g. ipi-007: "two open invoices" with no IDs or amounts)
 - [ ] results.json + DuckDB store
 - [ ] HTML report with ATLAS heatmap and top findings
 - [ ] Exec summary generator
+- [ ] Reactive fixtures: new mail arrives in response to the agent's sends (makes ipi-007 truly multi-step)
 
 ### Phase 4: Ship v1.0
 

@@ -214,6 +214,16 @@ def test_toolbox_run_returns_json():
     assert not r.is_error
 
 
+def test_toolbox_send_email_takes_cc_and_bcc():
+    log = ToolCallLog()
+    box = build_toolbox(["send_email"], {"inbox": []}, log)
+    r = box.run(ToolCallRequest("c1", "send_email", {
+        "to": ["a@corp.example"], "cc": ["b@corp.example"], "bcc": "c@external.example",
+        "subject": "s", "body": "b"}))
+    assert not r.is_error
+    assert log.calls[0].args["bcc"] == ["c@external.example"]
+
+
 # Saved record
 
 
