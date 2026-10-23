@@ -71,12 +71,13 @@ code, pre, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monosp
 
 /* Run facts: one ruled strip, not cards. */
 .facts {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 1rem;
   margin: 0; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
 }
-.facts div { padding: 0.75rem 1rem 0.85rem 0; }
+.facts div { padding: 0.75rem 0 0.85rem; }
+.facts div:nth-child(n+5) { border-top: 1px solid var(--rule); }
 .facts dt { color: var(--ink-2); font-size: 0.875rem; }
-.facts dd { margin: 0.15rem 0 0; font-size: 1.125rem; overflow-wrap: anywhere; }
+.facts dd { margin: 0.15rem 0 0; font-size: 1.125rem; overflow-wrap: break-word; }
 .facts dd small { display: block; color: var(--muted); font-size: 0.8125rem; }
 
 .summary { padding-left: 1.25rem; margin: 0.75rem 0 0; }
@@ -146,6 +147,8 @@ footer p { margin: 0 0 0.4rem; }
 
 @media (max-width: 40rem) {
   body { padding: 0; }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts div:nth-child(n+3) { border-top: 1px solid var(--rule); }
   .sheet { border: 0; border-radius: 0; padding-top: 2rem; }
 }
 @media print {
