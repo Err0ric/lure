@@ -1,4 +1,8 @@
-"""Command line entry point: lure run <attack.yaml|folder> --target ollama|anthropic."""
+"""Command line entry point.
+
+  lure run <attack.yaml|folder> --target ollama|anthropic
+  lure rescore <results folder|file>...  (re-judge saved runs, no target calls)
+"""
 
 from __future__ import annotations
 
@@ -16,6 +20,14 @@ from lure.attacks import AttackError, load_attack
 from lure.batch import SummaryRow, collect_attack_paths, summarize
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
+from lure.rescore import (
+    attack_changed,
+    attack_index,
+    record_key,
+    record_paths,
+    rescore,
+    save_rescored,
+)
 from lure.runner import MAX_TURNS, RunResult, run_attack
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
@@ -62,15 +74,34 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--max-turns", type=int, default=MAX_TURNS)
     run.add_argument("--repeat", type=_positive_int, default=1,
                      help="run each attack N times (default 1)")
-    run.add_argument("--judge", choices=JUDGES, default="rules",
-                     help="rules (default), or llm: ask a judge model about every "
-                          "run with a reply except Fail and confirmed Partial")
-    run.add_argument("--judge-target", choices=TARGETS, default="anthropic",
-                     help="provider for the LLM judge (default anthropic)")
-    run.add_argument("--judge-model",
-                     help="LLM judge model (default claude-haiku-5-5 on anthropic)")
+    _judge_args(run)
     run.add_argument("--results-dir", default="results")
+
+    rescore_cmd = sub.add_parser("rescore", help="re-judge saved runs; the target is not called")
+    rescore_cmd.add_argument("results", nargs="+", help="result JSON files, or folders of them")
+    rescore_cmd.add_argument("--attacks-dir", default="attacks",
+                            help="where to find the attack files (default attacks)")
+    rescore_cmd.add_argument("--attack", help="only runs of this attack id")
+    rescore_cmd.add_argument("--version", type=_positive_int, help="only runs of this attack version")
+    _judge_args(rescore_cmd)
+    rescore_cmd.add_argument("--out", help="folder for rescored copies (default <first folder>/rescored)")
     return parser
+
+
+def _judge_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--judge", choices=JUDGES, default="rules",
+                        help="rules (default), or llm: ask a judge model about every "
+                             "run with a reply except Fail and confirmed Partial")
+    parser.add_argument("--judge-target", choices=TARGETS, default="anthropic",
+                        help="provider for the LLM judge (default anthropic)")
+    parser.add_argument("--judge-model",
+                        help="LLM judge model (default claude-haiku-5-5 on anthropic)")
+
+
+def _llm_judge(args) -> LLMJudge | None:
+    if args.judge != "llm":
+        return None
+    return LLMJudge(make_judge_adapter(args.judge_target, args.judge_model))
 
 
 def _positive_int(text: str) -> int:
@@ -86,6 +117,8 @@ def _positive_int(text: str) -> int:
 def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     args = build_parser().parse_args(argv)
     load_dotenv(find_dotenv(usecwd=True), override=False)
+    if args.command == "rescore":
+        return rescore_main(args, out)
     try:
         # Load every attack first so a bad file fails before any model call.
         paths = collect_attack_paths(args.attack)
@@ -93,9 +126,7 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         for a in attacks:
             build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
         adapter = make_adapter(args.target, args.model)
-        llm_judge = None
-        if args.judge == "llm":
-            llm_judge = LLMJudge(make_judge_adapter(args.judge_target, args.judge_model))
+        llm_judge = _llm_judge(args)
     except (AttackError, ToolboxError, AdapterError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
@@ -115,6 +146,56 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         print_summary(summarize(results), out)
     if any(r.judgment.verdict is Verdict.ERROR for r in results):
         return EXIT_RUN_ERROR
+    return EXIT_OK
+
+
+def rescore_main(args, out: TextIO) -> int:
+    try:
+        index = attack_index(args.attacks_dir)
+        paths = record_paths(args.results)
+        llm_judge = _llm_judge(args)
+    except (AttackError, AdapterError, FileNotFoundError) as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    first_dir = next((Path(p) for p in args.results if Path(p).is_dir()), Path("results"))
+    out_dir = Path(args.out) if args.out else first_dir / "rescored"
+
+    picked = []
+    for path in paths:
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+            key = record_key(record)
+        except (json.JSONDecodeError, KeyError, TypeError):
+            print(f"lure: skipping {path}: not a Lure result", file=sys.stderr)
+            continue
+        if (args.attack and key[0] != args.attack) or (args.version and key[1] != args.version):
+            continue
+        if key not in index:
+            print(f"lure: skipping {path}: no attack file for {key[0]} v{key[1]}", file=sys.stderr)
+            continue
+        picked.append((path, record, index[key]))
+    if not picked:
+        print("lure: no matching results to rescore", file=sys.stderr)
+        return EXIT_BAD_INPUT
+
+    results: list[RunResult] = []
+    width = len(str(len(picked)))
+    for i, (path, record, attack) in enumerate(picked, 1):
+        result = rescore(record, attack, llm_judge)
+        save_rescored(result, record, path, out_dir)
+        results.append(result)
+        old = str(record["judgment"].get("verdict", "?")).upper()
+        new = result.judgment.verdict.value.upper()
+        notes = [n for n, on in (("llm-judged", result.judgment.llm_judged),
+                                 ("attack changed since run", attack_changed(record, attack)))
+                 if on]
+        note = f"  [{', '.join(notes)}]" if notes else ""
+        print(f"[{i:>{width}}/{len(picked)}] {path.name}  {attack.id} v{attack.version}  "
+              f"{old:<8} -> {new:<8}{note}", file=out)
+    print(file=out)
+    print(f"Rescored copies: {out_dir}", file=out)
+    print(file=out)
+    print_summary(summarize(results), out)
     return EXIT_OK
 
 
