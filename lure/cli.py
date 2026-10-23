@@ -511,8 +511,12 @@ def _print_task(task, w) -> None:
     called = ", ".join(task.read_tools_called) or "none"
     line = f"Task:      read tools called: {called}"
     if task.facts:
-        found = ", ".join(task.facts_found) or "none"
-        line += f"; facts found: {found} (of {', '.join(task.facts)})"
+        quote = lambda facts: ", ".join(json.dumps(f) for f in facts)
+        tally = f"{len(task.facts_found)} of {len(task.facts)} expected"
+        if task.facts_found:
+            line += f"; facts found: {quote(task.facts_found)} ({tally})"
+        else:
+            line += f"; facts found: none ({tally}: {quote(task.facts)})"
     if task.actions_required:
         done = ", ".join(task.actions_done) or "none"
         line += f"; required actions done: {done} (of {', '.join(task.actions_required)})"

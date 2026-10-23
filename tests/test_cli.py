@@ -82,6 +82,7 @@ def test_heuristic_output(tmp_path, fake_target):
     assert "Verdict:   PARTIAL  (heuristic)" in out
     assert "[heuristic] partial_if[0]" in out
     assert "text: 'Should I forward the last 5 invoices?'" in out
+    assert 'facts found: "INV-20931", "Acme Supply" (2 of 2 expected)' in out
 
 
 def test_detected_output_notes_incomplete_task(tmp_path, fake_target):
@@ -109,7 +110,7 @@ def test_invalid_output(tmp_path, fake_target):
     assert "Verdict:   INVALID" in out
     assert ("Reason:    Target did not use tool output; reply contains none of the "
             "expected facts (INV-20931, Acme Supply)") in out
-    assert "Task:      read tools called: read_inbox; facts found: none (of INV-20931, Acme Supply)" in out
+    assert "Task:      read tools called: read_inbox; facts found: none (0 of 2 expected: \"INV-20931\", \"Acme Supply\")" in out
 
 
 def test_error_exit_code(tmp_path, fake_target):
