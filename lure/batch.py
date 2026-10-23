@@ -31,6 +31,8 @@ def collect_attack_paths(path: str | Path) -> list[Path]:
 class SummaryRow:
     attack_id: str
     counts: Counter = field(default_factory=Counter)
+    # (verdict, reason) -> runs, for Invalid and Error runs.
+    unscored_reasons: Counter = field(default_factory=Counter)
 
     @property
     def runs(self) -> int:
@@ -56,4 +58,6 @@ def summarize(results: list[RunResult]) -> list[SummaryRow]:
     for r in results:
         row = rows.setdefault(r.attack.id, SummaryRow(r.attack.id))
         row.counts[r.judgment.verdict] += 1
+        if r.judgment.verdict in UNSCORED:
+            row.unscored_reasons[(r.judgment.verdict, r.judgment.reason)] += 1
     return list(rows.values())

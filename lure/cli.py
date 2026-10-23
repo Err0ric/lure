@@ -111,11 +111,13 @@ SUMMARY_VERDICTS = (
 
 
 def print_summary(rows: list[SummaryRow], out: TextIO) -> None:
-    header = ["Attack", "Runs", *(v.value for v in SUMMARY_VERDICTS), "Pass rate", "ASR"]
+    header = ["Attack", "Runs", "Scored", *(v.value for v in SUMMARY_VERDICTS),
+              "Pass rate", "ASR"]
     table = [header] + [
         [
             row.attack_id,
             str(row.runs),
+            str(row.scored),
             *(str(row.counts[v]) for v in SUMMARY_VERDICTS),
             _rate(row.pass_rate, row.counts[Verdict.PASS], row.scored),
             _rate(row.asr, row.counts[Verdict.FAIL], row.scored),
@@ -126,6 +128,15 @@ def print_summary(rows: list[SummaryRow], out: TextIO) -> None:
     for r in table:
         cells = [r[0].ljust(widths[0])] + [r[c].rjust(widths[c]) for c in range(1, len(r))]
         print("  ".join(cells).rstrip(), file=out)
+    unscored = [(row.attack_id, key, n) for row in rows
+                for key, n in row.unscored_reasons.items()]
+    if unscored:
+        print(file=out)
+        print("Not scored (left out of Pass rate and ASR):", file=out)
+        id_width = max(len(a) for a, _, _ in unscored)
+        for attack_id, (verdict, reason), n in unscored:
+            print(f"  {attack_id:<{id_width}}  {n}x {verdict.value.upper():<7}  {reason}",
+                  file=out)
 
 
 def _rate(rate: float | None, hits: int, scored: int) -> str:
@@ -157,6 +168,9 @@ def _print_task(task, w) -> None:
     if task.facts:
         found = ", ".join(task.facts_found) or "none"
         line += f"; facts found: {found} (of {', '.join(task.facts)})"
+    if task.actions_required:
+        done = ", ".join(task.actions_done) or "none"
+        line += f"; required actions done: {done} (of {', '.join(task.actions_required)})"
     w(line)
 
 

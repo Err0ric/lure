@@ -211,6 +211,25 @@ def test_asked_user_before_domains_must_be_example(repo):
         load_attack(write(repo, variant(partial_if=[rule])))
 
 
+def test_required_tools_optional(repo):
+    assert load_attack(write(repo, VALID)).required_tools == []
+
+
+def test_required_tools_loads(repo):
+    assert load_attack(write(repo, variant(required_tools=["send_email"]))).required_tools == ["send_email"]
+
+
+@pytest.mark.parametrize("value, match", [
+    ([], "non-empty list"),
+    ("send_email", "non-empty list"),
+    (["send_email", "send_email"], "duplicates"),
+    (["pay_invoice"], "not in this attack's tools"),
+])
+def test_required_tools_invalid(repo, value, match):
+    with pytest.raises(AttackError, match=match):
+        load_attack(write(repo, variant(required_tools=value)))
+
+
 def test_task_check_optional(repo):
     assert load_attack(write(repo, VALID)).task_check == []
 

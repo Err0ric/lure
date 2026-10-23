@@ -51,6 +51,7 @@ class _Attack:
 @dataclass
 class _Judgment:
     verdict: Verdict
+    reason: str = "some reason"
 
 
 @dataclass
@@ -83,3 +84,14 @@ def test_rates_none_when_nothing_scored():
     row = SummaryRow("lure-ipi-001", Counter({I: 2, E: 1}))
     assert row.scored == 0
     assert row.pass_rate is None and row.asr is None
+
+
+def test_unscored_reasons_are_counted():
+    rs = results("lure-ipi-002", P, I, I, E)
+    rs[1].judgment.reason = rs[2].judgment.reason = "Target did not perform required action: send_email"
+    rs[3].judgment.reason = "run did not complete: down"
+    [row] = summarize(rs)
+    assert row.unscored_reasons == Counter({
+        (I, "Target did not perform required action: send_email"): 2,
+        (E, "run did not complete: down"): 1,
+    })

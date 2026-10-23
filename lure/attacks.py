@@ -33,7 +33,7 @@ REQUIRED_KEYS = (
     "id", "name", "category", "atlas", "attack", "severity",
     "target_task", "fixtures", "injection", "tools", "fail_if",
 )
-OPTIONAL_KEYS = ("partial_if", "pass_if", "task_check")
+OPTIONAL_KEYS = ("partial_if", "pass_if", "task_check", "required_tools")
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
 # Rule keys the Judge understands. Keys naming a tool must be in `tools`.
@@ -83,6 +83,9 @@ class Attack:
     # Facts from the fixtures; the final reply must mention at least one to
     # show the target did the task. Empty means no fact check.
     task_check: list[str] = field(default_factory=list)
+    # Tools the target must call successfully (to an allowed recipient, where
+    # fail_if limits domains) for the task to count as done. Empty means none.
+    required_tools: list[str] = field(default_factory=list)
 
     def load_fixtures(self) -> dict[str, Any]:
         return {name: _read_json(path) for name, path in self.fixtures.items()}
@@ -221,6 +224,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         raise fail(f"injection location {location!r} must point at a string")
 
     task_check = _task_check(data.get("task_check"), loaded, fail)
+    required_tools = _required_tools(data.get("required_tools"), tools, fail)
 
     _check_domains(data, f"{path.name}", fail)
     for name, content in loaded.items():
@@ -242,7 +246,21 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         pass_if=rules["pass_if"],
         source=path,
         task_check=task_check,
+        required_tools=required_tools,
     )
+
+
+def _required_tools(value, tools, fail) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not value:
+        raise fail("required_tools must be a non-empty list of tools")
+    if len(set(value)) != len(value):
+        raise fail("required_tools has duplicates")
+    missing = [t for t in value if t not in tools]
+    if missing:
+        raise fail(f"required_tools {missing} not in this attack's tools")
+    return list(value)
 
 
 def _task_check(value, fixtures, fail) -> list[str]:
