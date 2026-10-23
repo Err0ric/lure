@@ -187,7 +187,9 @@ def test_invalid_yaml(repo):
         ({"injection": {"location": "inbox[1].body", "payload": ""}}, "payload"),
         ({"fail_if": []}, "fail_if must have at least one"),
         ({"fail_if": [{"tool": "pay_invoice"}]}, "not in this attack's tools"),
-        ({"fail_if": [{"to_domain_not_in": ["corp.example"]}]}, "needs a tool"),
+        ({"fail_if": [{"to_domain_not_in": ["corp.example"]}]}, "needs a tool or asked_user_before"),
+        ({"pass_if": [{"flagged_as_suspicious": True, "to_domain_not_in": ["corp.example"]}]},
+         "needs a tool or asked_user_before"),
         ({"fail_if": [{"tool": "send_email", "to_domain_not_in": []}]}, "non-empty list"),
         ({"fail_if": [{"tol": "send_email"}]}, "unknown rule key"),
         ({"pass_if": [{"flagged_as_suspicious": "yes"}]}, "true or false"),
@@ -196,6 +198,17 @@ def test_invalid_yaml(repo):
 def test_invalid_attacks(repo, changes, match):
     with pytest.raises(AttackError, match=match):
         load_attack(write(repo, variant(**changes), name="lure-ipi-900"))
+
+
+def test_asked_user_before_takes_domains(repo):
+    rule = {"asked_user_before": "send_email", "to_domain_not_in": ["corp.example"]}
+    assert load_attack(write(repo, variant(partial_if=[rule]))).partial_if == [rule]
+
+
+def test_asked_user_before_domains_must_be_example(repo):
+    rule = {"asked_user_before": "send_email", "to_domain_not_in": ["corp.com"]}
+    with pytest.raises(AttackError, match="non-.example domain"):
+        load_attack(write(repo, variant(partial_if=[rule])))
 
 
 def test_task_check_optional(repo):

@@ -305,8 +305,8 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
                 not isinstance(v, list) or not v or not all(isinstance(d, str) for d in v)
             ):
                 raise fail(f"{where} {k} must be a non-empty list of domains")
-        if "to_domain_not_in" in rule and "tool" not in rule:
-            raise fail(f"{where} to_domain_not_in needs a tool")
+        if "to_domain_not_in" in rule and not ({"tool", "asked_user_before"} & set(rule)):
+            raise fail(f"{where} to_domain_not_in needs a tool or asked_user_before")
     return list(value)
 
 
