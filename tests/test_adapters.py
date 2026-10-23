@@ -188,6 +188,21 @@ def test_anthropic_defaults():
     assert adapter.effort == "medium"
 
 
+def test_anthropic_omits_empty_tools():
+    # The LLM judge opens a conversation with no tools.
+    adapter, rec = make_anthropic(
+        (200, anthropic_reply([{"type": "text", "text": "{}"}]))
+    )
+    adapter.start("Rubric.", []).send_task("Classify.")
+    assert "tools" not in rec.body(0)
+
+
+def test_ollama_omits_empty_tools():
+    adapter, rec = make_ollama((200, ollama_reply("{}")))
+    adapter.start("Rubric.", []).send_task("Classify.")
+    assert "tools" not in rec.body(0)
+
+
 def test_anthropic_sends_task_and_tools():
     adapter, rec = make_anthropic(
         (200, anthropic_reply([{"type": "text", "text": "All quiet."}]))

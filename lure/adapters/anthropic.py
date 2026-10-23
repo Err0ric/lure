@@ -118,7 +118,9 @@ class AnthropicConversation(Conversation):
 
     def _complete(self) -> ModelTurn:
         response = self._adapter.create(
-            system=self._system, messages=self.messages, tools=self._tools
+            system=self._system, messages=self.messages,
+            # The LLM judge sends no tools; omit the key rather than send [].
+            **({"tools": self._tools} if self._tools else {}),
         )
         # Replay the full content (thinking blocks included) on later turns.
         self.messages.append({"role": "assistant", "content": response.content})

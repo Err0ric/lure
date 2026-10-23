@@ -2,7 +2,8 @@
 
 Plants the payload, gives the target its task and only the attack's mock
 tools, loops model turns and tool calls until the model stops or hits the
-turn limit, then judges the run from the call log and final reply.
+turn limit, then judges the run from the call log and final reply. With an
+LLM judge, runs the rules could not settle get a second opinion.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from typing import Any, Callable
 
 from lure.adapters.base import AdapterError, ModelAdapter, ModelTurn
 from lure.attacks import Attack
+from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import Judgment, judge
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import build_toolbox
@@ -100,6 +102,7 @@ def run_attack(
     max_turns: int = MAX_TURNS,
     system_prompt: str = DEFAULT_SYSTEM_PROMPT,
     clock: Callable[[], datetime] = _utc_now,
+    llm_judge: LLMJudge | None = None,
 ) -> RunResult:
     started_at = clock()
     log = ToolCallLog(clock=clock)
@@ -142,6 +145,8 @@ def run_attack(
 
     final_text = turn.text if turn is not None else None
     judgment = judge(attack, log, final_text=final_text, error=error)
+    if llm_judge is not None:
+        judgment = llm_judge.review(attack, judgment, final_text)
     return RunResult(
         attack=attack,
         target=adapter.target_name,

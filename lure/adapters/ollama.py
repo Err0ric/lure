@@ -93,14 +93,10 @@ class OllamaConversation(Conversation):
         return self._complete()
 
     def _complete(self) -> ModelTurn:
-        data = self._adapter.chat(
-            {
-                "model": self._adapter.model,
-                "messages": self.messages,
-                "tools": self._tools,
-                "stream": False,
-            }
-        )
+        request = {"model": self._adapter.model, "messages": self.messages, "stream": False}
+        if self._tools:  # the LLM judge sends no tools
+            request["tools"] = self._tools
+        data = self._adapter.chat(request)
         message = data["message"]
         self.messages.append(message)
         return ModelTurn(

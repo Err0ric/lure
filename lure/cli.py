@@ -14,12 +14,14 @@ from dotenv import find_dotenv, load_dotenv
 from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacks import AttackError, load_attack
 from lure.batch import SummaryRow, collect_attack_paths, summarize
+from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
 from lure.runner import MAX_TURNS, RunResult, run_attack
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
 
 TARGETS = ("ollama", "anthropic")
+JUDGES = ("rules", "llm")
 
 EXIT_OK = 0
 EXIT_RUN_ERROR = 1
@@ -41,6 +43,15 @@ def make_adapter(target: str, model: str | None) -> ModelAdapter:
     raise ValueError(f"unknown target {target!r}")
 
 
+def make_judge_adapter(target: str, model: str | None) -> ModelAdapter:
+    """The judge model's own adapter, separate from the target's."""
+    from lure.judge.llm_judge import DEFAULT_JUDGE_MODEL
+
+    if target == "anthropic" and not model:
+        model = DEFAULT_JUDGE_MODEL
+    return make_adapter(target, model)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lure")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -51,6 +62,13 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--max-turns", type=int, default=MAX_TURNS)
     run.add_argument("--repeat", type=_positive_int, default=1,
                      help="run each attack N times (default 1)")
+    run.add_argument("--judge", choices=JUDGES, default="rules",
+                     help="rules (default), or llm: ask a judge model about runs "
+                          "the rules mark Partial, Review or heuristic")
+    run.add_argument("--judge-target", choices=TARGETS, default="anthropic",
+                     help="provider for the LLM judge (default anthropic)")
+    run.add_argument("--judge-model",
+                     help="LLM judge model (default claude-haiku-5-5 on anthropic)")
     run.add_argument("--results-dir", default="results")
     return parser
 
@@ -75,6 +93,9 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         for a in attacks:
             build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
         adapter = make_adapter(args.target, args.model)
+        llm_judge = None
+        if args.judge == "llm":
+            llm_judge = LLMJudge(make_judge_adapter(args.judge_target, args.judge_model))
     except (AttackError, ToolboxError, AdapterError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
@@ -82,7 +103,7 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     plan = [(a, n) for a in attacks for n in range(1, args.repeat + 1)]
     results: list[RunResult] = []
     for i, (attack, n) in enumerate(plan, 1):
-        result = run_attack(attack, adapter, max_turns=args.max_turns)
+        result = run_attack(attack, adapter, max_turns=args.max_turns, llm_judge=llm_judge)
         result.save(args.results_dir)
         results.append(result)
         if batch:
@@ -102,7 +123,9 @@ def print_progress(result: RunResult, i: int, total: int, n: int, repeat: int, o
     j = result.judgment
     verdict = j.verdict.value.upper()
     notes = [n for n, on in (("detected", j.reason == DETECTED),
-                             ("task incomplete", j.task_incomplete)) if on]
+                             ("task incomplete", j.task_incomplete),
+                             ("llm-judged", j.llm_judged),
+                             ("llm judge failed", bool(j.llm) and not j.llm_judged)) if on]
     note = f"  [{', '.join(notes)}]" if notes else ""
     print(f"[{i:>{width}}/{total}] {result.attack.id}  run {n}/{repeat}  "
           f"{verdict:<8}  {result.saved_to}{note}", file=out)
@@ -153,8 +176,10 @@ def print_result(result: RunResult, out: TextIO) -> None:
     w(f"{result.attack.id}  {result.attack.name}")
     w(f"Target:    {result.target}")
     w(f"Turns:     {result.turns} / {result.max_turns} ({result.stop})")
-    w(f"Verdict:   {j.verdict.value.upper()}{'  (heuristic)' if j.heuristic else ''}")
+    w(f"Verdict:   {j.verdict.value.upper()}{_verdict_note(j)}")
     w(f"Reason:    {j.reason}")
+    if j.llm:
+        _print_llm(j, w)
     if j.task_incomplete:
         w(f"Note:      task incomplete: {'. '.join(j.task.problems)}")
     if j.task:
@@ -166,6 +191,22 @@ def print_result(result: RunResult, out: TextIO) -> None:
             w(f"  {u.rule_set}[{u.rule_index}] {_rule(u.rule)}: {u.reason}")
     if result.saved_to:
         w(f"Saved:     {result.saved_to}")
+
+
+def _verdict_note(j: Judgment) -> str:
+    if j.llm_judged:
+        return "  (llm-judged)"
+    return "  (heuristic)" if j.heuristic else ""
+
+
+def _print_llm(j: Judgment, w) -> None:
+    llm = j.llm
+    if "error" in llm:
+        w(f"LLM judge: {llm['model']} failed, rules verdict kept: {llm['error']}")
+        return
+    w(f"LLM judge: {llm['model']}: {llm['label']} (rules said {llm['rules']['verdict'].upper()})")
+    quote = "" if llm["quote_found"] else "  [quote not found in reply]"
+    w(f"           {llm['justification']}{quote}")
 
 
 def _print_task(task, w) -> None:

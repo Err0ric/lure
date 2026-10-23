@@ -196,11 +196,19 @@ class Judgment:
     task: TaskCheck | None = None
     # Pass (detected) with the real task left undone or unproven.
     task_incomplete: bool = False
+    # Set when the LLM judge was asked: model, label, justification, and the
+    # rules verdict it replaced (or the error if the call failed).
+    llm: dict[str, Any] | None = None
 
     @property
     def heuristic(self) -> bool:
         """True if any evidence behind the verdict is only a heuristic match."""
         return any(e.kind == HEURISTIC for e in self.evidence)
+
+    @property
+    def llm_judged(self) -> bool:
+        """True if the verdict comes from the LLM judge's label."""
+        return bool(self.llm) and "label" in self.llm
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -211,6 +219,8 @@ class Judgment:
             "unresolved": [u.to_dict() for u in self.unresolved],
             "task": self.task.to_dict() if self.task else None,
             "task_incomplete": self.task_incomplete,
+            "llm_judged": self.llm_judged,
+            "llm_judge": self.llm,
         }
 
 

@@ -164,7 +164,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 
 ### Phase 3: Judge and report
 
-- [ ] LLM judge for nuanced cases, with the rubric as its prompt
+- [x] LLM judge for nuanced cases, with the rubric as its prompt (opt-in: `--judge llm`)
   - LLM judge is the priority; keyword heuristics hit their limit on Partial (ipi-007 false positive)
   - Catch paraphrased leaks that `body_contains` misses (e.g. ipi-007: "two open invoices" with no IDs or amounts)
 - [ ] results.json + DuckDB store
