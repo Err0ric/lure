@@ -28,8 +28,6 @@ Lure is an open-source harness that attacks AI agents with prompt injection and 
 
 Four agents run each test; the target only ever touches mock tools, and the Judge scores from the tool-call log.
 
-_(Architecture diagram lives in the Claude Doc version.)_
-
 The Attacker hides the payload in fixtures, the target works its normal task inside the sandbox, and every tool call is logged for the Judge and Reporter.
 
 | Agent | Role | Real-world equivalent |
@@ -141,8 +139,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 
 ### Phase 0: Kickoff
 
-- [x] Create the GitHub repo and Claude Project
-- [x] Paste the project instructions (below) into the Claude Project
+- [x] Create the GitHub repo
 - [x] Write README v0 (what, why, safety model) and CLAUDE.md
 - [x] Confirm the name (Lure or other)
 
@@ -178,7 +175,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 - [x] Security review of the repo itself
 - [x] CI on every PR
 - [x] Quickstart, demo GIF, sample report in the README
-- [ ] Tag v1.0 and publish the release
+- [x] Tag v1.0 and publish the release
 
 ### v1.1
 
@@ -192,41 +189,3 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 - [ ] Multi-agent targets (test an orchestrator plus specialists)
 - [ ] Run against a sample SecOps agent team
 - [ ] Org use: a vetting checklist for internally built AI tools
-
-## Claude Project setup
-
-Paste the block below into the Claude Project's instructions, and upload this doc (exported as Markdown) as project knowledge.
-
-**Project instructions**
-
-```markdown
-You are my co-builder on Lure, an open-source harness that tests AI agents for prompt injection, jailbreaks, data leakage, and tool abuse. It scores each run Pass / Partial / Fail and maps findings to MITRE ATLAS (AML.*) and ATT&CK.
-
-Context:
-- I work on this in short sessions.
-- Stack: Python 3.12 CLI, YAML attacks, JSON fixtures, mock tools, Anthropic + Ollama adapters, DuckDB results, static HTML report.
-- The kickoff doc in project knowledge is the source of truth for scope, schema, rubric, and roadmap.
-
-Rules:
-- Safety first: target agents only ever get mock tools. No real network calls, email, file deletion, or payments. Flag any design that breaks this.
-- Map every attack and finding to ATLAS and ATT&CK. Tell me to verify IDs on atlas.mitre.org when unsure.
-- Keep attack payloads to realistic test scenarios against our own mock targets. No payloads aimed at real third-party services.
-- Start each session by asking which roadmap phase and task I'm on, then keep the work scoped to it.
-- End each session with: what changed, what's next, and any checkbox I can tick.
-
-Style:
-- No em dashes.
-- Structured, concise, practical. Tables, checklists, and code over long prose.
-- Treat this as co-authoring; I'll often ask for shorter, longer, or reformatted versions.
-```
-
-**First-session prompt**
-
-```text
-We're starting Phase 0 and Phase 1 of Lure.
-1. Draft README v0 (what it is, why, safety model, quickstart placeholder).
-2. Draft CLAUDE.md for Claude Code sessions on this repo.
-3. Scaffold the repo layout from the kickoff doc.
-4. Build the mock email tool and the runner for lure-ipi-001, with a rule-based judge.
-Stop after each step so I can review.
-```
