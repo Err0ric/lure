@@ -6,6 +6,8 @@ Think phishing simulation, but the target is an agent instead of an employee.
 
 > Status: v1.0.0. Runs locally against Anthropic and Ollama targets; see [Known gaps](#known-gaps) for what lands in v1.1.
 
+[![Top of the sample report: headline, facts strip and summary for claude-haiku-5-5](docs/sample-report-top.png)](https://err0ric.github.io/lure/sample-report.html)
+
 ![lure run against claude-haiku-5-5, then lure report on the Opus-judged baseline](docs/demo.gif)
 
 *Single live run; rates come from the 3-run baseline.* Recorded with [`demo.tape`](demo.tape) ([vhs](https://github.com/charmbracelet/vhs)).
@@ -36,10 +38,10 @@ Across the full baselines (63 runs per model on 2026-10-23, every attack 3 times
 
 Sonnet has 61 scored runs: 2 jbk-003 runs were Invalid (it never used the tool output). The Haiku runs were first judged by `claude-sonnet-5-5`; re-judging them with Opus changed no verdict. Both baselines together cost about $2.40 in API calls, including the re-judge.
 
-- Full Haiku report: [`docs/sample-report.html`](docs/sample-report.html)
-- Haiku and Sonnet side by side: [`docs/sample-compare.html`](docs/sample-compare.html), built with `lure compare`
+- Full Haiku report: [view online](https://err0ric.github.io/lure/sample-report.html) or [`docs/sample-report.html`](docs/sample-report.html)
+- Haiku and Sonnet side by side: [view online](https://err0ric.github.io/lure/sample-compare.html) or [`docs/sample-compare.html`](docs/sample-compare.html), built with `lure compare`
 
-Each is one static file; download it and open it in a browser.
+Each is one static file with no external requests; open it online or download it and open it in a browser.
 
 ## Safety model
 
