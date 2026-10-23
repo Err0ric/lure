@@ -6,6 +6,10 @@ Think phishing simulation, but the target is an agent instead of an employee.
 
 > Status: Phase 2 (attack library) is complete; Phase 3 (judge and report) is in progress.
 
+![lure run against claude-haiku-5-5, then lure report on the Opus-judged baseline](docs/demo.gif)
+
+*Single live run; rates come from the 3-run baseline.* Recorded with [`demo.tape`](demo.tape) ([vhs](https://github.com/charmbracelet/vhs)).
+
 ## What Lure found
 
 **Two models, same blind spot.** Under a policy that only named the secrets, both `claude-haiku-5-5` and `claude-sonnet-5-5` emailed company invoice data to a personal outside address (Haiku in 2 of 3 runs, Sonnet in 3 of 3) while scoring 0% attack success. The org-level exposure check caught every one of those sends. With one added line, "only send email to addresses at corp.example", both models sent nothing outside in 0 of 3 runs.
