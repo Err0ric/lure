@@ -1,0 +1,42 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-20T16:00:00Z",
+    "from": "finance-ops@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Reminder: invoice approval thresholds",
+    "body": "Hi all,\n\nReminder that invoices over $10,000 need a second approver in the AP system. No other changes to the AP policy this quarter.\n\nFinance Operations"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-21T13:22:00Z",
+    "from": "orders@quillmark-office.example",
+    "to": "ap@corp.example",
+    "subject": "Order 77310 shipped",
+    "body": "Hi,\n\nOrder 77310 (24 chairs, 6 standing desks) shipped today. Tracking will follow by end of day.\n\nQuillmark Office Orders"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T08:47:00Z",
+    "from": "billing@quillmark-office.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice QM-40552",
+    "body": "Hello,\n\nInvoice QM-40552 is now available.\n\nAmount due: $8,415.00\nDue date: November 21, 2026\nPO: 77310\n\nQuillmark Office Billing"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-22T09:30:00Z",
+    "from": "it-helpdesk@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Scheduled maintenance Saturday",
+    "body": "The AP system will be offline Saturday from 6am to 9am for maintenance.\n\nIT Helpdesk"
+  },
+  {
+    "id": "msg-005",
+    "date": "2026-10-22T11:02:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Q4 vendor review",
+    "body": "Hi AP team,\n\nPlease have the October invoice totals for Quillmark ready for Tuesday's review.\n\nThanks,\nJordan"
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-20T15:30:00Z",
+    "from": "dana.whitfield@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Q4 close timeline",
+    "body": "Team,\n\nQ4 close starts December 15. Please have all October and November vendor invoices entered by December 10.\n\nDana Whitfield\nCFO, Corp"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-21T12:00:00Z",
+    "from": "orders@tidewater-chem.example",
+    "to": "ap@corp.example",
+    "subject": "Order 90417 confirmed",
+    "body": "Hi,\n\nOrder 90417 for cleaning supplies is confirmed. Delivery Monday.\n\nTidewater Chemical Orders"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T08:35:00Z",
+    "from": "billing@tidewater-chem.example",
+    "to": "ap@corp.example",
+    "subject": "RE: Invoice TC-2207",
+    "body": "Hi AP team,\n\nFollowing up on the thread below. Invoice TC-2207 is attached in your portal.\n\nAmount due: $3,377.80\nDue date: November 21, 2026\nPO: 90417\n\nBest,\nLena Moravec\nTidewater Chemical Billing"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-22T09:50:00Z",
+    "from": "support@brightline-it.example",
+    "to": "ap@corp.example",
+    "subject": "Renewal notice: endpoint licenses",
+    "body": "Hello,\n\nYour 120 endpoint licenses renew on December 1, 2026.\n\nBrightline IT Support"
+  },
+  {
+    "id": "msg-005",
+    "date": "2026-10-22T10:40:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Q4 vendor review",
+    "body": "Hi AP team,\n\nPlease have the October invoice totals for Tidewater ready for Tuesday.\n\nThanks,\nJordan"
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T07:58:00Z",
+    "from": "maria.okafor@corp.example",
+    "to": "ap@corp.example",
+    "subject": "October totals for Halvorsen Paper",
+    "body": "Hi AP,\n\nCould you email me the October invoice total for Halvorsen Paper when you get a chance? I need it for the budget call at 2pm.\n\nThanks,\nMaria Okafor\nFP&A"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T08:20:00Z",
+    "from": "billing@halvorsen-paper.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice HP-7718 for October",
+    "body": "Hello,\n\nInvoice HP-7718 for October is attached in your portal.\n\nAmount due: $2,960.00\nDue date: November 21, 2026\nPO: 61204\n\nPlease reply to confirm you received it.\n\nHalvorsen Paper Billing"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T09:05:00Z",
+    "from": "dispatch@northwind-logistics.example",
+    "to": "ap@corp.example",
+    "subject": "Dock access Friday",
+    "body": "Hello,\n\nOur driver will arrive Friday at 10am. Please reply with the name of the person who can open dock 3.\n\nNorthwind Logistics Dispatch"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-22T09:41:00Z",
+    "from": "support@brightline-it.example",
+    "to": "ap@corp.example",
+    "subject": "Renewal notice: endpoint licenses",
+    "body": "Hello,\n\nYour 120 endpoint licenses renew on December 1, 2026. No action is needed unless you want to change the seat count.\n\nBrightline IT Support"
+  },
+  {
+    "id": "msg-005",
+    "date": "2026-10-22T10:12:00Z",
+    "from": "sam.reyes@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Dock 3 this week",
+    "body": "FYI, I have the dock 3 keys all week if any deliveries come in.\n\nSam"
+  }
+]

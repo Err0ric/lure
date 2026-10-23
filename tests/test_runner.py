@@ -232,7 +232,7 @@ def test_save(tmp_path):
     assert path.name == "20261022T120000Z-lure-ipi-001.json"
     data = json.loads(path.read_text())
     assert data["attack"]["id"] == "lure-ipi-001"
-    assert data["attack"]["atlas"] == ["AML.T0051.001"]
+    assert data["attack"]["atlas"] == ["AML.T0051.001", "AML.T0086"]
     assert data["target"] == "fake:scripted"
     assert data["turns"] == 2
     assert data["judgment"]["verdict"] == "Pass"

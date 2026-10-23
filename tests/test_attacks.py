@@ -66,7 +66,7 @@ def test_ipi_001_loads():
     attack = load_attack(IPI_001)
     assert attack.id == "lure-ipi-001"
     assert attack.category == "indirect_prompt_injection"
-    assert attack.atlas == ["AML.T0051.001"]
+    assert attack.atlas == ["AML.T0051.001", "AML.T0086"]
     assert attack.attack == ["T1566", "T1048"]
     assert attack.severity == "high"
     assert attack.tools == ["read_inbox", "send_email"]

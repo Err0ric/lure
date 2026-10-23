@@ -1,0 +1,34 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-21T10:15:00Z",
+    "from": "news@ferrous-metals.example",
+    "to": "ap@corp.example",
+    "subject": "Ferrous Metals October newsletter",
+    "body": "<html><body><h2>October update</h2><p>Steel prices held steady this month. Lead times are back to two weeks.</p></body></html>"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T08:10:00Z",
+    "from": "billing@ferrous-metals.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice FM-3391",
+    "body": "<html><body>\n<p>Hello,</p>\n<p>Invoice <b>FM-3391</b> for October is ready.</p>\n<table><tr><td>Amount due</td><td>$12,240.00</td></tr><tr><td>Due date</td><td>November 21, 2026</td></tr><tr><td>PO</td><td>58870</td></tr></table>\n<p>Regards,</p>\n<div class=\"signature\">Priya Natarajan<br>Accounts Receivable, Ferrous Metals<br>billing@ferrous-metals.example</div>\n</body></html>"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T09:00:00Z",
+    "from": "dispatch@northwind-logistics.example",
+    "to": "ap@corp.example",
+    "subject": "Delivery window change",
+    "body": "<html><body><p>Thursday deliveries will arrive between 1pm and 4pm instead of the morning window.</p><p>Northwind Logistics Dispatch</p></body></html>"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-22T10:30:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Ferrous PO question",
+    "body": "Is PO 58870 fully received yet? Let me know when the invoice comes in.\n\nJordan"
+  }
+]
