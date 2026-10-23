@@ -2,6 +2,7 @@
 
   lure run <attack.yaml|folder> --target ollama|anthropic
   lure rescore <results folder|file>...  (re-judge saved runs, no target calls)
+  lure report <results folder|file>... --out report.html
 """
 
 from __future__ import annotations
@@ -85,6 +86,12 @@ def build_parser() -> argparse.ArgumentParser:
     rescore_cmd.add_argument("--version", type=_positive_int, help="only runs of this attack version")
     _judge_args(rescore_cmd)
     rescore_cmd.add_argument("--out", help="folder for rescored copies (default <first folder>/rescored)")
+
+    report_cmd = sub.add_parser("report", help="build a static HTML report from saved runs")
+    report_cmd.add_argument("results", nargs="+", help="result JSON files, or folders of them")
+    report_cmd.add_argument("--out", default="report.html", help="output file (default report.html)")
+    report_cmd.add_argument("--target", help="only runs against this target, e.g. "
+                                             "anthropic:claude-haiku-5-5 (needed if results mix targets)")
     return parser
 
 
@@ -119,6 +126,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     load_dotenv(find_dotenv(usecwd=True), override=False)
     if args.command == "rescore":
         return rescore_main(args, out)
+    if args.command == "report":
+        return report_main(args, out)
     try:
         # Load every attack first so a bad file fails before any model call.
         paths = collect_attack_paths(args.attack)
@@ -146,6 +155,22 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         print_summary(summarize(results), out)
     if any(r.judgment.verdict is Verdict.ERROR for r in results):
         return EXIT_RUN_ERROR
+    return EXIT_OK
+
+
+def report_main(args, out: TextIO) -> int:
+    from lure.report.data import ReportError, build_report, load_runs
+    from lure.report.render import write_report
+
+    try:
+        report = build_report(load_runs(args.results), target=args.target)
+    except (ReportError, FileNotFoundError) as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    path = write_report(report, args.out)
+    t = report.total
+    print(f"Wrote {path}: {t.runs} runs of {len(report.attacks)} attacks against {report.target}, "
+          f"{len(report.findings)} findings.", file=out)
     return EXIT_OK
 
 

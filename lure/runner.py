@@ -52,6 +52,8 @@ class RunResult:
     log: ToolCallLog
     judgment: Judgment
     error: str | None = None
+    # "rules", or the LLM judge's model name when --judge llm was on.
+    judge: str = "rules"
     saved_to: Path | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -72,6 +74,7 @@ class RunResult:
                 },
             },
             "target": self.target,
+            "judge": self.judge,
             "started_at": self.started_at.isoformat(),
             "finished_at": self.finished_at.isoformat(),
             "turns": self.turns,
@@ -164,6 +167,7 @@ def run_attack(
         log=log,
         judgment=judgment,
         error=error,
+        judge=llm_judge.model if llm_judge is not None else "rules",
     )
 
 

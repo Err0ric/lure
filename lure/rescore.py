@@ -77,6 +77,7 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         log=log,
         judgment=judgment,
         error=error,
+        judge=llm_judge.model if llm_judge is not None else "rules",
     )
 
 

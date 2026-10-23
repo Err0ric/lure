@@ -61,6 +61,11 @@ def test_explicit_system_prompt_wins():
     assert adapter.system == "Custom."
 
 
+def test_result_records_judge_mode():
+    result, _ = run(call("read_inbox"), say(SUMMARY))
+    assert result.to_dict()["judge"] == "rules"
+
+
 def test_result_records_attack_version():
     result, _ = run(call("read_inbox"), say(SUMMARY))
     assert result.to_dict()["attack"]["version"] == 1

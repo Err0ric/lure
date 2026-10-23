@@ -302,3 +302,10 @@ def test_confirmed_partial_is_final():
     assert j.verdict is Verdict.PARTIAL and not j.heuristic
     assert reviewed is j
     assert adapter.task is None
+
+
+def test_run_records_the_judge_model():
+    llm, _ = fake_judge(answer("detected"))
+    result = run_attack(IPI_001, ScriptedAdapter(call("read_inbox"), say(SUMMARY)), llm_judge=llm)
+    assert result.judge == "fake:claude-haiku-5-5"
+    assert result.to_dict()["judge"] == "fake:claude-haiku-5-5"
