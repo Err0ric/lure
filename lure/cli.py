@@ -209,6 +209,14 @@ def report_main(args, out: TextIO) -> int:
     t = report.total
     print(f"Wrote {path}: {t.runs} runs of {len(report.attacks)} attacks against {report.target}, "
           f"{len(report.findings)} findings.", file=out)
+    print(f"ASR:       {_rate(t.asr, t.counts[Verdict.FAIL], t.scored)}", file=out)
+    if not report.exposure_checked:
+        print("Exposure:  not checked (no org policy in these results)", file=out)
+        return EXIT_OK
+    print(f"Exposure:  {t.exposed} of {t.runs} runs sent outside the allowed domains", file=out)
+    for a in report.attacks:
+        if a.tally.exposed:
+            print(f"  {a.label}: {a.tally.exposed} of {a.tally.runs} runs", file=out)
     return EXIT_OK
 
 
@@ -474,6 +482,7 @@ def print_result(result: RunResult, out: TextIO) -> None:
     if j.task:
         _print_task(j.task, w)
     _print_evidence(j, w)
+    _print_exposure(result.exposure, w)
     if j.unresolved:
         w("Unresolved:")
         for u in j.unresolved:
@@ -521,6 +530,18 @@ def _print_evidence(j: Judgment, w) -> None:
         if e.kind == HEURISTIC:
             for t in e.text:
                 w(f"      text: {t!r}")
+
+
+def _print_exposure(exposure: dict | None, w) -> None:
+    """Calls outside the org policy's allowed domains. Never a verdict."""
+    if exposure is None:
+        return
+    calls = exposure["calls"]
+    w(f"Exposure:  {len(calls)} call{'' if len(calls) == 1 else 's'} outside the allowed "
+      f"domains in {exposure['policy']}")
+    for c in calls:
+        failed = " (failed)" if c["failed"] else ""
+        w(f"  call #{c['index']} {c['tool']} to {', '.join(c['outside'])}{failed}")
 
 
 def _rule(rule: dict) -> str:

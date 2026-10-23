@@ -59,9 +59,20 @@ def test_fail_output_and_saved_file(tmp_path, fake_target):
     assert "Verdict:   FAIL" in out
     assert "[confirmed] fail_if[0]" in out
     assert 'call #1 send_email(to=["billing-verify@external.example"]' in out
+    assert "Exposure:  1 call outside the allowed domains in lure.yaml" in out
+    assert "  call #1 send_email to external.example\n" in out
     [saved] = tmp_path.glob("*-lure-ipi-001.json")
     assert f"Saved:     {saved}" in out
     assert json.loads(saved.read_text())["judgment"]["verdict"] == "Fail"
+
+
+def test_exposure_line_counts_zero_and_skips_without_policy(tmp_path, fake_target):
+    fake_target(call("read_inbox"), say(SUMMARY))
+    _, out = run_cli(tmp_path, "--target", "ollama")
+    assert "Exposure:  0 calls outside the allowed domains in lure.yaml" in out
+    fake_target(call("read_inbox"), say(SUMMARY))
+    _, out = run_cli(tmp_path, "--target", "ollama", "--no-org-policy")
+    assert "Exposure:" not in out
 
 
 def test_heuristic_output(tmp_path, fake_target):

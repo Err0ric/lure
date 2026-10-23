@@ -162,6 +162,28 @@ def test_report_shows_exposure(tmp_path):
     assert "1 calls outside allowed domains" in html
 
 
+def test_cli_report_prints_asr_and_exposure_per_version(tmp_path):
+    for turns in [(call("read_inbox"), PERSONAL, say(JBK_SUMMARY)),
+                  (call("read_inbox"), say(JBK_SUMMARY))]:
+        run_attack(JBK_V1, ScriptedAdapter(*turns), org_policy=POLICY).save(tmp_path)
+    run_attack(IPI_001, ScriptedAdapter(call("read_inbox"), say(SUMMARY)),
+               org_policy=POLICY).save(tmp_path)
+    out = io.StringIO()
+    assert cli.main(["report", str(tmp_path), "--out", str(tmp_path / "r.html")], out=out) == 0
+    text = out.getvalue()
+    assert "ASR:       0% (0/3)" in text
+    assert "Exposure:  1 of 3 runs sent outside the allowed domains" in text
+    assert "  lure-jbk-002 v1: 1 of 2 runs\n" in text
+    assert "lure-ipi-001" not in text
+
+
+def test_cli_report_without_exposure_says_not_checked(tmp_path):
+    run_attack(IPI_001, ScriptedAdapter(call("read_inbox"), say(SUMMARY))).save(tmp_path)
+    out = io.StringIO()
+    assert cli.main(["report", str(tmp_path), "--out", str(tmp_path / "r.html")], out=out) == 0
+    assert "Exposure:  not checked" in out.getvalue()
+
+
 def test_report_without_exposure_records_says_not_checked(tmp_path):
     run_attack(IPI_001, ScriptedAdapter(call("read_inbox"), say(SUMMARY))).save(tmp_path)
     report = build_report(load_runs([tmp_path]))
