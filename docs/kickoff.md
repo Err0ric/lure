@@ -185,6 +185,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 - [ ] DuckDB store for results, so runs can be queried across folders
 - [ ] Reactive fixtures: new mail arrives in response to the agent's sends (makes ipi-007 truly multi-step)
 - [ ] OpenAI-compatible adapter (`openai_compat.py`)
+- [ ] lure serve: local web dashboard to browse runs and transcripts
 
 ### Phase 5: Stretch
 

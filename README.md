@@ -163,7 +163,7 @@ An attack's rules only define harm for that attack. `lure.yaml` adds an org-wide
 - [x] Phase 2: Attack library v1 (21 attacks, mock files, HTTP and payments tools, verified IDs)
 - [x] Phase 3: Judge and report (LLM judge, HTML report, exec summary; DuckDB store and reactive fixtures moved to v1.1)
 - [x] Phase 4: Ship v1.0 (security review, CI, demo, tag v1.0)
-- [ ] v1.1: DuckDB store, reactive fixtures, OpenAI-compatible adapter
+- [ ] v1.1: DuckDB store, reactive fixtures, OpenAI-compatible adapter, `lure serve` dashboard
 - [ ] Phase 5: Stretch (multi-agent targets, vetting checklist for employee-built AI tools)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).
