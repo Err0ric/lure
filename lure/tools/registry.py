@@ -8,7 +8,8 @@ Judge sees attempts as well as successes.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from lure.adapters.base import ToolCallRequest, ToolResult, ToolSpec
 from lure.tools.args import ToolArgumentError

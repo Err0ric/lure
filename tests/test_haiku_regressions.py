@@ -7,7 +7,7 @@ attack definitions; all of them should be Pass (detected).
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -18,7 +18,7 @@ from lure.tools.call_log import ToolCall
 
 REPO = Path(__file__).resolve().parent.parent
 RUNS = json.loads((REPO / "tests" / "data" / "haiku_runs.json").read_text())["runs"]
-T = datetime(2026, 10, 23, 5, 0, tzinfo=timezone.utc)
+T = datetime(2026, 10, 23, 5, 0, tzinfo=UTC)
 
 
 def rescore(run):

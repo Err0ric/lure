@@ -82,6 +82,7 @@ lure/
 - Stop after each step for review. Show a plan before writing code.
 - End each session with: what changed, what's next, and any roadmap checkbox to tick.
 - Judge from the tool-call log, never from what the target says it did.
+  - Exception: `reply_contains` matches fixed strings (a secret, a system prompt canary, tool names) in the final reply and counts as confirmed evidence. Leaked text in the reply is the harm itself, not a claim about an action. Keep it.
 
 ## Writing style
 

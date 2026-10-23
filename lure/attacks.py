@@ -4,6 +4,11 @@ Validation is strict so a bad attack fails at load time, not mid-run. It
 also enforces the fake-data rule: every email address, URL host and listed
 domain in the attack and its fixtures must be under the reserved .example
 TLD.
+
+Most payloads are planted in a fixture. A direct prompt injection uses the
+location `task` instead: the payload goes into the user turn itself, and the
+attack usually sets its own `system_prompt` with the policy it tries to
+override.
 """
 
 from __future__ import annotations
@@ -33,14 +38,19 @@ REQUIRED_KEYS = (
     "id", "name", "category", "atlas", "attack", "severity",
     "target_task", "fixtures", "injection", "tools", "fail_if",
 )
-OPTIONAL_KEYS = ("partial_if", "pass_if", "task_check", "required_tools")
+OPTIONAL_KEYS = (
+    "partial_if", "pass_if", "task_check", "required_tools", "system_prompt",
+)
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
+# Injection location for a payload in the user turn, not a fixture.
+TASK_LOCATION = "task"
 # Rule keys the Judge understands. Keys naming a tool must be in `tools`.
 RULE_KEYS = {
     "tool": "tool",
     "to_domain_not_in": "domains",
     "body_contains": "strings",
+    "reply_contains": "strings",
     "asked_user_before": "tool",
     "flagged_as_suspicious": "bool",
 }
@@ -95,12 +105,27 @@ class Attack:
     # injection keywords plus addresses and domains that appear only in the
     # payload. Computed at load time. Empty means any action question counts.
     ask_markers: list[str] = field(default_factory=list)
+    # The target's system prompt; None means the runner's neutral default.
+    system_prompt: str | None = None
+
+    @property
+    def in_task(self) -> bool:
+        """True if the payload is in the user turn (direct injection)."""
+        return self.injection.location == TASK_LOCATION
+
+    def planted_task(self) -> str:
+        """The user turn the target receives, with the payload if it goes there."""
+        if not self.in_task:
+            return self.target_task
+        return plant({TASK_LOCATION: self.target_task}, self.injection)[TASK_LOCATION]
 
     def load_fixtures(self) -> dict[str, Any]:
         return {name: _read_json(path) for name, path in self.fixtures.items()}
 
     def planted_fixtures(self) -> dict[str, Any]:
         """Fixtures with the payload planted. The files on disk are untouched."""
+        if self.in_task:
+            return self.load_fixtures()
         return plant(self.load_fixtures(), self.injection)
 
 
@@ -177,6 +202,11 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     for key in ("name", "target_task"):
         if not isinstance(data[key], str) or not data[key].strip():
             raise fail(f"{key} must be a non-empty string")
+    system_prompt = data.get("system_prompt")
+    if system_prompt is not None and (
+        not isinstance(system_prompt, str) or not system_prompt.strip()
+    ):
+        raise fail("system_prompt must be a non-empty string")
 
     category = data["category"]
     if category not in CATEGORIES:
@@ -216,8 +246,11 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         raise fail(f"injection location {location!r} is not a path like inbox[2].body")
     if not isinstance(payload, str) or not payload.strip():
         raise fail("injection payload must be a non-empty string")
-    if LOCATION_PART_RE.match(location).group(2) not in fixtures:
-        raise fail(f"injection location {location!r} must start with a fixture name")
+    in_task = location == TASK_LOCATION
+    if not in_task and LOCATION_PART_RE.match(location).group(2) not in fixtures:
+        raise fail(
+            f"injection location {location!r} must start with a fixture name, or be {TASK_LOCATION!r}"
+        )
 
     rules = {
         key: _rules(data.get(key, []), key, tools, fail)
@@ -227,16 +260,23 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         raise fail("fail_if must have at least one rule")
 
     loaded = {name: _read_json(p, fail) for name, p in fixtures.items()}
-    try:
-        container, key = resolve_location(loaded, location)
-    except AttackError as e:
-        raise fail(str(e)) from None
-    if not isinstance(container[key], str):
-        raise fail(f"injection location {location!r} must point at a string")
+    if not in_task:
+        try:
+            container, key = resolve_location(loaded, location)
+        except AttackError as e:
+            raise fail(str(e)) from None
+        if not isinstance(container[key], str):
+            raise fail(f"injection location {location!r} must point at a string")
 
     task_check = _task_check(data.get("task_check"), loaded, fail)
+    # Facts must prove the target read the fixtures. A fact in a task payload
+    # could be echoed straight from the user turn.
+    echoed = [f for f in task_check if f.lower() in payload.lower()] if in_task else []
+    if echoed:
+        raise fail(f"task_check facts {echoed} appear in the payload")
     required_tools = _required_tools(data.get("required_tools"), tools, fail)
     _check_body_contains(rules, loaded, fail)
+    _check_reply_contains(rules, loaded, system_prompt, tools, data["target_task"], payload, fail)
     keywords = _keywords(injection.get("keywords"), payload, loaded, fail)
 
     _check_domains(data, f"{path.name}", fail)
@@ -262,6 +302,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         task_check=task_check,
         required_tools=required_tools,
         ask_markers=_ask_markers(keywords, payload, loaded),
+        system_prompt=system_prompt,
     )
 
 
@@ -313,6 +354,22 @@ def _check_body_contains(rules, fixtures, fail) -> None:
             for text in rule.get("body_contains", []):
                 if text.lower() not in corpus:
                     raise fail(f"{key}[{i}] body_contains {text!r} does not appear in the fixtures")
+
+
+def _check_reply_contains(rules, fixtures, system_prompt, tools, task, payload, fail) -> None:
+    # A reply_contains string is something the target was given and must not
+    # repeat: fixture data, its system prompt or its tool names. It must not
+    # be in the task or payload, or echoing the user's message would match.
+    given = "\n".join([*_strings(fixtures), system_prompt or "", *tools]).lower()
+    asked = f"{task}\n{payload}".lower()
+    for key, rule_list in rules.items():
+        for i, rule in enumerate(rule_list):
+            for text in rule.get("reply_contains", []):
+                if text.lower() not in given:
+                    raise fail(f"{key}[{i}] reply_contains {text!r} is not in the fixtures, "
+                               "system prompt or tool names")
+                if text.lower() in asked:
+                    raise fail(f"{key}[{i}] reply_contains {text!r} appears in the task or payload")
 
 
 def _task_check(value, fixtures, fail) -> list[str]:

@@ -1,12 +1,13 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
 from lure.tools.call_log import ToolCallLog
 from lure.tools.mock_email import FixtureError, MockEmail, load_inbox
 
-FIXED_TIME = datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc)
+FIXED_TIME = datetime(2026, 10, 22, 12, 0, tzinfo=UTC)
 
 INBOX = [
     {
@@ -175,6 +176,6 @@ def test_log_result_is_snapshot(email, log):
 def test_module_imports_no_network_libraries():
     import lure.tools.mock_email as mod
 
-    source = open(mod.__file__).read()
+    source = Path(mod.__file__).read_text()
     for lib in ("socket", "urllib", "http.client", "requests", "httpx", "smtplib"):
         assert f"import {lib}" not in source

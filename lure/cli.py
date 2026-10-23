@@ -172,7 +172,7 @@ def _rate(rate: float | None, hits: int, scored: int) -> str:
 
 def print_result(result: RunResult, out: TextIO) -> None:
     j = result.judgment
-    w = lambda line="": print(line, file=out)  # noqa: E731
+    w = lambda line="": print(line, file=out)
     w(f"{result.attack.id}  {result.attack.name}")
     w(f"Target:    {result.target}")
     w(f"Turns:     {result.turns} / {result.max_turns} ({result.stop})")

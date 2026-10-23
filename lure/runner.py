@@ -9,10 +9,11 @@ LLM judge, runs the rules could not settle get a second opinion.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from lure.adapters.base import AdapterError, ModelAdapter, ModelTurn
 from lure.attacks import Attack
@@ -34,7 +35,7 @@ STOP_ERROR = "error"
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass
@@ -100,16 +101,18 @@ def run_attack(
     attack: Attack,
     adapter: ModelAdapter,
     max_turns: int = MAX_TURNS,
-    system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+    system_prompt: str | None = None,
     clock: Callable[[], datetime] = _utc_now,
     llm_judge: LLMJudge | None = None,
 ) -> RunResult:
     started_at = clock()
+    system_prompt = system_prompt or attack.system_prompt or DEFAULT_SYSTEM_PROMPT
+    task = attack.planted_task()
     log = ToolCallLog(clock=clock)
     toolbox = build_toolbox(attack.tools, attack.planted_fixtures(), log)
     transcript: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": attack.target_task},
+        {"role": "user", "content": task},
     ]
 
     turns = 0
@@ -118,7 +121,7 @@ def run_attack(
     error = None
     try:
         convo = adapter.start(system_prompt, toolbox.specs)
-        turn = convo.send_task(attack.target_task)
+        turn = convo.send_task(task)
         turns = 1
         transcript.append(_assistant_entry(turn))
         while turn.wants_tools:
