@@ -1,4 +1,4 @@
-"""Command line entry point: lure run <attack.yaml> --target ollama|anthropic."""
+"""Command line entry point: lure run <attack.yaml|folder> --target ollama|anthropic."""
 
 from __future__ import annotations
 
@@ -6,15 +6,18 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import TextIO
 
 from dotenv import find_dotenv, load_dotenv
 
 from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacks import AttackError, load_attack
+from lure.batch import SummaryRow, collect_attack_paths, summarize
 from lure.judge.rules import HEURISTIC, Judgment, Verdict
 from lure.runner import MAX_TURNS, RunResult, run_attack
-from lure.tools.registry import ToolboxError
+from lure.tools.call_log import ToolCallLog
+from lure.tools.registry import ToolboxError, build_toolbox
 
 TARGETS = ("ollama", "anthropic")
 
@@ -41,28 +44,92 @@ def make_adapter(target: str, model: str | None) -> ModelAdapter:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lure")
     sub = parser.add_subparsers(dest="command", required=True)
-    run = sub.add_parser("run", help="run one attack against a target")
-    run.add_argument("attack", help="path to the attack YAML file")
+    run = sub.add_parser("run", help="run attacks against a target")
+    run.add_argument("attack", help="attack YAML file, or a folder of them")
     run.add_argument("--target", choices=TARGETS, required=True)
     run.add_argument("--model", help="model name (default depends on target)")
     run.add_argument("--max-turns", type=int, default=MAX_TURNS)
+    run.add_argument("--repeat", type=_positive_int, default=1,
+                     help="run each attack N times (default 1)")
     run.add_argument("--results-dir", default="results")
     return parser
+
+
+def _positive_int(text: str) -> int:
+    try:
+        n = int(text)
+    except ValueError:
+        n = 0
+    if n < 1:
+        raise argparse.ArgumentTypeError(f"must be a whole number of at least 1, got {text!r}")
+    return n
 
 
 def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     args = build_parser().parse_args(argv)
     load_dotenv(find_dotenv(usecwd=True), override=False)
     try:
-        attack = load_attack(args.attack)
+        # Load every attack first so a bad file fails before any model call.
+        paths = collect_attack_paths(args.attack)
+        attacks = [load_attack(p) for p in paths]
+        for a in attacks:
+            build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
         adapter = make_adapter(args.target, args.model)
-        result = run_attack(attack, adapter, max_turns=args.max_turns)
     except (AttackError, ToolboxError, AdapterError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
-    result.save(args.results_dir)
-    print_result(result, out)
-    return EXIT_RUN_ERROR if result.judgment.verdict is Verdict.ERROR else EXIT_OK
+    batch = Path(args.attack).is_dir() or args.repeat > 1
+    plan = [(a, n) for a in attacks for n in range(1, args.repeat + 1)]
+    results: list[RunResult] = []
+    for i, (attack, n) in enumerate(plan, 1):
+        result = run_attack(attack, adapter, max_turns=args.max_turns)
+        result.save(args.results_dir)
+        results.append(result)
+        if batch:
+            print_progress(result, i, len(plan), n, args.repeat, out)
+        else:
+            print_result(result, out)
+    if batch:
+        print(file=out)
+        print_summary(summarize(results), out)
+    if any(r.judgment.verdict is Verdict.ERROR for r in results):
+        return EXIT_RUN_ERROR
+    return EXIT_OK
+
+
+def print_progress(result: RunResult, i: int, total: int, n: int, repeat: int, out: TextIO) -> None:
+    width = len(str(total))
+    verdict = result.judgment.verdict.value.upper()
+    print(f"[{i:>{width}}/{total}] {result.attack.id}  run {n}/{repeat}  "
+          f"{verdict:<8}  {result.saved_to}", file=out)
+
+
+SUMMARY_VERDICTS = (
+    Verdict.PASS, Verdict.PARTIAL, Verdict.REVIEW,
+    Verdict.INVALID, Verdict.FAIL, Verdict.ERROR,
+)
+
+
+def print_summary(rows: list[SummaryRow], out: TextIO) -> None:
+    header = ["Attack", "Runs", *(v.value for v in SUMMARY_VERDICTS), "Pass rate", "ASR"]
+    table = [header] + [
+        [
+            row.attack_id,
+            str(row.runs),
+            *(str(row.counts[v]) for v in SUMMARY_VERDICTS),
+            _rate(row.pass_rate, row.counts[Verdict.PASS], row.scored),
+            _rate(row.asr, row.counts[Verdict.FAIL], row.scored),
+        ]
+        for row in rows
+    ]
+    widths = [max(len(r[c]) for r in table) for c in range(len(header))]
+    for r in table:
+        cells = [r[0].ljust(widths[0])] + [r[c].rjust(widths[c]) for c in range(1, len(r))]
+        print("  ".join(cells).rstrip(), file=out)
+
+
+def _rate(rate: float | None, hits: int, scored: int) -> str:
+    return "n/a" if rate is None else f"{rate:.0%} ({hits}/{scored})"
 
 
 def print_result(result: RunResult, out: TextIO) -> None:
