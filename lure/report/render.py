@@ -12,6 +12,7 @@ from pathlib import Path
 from jinja2 import Environment, PackageLoader, StrictUndefined
 
 from lure.judge.rules import Verdict
+from lure.report.compare import Comparison, compare_headline, compare_lede
 from lure.report.data import VERDICT_ORDER, Report
 from lure.report.exec_summary import (
     exec_summary,
@@ -85,7 +86,17 @@ def date_range(first: datetime, last: datetime) -> str:
     return a if a == b else f"{a} to {b}"
 
 
-def render(report: Report, generated: datetime | None = None) -> str:
+def tokens(n: int) -> str:
+    return f"{n:,}"
+
+
+def dollars(amount: float | None) -> str:
+    if amount is None:
+        return "n/a"
+    return f"${amount:,.2f}" if amount >= 0.01 or amount == 0 else "under $0.01"
+
+
+def _env() -> Environment:
     env = Environment(
         loader=PackageLoader("lure.report", "templates"),
         autoescape=True,
@@ -94,8 +105,13 @@ def render(report: Report, generated: datetime | None = None) -> str:
         lstrip_blocks=True,
     )
     env.filters.update(pct=pct, asr_step=asr_step, pretty_args=pretty_args,
-                       atlas_name=atlas_name, category_name=category_name)
-    template = env.get_template("report.html.j2")
+                       atlas_name=atlas_name, category_name=category_name,
+                       tokens=tokens, dollars=dollars)
+    return env
+
+
+def render(report: Report, generated: datetime | None = None) -> str:
+    template = _env().get_template("report.html.j2")
     return template.render(
         report=report,
         model=model_name(report.target),
@@ -117,8 +133,31 @@ def render(report: Report, generated: datetime | None = None) -> str:
     )
 
 
+def render_compare(comp: Comparison, generated: datetime | None = None) -> str:
+    template = _env().get_template("compare.html.j2")
+    return template.render(
+        comp=comp,
+        headline=compare_headline(comp),
+        lede=compare_lede(comp),
+        what_it_did=what_it_did,
+        policy_segments=policy_segments,
+        Verdict=Verdict,
+        dates=date_range(comp.first, comp.last),
+        judge_name=judge_name,
+        generated=(generated or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M UTC"),
+    )
+
+
 def write_report(report: Report, out: str | Path) -> Path:
+    return _write(render(report), out)
+
+
+def write_comparison(comp: Comparison, out: str | Path) -> Path:
+    return _write(render_compare(comp), out)
+
+
+def _write(html: str, out: str | Path) -> Path:
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render(report), encoding="utf-8")
+    out.write_text(html, encoding="utf-8")
     return out

@@ -3,6 +3,7 @@
   lure run <attack.yaml|folder> --target ollama|anthropic
   lure rescore <results folder|file>...  (re-judge saved runs, no target calls)
   lure report <results folder|file>... --out report.html
+  lure compare <results folder> <results folder>... --out compare.html [--prices prices.yaml]
 """
 
 from __future__ import annotations
@@ -100,6 +101,14 @@ def build_parser() -> argparse.ArgumentParser:
     report_cmd.add_argument("--out", default="report.html", help="output file (default report.html)")
     report_cmd.add_argument("--target", help="only runs against this target, e.g. "
                                              "anthropic:claude-haiku-5-5 (needed if results mix targets)")
+
+    compare_cmd = sub.add_parser("compare", help="compare targets side by side in one HTML page")
+    compare_cmd.add_argument("results", nargs="+",
+                             help="results folders, one per target (at least two)")
+    compare_cmd.add_argument("--out", default="compare.html", help="output file (default compare.html)")
+    compare_cmd.add_argument("--prices", help="prices file (USD per million tokens) to turn "
+                                              "recorded tokens into a cost estimate; see "
+                                              "prices.example.yaml")
     return parser
 
 
@@ -153,6 +162,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         return rescore_main(args, out)
     if args.command == "report":
         return report_main(args, out)
+    if args.command == "compare":
+        return compare_main(args, out)
     try:
         # Load every attack first so a bad file fails before any model call.
         paths = collect_attack_paths(args.attack)
@@ -199,6 +210,121 @@ def report_main(args, out: TextIO) -> int:
     print(f"Wrote {path}: {t.runs} runs of {len(report.attacks)} attacks against {report.target}, "
           f"{len(report.findings)} findings.", file=out)
     return EXIT_OK
+
+
+def compare_main(args, out: TextIO) -> int:
+    from lure.report.compare import PricesError, build_comparison, load_prices
+    from lure.report.data import ReportError
+    from lure.report.render import write_comparison
+
+    try:
+        prices = load_prices(args.prices) if args.prices else None
+        comp = build_comparison(args.results, prices)
+    except (ReportError, PricesError, FileNotFoundError) as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    print_comparison(comp, out)
+    path = write_comparison(comp, args.out)
+    print(file=out)
+    print(f"Wrote {path}: {len(comp.columns)} targets.", file=out)
+    return EXIT_OK
+
+
+def print_comparison(comp, out: TextIO) -> None:
+    from lure.report.render import dollars, judge_name, tokens
+
+    models = [c.model for c in comp.columns]
+    exposure = (lambda t: f"{t.exposed} of {t.runs}") if comp.exposure_checked else (lambda t: "n/a")
+    rows = [
+        ["Judge", *(judge_name(j) for j in comp.judges)],
+        ["Runs (scored)", *(f"{c.report.total.runs} ({c.report.total.scored})" for c in comp.columns)],
+        ["Pass rate", *(_tally_rate(c.report.total, "pass_rate", Verdict.PASS) for c in comp.columns)],
+        ["Influenced rate", *(_rate(c.report.total.influenced_rate, c.report.total.influenced,
+                                    c.report.total.scored) for c in comp.columns)],
+        ["ASR", *(_tally_rate(c.report.total, "asr", Verdict.FAIL) for c in comp.columns)],
+        ["Detection rate", *(_rate(c.report.total.detection_rate, c.report.total.detected,
+                                   c.report.total.scored) for c in comp.columns)],
+        ["Exposure (runs)", *(exposure(c.report.total) for c in comp.columns)],
+        ["Target tokens in/out", *(f"{tokens(c.target_usage.input)} / {tokens(c.target_usage.output)}"
+                                   for c in comp.columns)],
+        ["Judge tokens in/out", *(" + ".join(f"{tokens(u.input)} / {tokens(u.output)}"
+                                             for u in c.judge_usage) or "none"
+                                  for c in comp.columns)],
+    ]
+    if comp.prices:
+        tc = [c.target_cost(comp.prices) for c in comp.columns]
+        jc = [c.judge_cost(comp.prices) for c in comp.columns]
+        rows += [
+            ["Target cost", *(dollars(x) for x in tc)],
+            ["Judge cost", *(dollars(x) for x in jc)],
+            ["Total cost", *(dollars(a + b if a is not None and b is not None else None)
+                             for a, b in zip(tc, jc))],
+        ]
+    _print_table(["", *models], rows, out)
+
+    print(file=out)
+    cat_rows = []
+    for cat in comp.categories:
+        for model, t in zip(models, cat.tallies):
+            if t is None:
+                cat_rows.append([cat.name, model, "not run", "", "", "", ""])
+                continue
+            cat_rows.append([cat.name, model, _pct(t.pass_rate), _pct(t.influenced_rate),
+                             _pct(t.asr), _pct(t.detection_rate), exposure(t)])
+    _print_table(["Category", "Target", "Pass", "Influenced", "ASR", "Detected", "Exposure"],
+                 _blank_repeats(cat_rows), out)
+
+    for p in comp.policies:
+        print(file=out)
+        print(f"Policy comparison: {p.attack_id} ({p.name})", file=out)
+        pol_rows = []
+        for v in p.versions:
+            for model, row in zip(models, v.rows):
+                if row is None:
+                    pol_rows.append([f"v{v.version}", model, "not run", "", "", ""])
+                    continue
+                t = row.tally
+                pol_rows.append([f"v{v.version}", model, str(t.runs),
+                                 _rate(t.influenced_rate, t.influenced, t.scored),
+                                 _tally_rate(t, "asr", Verdict.FAIL), exposure(t)])
+        _print_table(["Version", "Target", "Runs", "Influenced", "ASR", "Exposure"],
+                     _blank_repeats(pol_rows), out)
+
+    from lure.report.compare import compare_lede
+
+    notes = compare_lede(comp)
+    if comp.prices:
+        notes.append(f"Cost is an estimate from recorded tokens at the rates in "
+                     f"{comp.prices.source}; check current pricing.")
+    if notes:
+        print(file=out)
+        for line in notes:
+            print(f"- {line}", file=out)
+
+
+def _tally_rate(t, attr: str, verdict: Verdict) -> str:
+    return _rate(getattr(t, attr), t.counts[verdict], t.scored)
+
+
+def _pct(rate: float | None) -> str:
+    return "n/a" if rate is None else f"{rate:.0%}"
+
+
+def _blank_repeats(rows: list[list[str]]) -> list[list[str]]:
+    """Blank the first cell when it repeats the row above, so groups read."""
+    out, prev = [], None
+    for r in rows:
+        out.append(["" if r[0] == prev else r[0], *r[1:]])
+        prev = r[0]
+    return out
+
+
+def _print_table(header: list[str], rows: list[list[str]], out: TextIO) -> None:
+    table = [header] + rows
+    widths = [max(len(r[c]) for r in table) for c in range(len(header))]
+    for r in table:
+        cells = [r[0].ljust(widths[0])] + [r[c].rjust(widths[c]) for c in range(1, len(r))]
+        print("  ".join(cells).rstrip(), file=out)
 
 
 def rescore_main(args, out: TextIO) -> int:

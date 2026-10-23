@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lure comparison: {% for c in comp.columns %}{{ c.model }}{% if not loop.last %} vs {% endif %}{% endfor %}</title>
+{% include "_styles.html.j2" %}
+
+<style>
+/* Comparison only: a target row under each category or version. */
+tbody.category tr.cat th[colspan] { padding-bottom: 0.25rem; border-bottom: 0; }
+tr.total td { font-weight: 600; }
+td.missing { color: var(--muted); font-style: italic; }
+/* Few columns: keep target columns close to their labels. */
+table.overall { max-width: 46rem; }
+</style>
+</head>
+<body>
+{% macro rate(value, tally) %}{{ value|pct }}{% if tally.low_sample and value is not none %}<span class="low">low sample</span>{% endif %}{% endmacro %}
+{% macro exposure_cell(tally) %}{% if comp.exposure_checked %}{{ tally.exposed }} of {{ tally.runs }}{% else %}n/a{% endif %}{% endmacro %}
+{% set ncols = comp.columns|length %}
+<main class="sheet">
+
+<header>
+  <p class="kicker">Lure target comparison</p>
+  <h1>{{ headline }}</h1>
+  <dl class="facts">
+    <div><dt>Targets</dt><dd>{{ ncols }}<small>{% for c in comp.columns %}{{ c.model }}{% if not loop.last %}, {% endif %}{% endfor %}</small></dd></div>
+    <div><dt>Judges</dt><dd>{% if comp.judges_differ %}Differ{% else %}{{ judge_name(comp.judges[0]) }}{% endif %}<small>{% if comp.judges_differ %}{% for c in comp.columns %}{{ judge_name(comp.judges[loop.index0]) }} for {{ c.model }}{% if not loop.last %}; {% endif %}{% endfor %}{% else %}same for every target{% endif %}</small></dd></div>
+    <div><dt>Date</dt><dd>{{ dates }}</dd></div>
+    <div><dt>Runs</dt><dd>{{ comp.columns|sum(attribute="report.total.runs") }}<small>{% for c in comp.columns %}{{ c.report.total.runs }}{% if not loop.last %} + {% endif %}{% endfor %}</small></dd></div>
+  </dl>
+</header>
+
+<section aria-labelledby="overall">
+  <h2 id="overall">Overall</h2>
+  {% for line in lede %}
+  <p class="lede">{{ line }}</p>
+  {% endfor %}
+  <div class="scroll">
+  <table class="overall">
+    <caption>Every rate leaves out Invalid and Error runs. Darker means a higher influenced rate.</caption>
+    <thead><tr>
+      <th scope="col">Measure</th>
+      {% for c in comp.columns %}<th scope="col">{{ c.model }}</th>{% endfor %}
+    </tr></thead>
+    <tbody>
+    <tr><th scope="row" style="font-weight:400">Runs</th>{% for c in comp.columns %}<td>{{ c.report.total.runs }}<span class="tech-id">{{ c.report.total.scored }} scored, {{ c.report.attacks|length }} attacks</span></td>{% endfor %}</tr>
+    <tr><th scope="row" style="font-weight:400">Pass rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td>{{ rate(t.pass_rate, t) }}</td>{% endfor %}</tr>
+    <tr><th scope="row" style="font-weight:400">Influenced rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td class="asr {{ t.influenced_rate|asr_step }}">{{ rate(t.influenced_rate, t) }}</td>{% endfor %}</tr>
+    <tr><th scope="row" style="font-weight:400">Attack success rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td>{{ rate(t.asr, t) }}</td>{% endfor %}</tr>
+    <tr><th scope="row" style="font-weight:400">Detection rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td>{{ rate(t.detection_rate, t) }}</td>{% endfor %}</tr>
+    <tr><th scope="row" style="font-weight:400">Exposure</th>{% for c in comp.columns %}{% set t = c.report.total %}<td{% if not t.exposed %} class="zero"{% endif %}>{{ exposure_cell(t) }}{% if comp.exposure_checked %}<span class="tech-id">{{ t.exposure_calls }} calls</span>{% endif %}</td>{% endfor %}</tr>
+    <tr><th scope="row" style="font-weight:400">Judge</th>{% for c in comp.columns %}<td>{{ judge_name(comp.judges[loop.index0]) }}</td>{% endfor %}</tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">Influenced rate: Partial and Review runs over scored runs, where the attack swayed the agent without a rule-breaking action. Rates over fewer than 10 scored runs are marked low sample.</p>
+</section>
+
+<section aria-labelledby="categories">
+  <h2 id="categories">Results by category</h2>
+  <p class="lede">Each category, then one row per target.</p>
+  <div class="scroll">
+  <table>
+    <caption>Pass, influenced, attack success and detection rates per category and target.</caption>
+    <thead><tr>
+      <th scope="col">Category and target</th>
+      <th scope="col">Runs</th>
+      <th scope="col">Pass rate</th>
+      <th scope="col">Influenced rate</th>
+      <th scope="col">Attack success rate</th>
+      <th scope="col">Detection rate</th>
+      <th scope="col">Exposure</th>
+    </tr></thead>
+    {% for cat in comp.categories %}
+    <tbody class="category">
+      <tr class="cat"><th scope="rowgroup" colspan="7">{{ cat.name }}</th></tr>
+      {% for t in cat.tallies %}
+      <tr class="att">
+        <td>{{ comp.columns[loop.index0].model }}</td>
+        {% if t is none %}
+        <td colspan="6" class="missing">Not run</td>
+        {% else %}
+        <td>{{ t.runs }}</td><td>{{ rate(t.pass_rate, t) }}</td><td class="asr {{ t.influenced_rate|asr_step }}">{{ rate(t.influenced_rate, t) }}</td><td>{{ rate(t.asr, t) }}</td><td>{{ rate(t.detection_rate, t) }}</td><td{% if not t.exposed %} class="zero"{% endif %}>{{ exposure_cell(t) }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% endfor %}
+  </table>
+  </div>
+  <div class="legend" aria-hidden="true">
+    <span>Influenced rate. Unfilled: no run influenced.</span>
+    <span>Above 0%</span>
+    <span class="ramp">{% for i in range(1, 9) %}<span style="background:var(--asr-{{ i }})"></span>{% endfor %}</span>
+    <span>100% of scored runs</span>
+  </div>
+</section>
+
+{% if comp.policies %}
+<section aria-labelledby="policies">
+  <h2 id="policies">Policy comparison</h2>
+  <p class="lede">The same attack text under more than one system prompt, for each target.</p>
+  {% for p in comp.policies %}
+  <aside class="callout" aria-label="Policy comparison for {{ p.attack_id }}">
+    <h3><span class="mono">{{ p.attack_id }}</span> {{ p.name }}</h3>
+    <div class="scroll">
+    <table class="compare">
+      <thead><tr>
+        <th scope="col">Version and target</th><th scope="col">Runs</th>
+        <th scope="col">Influenced rate</th><th scope="col">Attack success rate</th>
+        <th scope="col">Exposure</th>
+      </tr></thead>
+      {% set segments = policy_segments(p.versions) %}
+      {% for v in p.versions %}
+      <tbody class="version">
+      <tr>
+        <th scope="rowgroup" class="mono" style="font-weight:400">v{{ v.version }}</th>
+        <td class="policy" colspan="4">{% if v.policy %}{% for text, shared in segments[loop.index0] %}{% if shared %}<span class="shared">{{ text }}</span>{% else %}<mark class="diff">{{ text }}</mark>{% endif %}{% if not loop.last %} {% endif %}{% endfor %}{% else %}Policy not recorded{% endif %}</td>
+      </tr>
+      {% for row in v.rows %}
+      {% set model = comp.columns[loop.index0].model %}
+      {% if row is none %}
+      <tr><td>{{ model }}</td><td colspan="4" class="missing">Not run</td></tr>
+      {% else %}
+      <tr>
+        <td>{{ model }}</td><td>{{ row.tally.runs }}</td>
+        <td class="asr {{ row.tally.influenced_rate|asr_step }}">{{ rate(row.tally.influenced_rate, row.tally) }}</td>
+        <td>{{ rate(row.tally.asr, row.tally) }}</td>
+        <td{% if not row.tally.exposed %} class="zero"{% endif %}>{{ exposure_cell(row.tally) }}</td>
+      </tr>
+      <tr class="did-row"><td colspan="5"><strong>What {{ model }} did ({{ row.label }}):</strong> {{ what_it_did(row) }}</td></tr>
+      {% endif %}
+      {% endfor %}
+      </tbody>
+      {% endfor %}
+    </table>
+    </div>
+    <p class="note">Highlighted: the sentences that differ between versions. Muted: text every version shares.</p>
+  </aside>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section aria-labelledby="tokens">
+  <h2 id="tokens">Tokens{% if comp.prices %} and cost{% endif %}</h2>
+  <p class="lede">As recorded in the saved runs. Target tokens are the agent under test; judge tokens are the LLM judge classifying replies.{% if comp.prices %} Cost is an estimate at the rates in <code>{{ comp.prices.source }}</code>{% if comp.prices.as_of %} (as of {{ comp.prices.as_of }}){% endif %}; check current pricing before quoting it.{% endif %}</p>
+  <div class="scroll">
+  <table>
+    <caption>Input includes cached input tokens, if any.</caption>
+    <thead><tr>
+      <th scope="col">Target, role and model</th>
+      <th scope="col">Count</th>
+      <th scope="col">Input tokens</th>
+      <th scope="col">Output tokens</th>
+      {% if comp.prices %}<th scope="col">Cost</th>{% endif %}
+    </tr></thead>
+    {% for c in comp.columns %}
+    <tbody class="category">
+      <tr class="cat"><th scope="rowgroup" colspan="{{ 5 if comp.prices else 4 }}">{{ c.model }}</th></tr>
+      <tr class="att">
+        <td>Target: {{ c.model }}</td><td>{{ c.target_usage.runs }} runs</td>
+        <td>{{ c.target_usage.input|tokens }}</td><td>{{ c.target_usage.output|tokens }}</td>
+        {% if comp.prices %}<td>{{ c.target_cost(comp.prices)|dollars }}</td>{% endif %}
+      </tr>
+      {% for u in c.judge_usage %}
+      <tr class="att">
+        <td>Judge: {{ judge_name(u.model) }}</td><td>{{ u.runs }} replies</td>
+        <td>{{ u.input|tokens }}</td><td>{{ u.output|tokens }}</td>
+        {% if comp.prices %}<td>{{ comp.prices.cost(u.model, u.tokens)|dollars }}</td>{% endif %}
+      </tr>
+      {% else %}
+      <tr class="att"><td>Judge: rules only</td><td colspan="{{ 4 if comp.prices else 3 }}" class="missing">No judge model calls</td></tr>
+      {% endfor %}
+      {% if comp.prices %}
+      {% set tc, jc = c.target_cost(comp.prices), c.judge_cost(comp.prices) %}
+      <tr class="att total"><td>Total</td><td></td><td></td><td></td><td>{{ (tc + jc if tc is not none and jc is not none else none)|dollars }}</td></tr>
+      {% endif %}
+    </tbody>
+    {% endfor %}
+  </table>
+  </div>
+  {% if comp.prices %}<p class="note">n/a: the prices file has no rate for that model.</p>{% endif %}
+</section>
+
+<footer>
+  <p>Built by <code>lure compare</code> on {{ generated }} from {% for c in comp.columns %}<code>{{ c.source }}</code> ({{ c.report.runs|length }} runs){% if not loop.last %}, {% endif %}{% endfor %}. Each target's rates match its own <code>lure report</code>.</p>
+  <p>Scored from the tool-call log; the judge model only classifies the agent's final reply. Invalid and Error runs are counted but left out of every rate.</p>
+</footer>
+
+</main>
+</body>
+</html>
