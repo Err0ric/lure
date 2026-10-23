@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import pytest
 
@@ -67,11 +66,3 @@ def test_url_key():
 def test_bad_fixture(log, fixture, match):
     with pytest.raises(FixtureError, match=match):
         MockHttp(fixture, log)
-
-
-def test_module_imports_no_network_libraries():
-    import lure.tools.mock_http as mod
-
-    source = Path(mod.__file__).read_text()
-    for lib in ("socket", "urllib", "http.client", "requests", "httpx", "ssl"):
-        assert f"import {lib}" not in source

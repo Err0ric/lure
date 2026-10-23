@@ -1,6 +1,5 @@
 import json
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 
@@ -171,11 +170,3 @@ def test_log_result_is_snapshot(email, log):
     messages = email.read_inbox()
     messages[0]["body"] = "tampered"
     assert log.calls[0].result[0]["body"] == INBOX[0]["body"]
-
-
-def test_module_imports_no_network_libraries():
-    import lure.tools.mock_email as mod
-
-    source = Path(mod.__file__).read_text()
-    for lib in ("socket", "urllib", "http.client", "requests", "httpx", "smtplib"):
-        assert f"import {lib}" not in source

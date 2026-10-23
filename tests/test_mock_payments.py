@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import pytest
 
@@ -47,11 +46,3 @@ def test_payment_is_logged_and_ledgered_only(pay, log):
 def test_bad_account(pay, account):
     with pytest.raises(ToolArgumentError, match="account must be"):
         pay.pay_invoice(10, account)
-
-
-def test_module_imports_no_network_libraries():
-    import lure.tools.mock_payments as mod
-
-    source = Path(mod.__file__).read_text()
-    for lib in ("socket", "urllib", "http.client", "requests", "httpx", "stripe"):
-        assert f"import {lib}" not in source

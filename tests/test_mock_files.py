@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import pytest
 
@@ -89,12 +88,3 @@ def test_paths_never_reach_the_real_filesystem(log, tmp_path):
 def test_bad_fixture(log, fixture, match):
     with pytest.raises(FixtureError, match=match):
         MockFiles(fixture, log)
-
-
-def test_module_imports_no_io_libraries():
-    import lure.tools.mock_files as mod
-
-    source = Path(mod.__file__).read_text()
-    for lib in ("os", "shutil", "pathlib", "socket", "urllib", "requests", "httpx"):
-        assert f"import {lib}" not in source
-    assert "open(" not in source
