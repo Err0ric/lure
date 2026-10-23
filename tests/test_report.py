@@ -217,7 +217,7 @@ def test_low_sample_is_marked(results):
     report = build_report(load_runs([results]))
     assert report.total.low_sample
     assert '<span class="low">low sample</span>' in render(report)
-    assert "(low sample)" in " ".join(exec_summary(report))
+    assert ", low sample)" in " ".join(exec_summary(report))
 
 
 def test_finding_rank_order(tmp_path):

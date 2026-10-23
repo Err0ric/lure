@@ -62,7 +62,7 @@ def why(run: Run) -> str:
 
 def rate_text(rate: float | None, tally: Tally) -> str:
     """A rate with its low-sample warning, for prose."""
-    return pct(rate) + (" (low sample)" if tally.low_sample else "")
+    return pct(rate) + (", low sample" if tally.low_sample else "")
 
 
 def headline(report: Report) -> str:
