@@ -4,7 +4,7 @@ An open-source harness that attacks AI agents with prompt injection and tool-abu
 
 Think phishing simulation, but the target is an agent instead of an employee.
 
-> Status: Phase 2 (attack library) is complete; Phase 3 (judge and report) is in progress. "Lure" is a working name.
+> Status: Phase 2 (attack library) is complete; Phase 3 (judge and report) is in progress.
 
 ## What Lure found
 
@@ -122,7 +122,7 @@ An attack's rules only define harm for that attack. `lure.yaml` adds an org-wide
 
 ## Roadmap
 
-- [ ] Phase 0: Kickoff (all done except confirming the name)
+- [x] Phase 0: Kickoff
 - [x] Phase 1: One attack, end to end
 - [x] Phase 2: Attack library v1 (21 attacks, mock files, HTTP and payments tools, verified IDs)
 - [ ] Phase 3: Judge and report (LLM judge, HTML report and exec summary are done; DuckDB store and reactive fixtures to go)

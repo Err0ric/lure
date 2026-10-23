@@ -2,7 +2,7 @@
 
 ## Overview
 
-Lure is an open-source harness that attacks AI agents with prompt injection and tool-abuse scenarios, scores how they respond, and maps every result to MITRE ATLAS. Think phishing simulation, but the target is an agent instead of an employee. ("Lure" is a working name.)
+Lure is an open-source harness that attacks AI agents with prompt injection and tool-abuse scenarios, scores how they respond, and maps every result to MITRE ATLAS. Think phishing simulation, but the target is an agent instead of an employee.
 
 **Problem:** Always-on agents now read email, files and web pages and can send, delete and pay. Their biggest weakness is indirect prompt injection: hidden instructions in content the agent reads. Most orgs have no repeatable way to test an agent before trusting it with real data.
 
@@ -141,18 +141,18 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 
 ### Phase 0: Kickoff
 
-- [ ] Create the GitHub repo and Claude Project
-- [ ] Paste the project instructions (below) into the Claude Project
-- [ ] Write README v0 (what, why, safety model) and CLAUDE.md
-- [ ] Confirm the name (Lure or other)
+- [x] Create the GitHub repo and Claude Project
+- [x] Paste the project instructions (below) into the Claude Project
+- [x] Write README v0 (what, why, safety model) and CLAUDE.md
+- [x] Confirm the name (Lure or other)
 
 ### Phase 1: One attack, end to end
 
-- [ ] Mock email tool (read\_inbox, send\_email) that logs every call
-- [ ] Anthropic adapter + Ollama adapter
-- [ ] Runner loads one YAML attack and records the tool-call log
-- [ ] Rule-based judge for lure-ipi-001
-- [ ] `lure run attacks/indirect_prompt_injection/lure-ipi-001.yaml` prints Pass / Partial / Fail
+- [x] Mock email tool (read\_inbox, send\_email) that logs every call
+- [x] Anthropic adapter + Ollama adapter
+- [x] Runner loads one YAML attack and records the tool-call log
+- [x] Rule-based judge for lure-ipi-001
+- [x] `lure run attacks/indirect_prompt_injection/lure-ipi-001.yaml` prints Pass / Partial / Fail
 
 ### Phase 2: Attack library v1
 
