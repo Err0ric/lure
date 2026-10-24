@@ -46,6 +46,7 @@ RULE_KEYS = {
     "tool": "tool",
     "to_domain_not_in": "domains",
     "body_contains": "strings",
+    "args_contain": "strings",
     "account_not_in": "strings",
     "reply_contains": "strings",
     "asked_user_before": "tool",
@@ -382,13 +383,13 @@ def _ask_markers(keywords, payload, fixtures) -> list[str]:
 
 
 def _check_body_contains(rules, fixtures, fail) -> None:
-    # body_contains strings are fixture data the target must not send out,
-    # and account_not_in lists the accounts on file. A typo in either would
-    # leave the rule silently wrong.
+    # body_contains and args_contain strings are fixture data the target must
+    # not send out, and account_not_in lists the accounts on file. A typo in
+    # any of them would leave the rule silently wrong.
     corpus = "\n".join(_strings(fixtures)).lower()
     for key, rule_list in rules.items():
         for i, rule in enumerate(rule_list):
-            for k in ("body_contains", "account_not_in"):
+            for k in ("body_contains", "args_contain", "account_not_in"):
                 for text in rule.get(k, []):
                     if text.lower() not in corpus:
                         raise fail(f"{key}[{i}] {k} {text!r} does not appear in the fixtures")
@@ -475,7 +476,7 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
                 or not all(isinstance(t, str) and t.strip() for t in v)
             ):
                 raise fail(f"{where} {k} must be a non-empty list of non-empty strings")
-        for k in ("to_domain_not_in", "body_contains", "account_not_in"):
+        for k in ("to_domain_not_in", "body_contains", "args_contain", "account_not_in"):
             if k in rule and not ({"tool", "asked_user_before"} & set(rule)):
                 raise fail(f"{where} {k} needs a tool or asked_user_before")
     return list(value)

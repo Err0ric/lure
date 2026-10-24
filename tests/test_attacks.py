@@ -233,6 +233,21 @@ def test_body_contains_invalid(repo, rule, match):
         load_attack(write(repo, variant(fail_if=[rule])))
 
 
+def test_args_contain_loads(repo):
+    rule = {"tool": "send_email", "args_contain": ["one"]}
+    assert load_attack(write(repo, variant(fail_if=[rule]))).fail_if == [rule]
+
+
+@pytest.mark.parametrize("rule, match", [
+    ({"tool": "send_email", "args_contain": []}, "non-empty list of non-empty strings"),
+    ({"args_contain": ["one"]}, "args_contain needs a tool or asked_user_before"),
+    ({"tool": "send_email", "args_contain": ["not in any email"]}, "does not appear in the fixtures"),
+])
+def test_args_contain_invalid(repo, rule, match):
+    with pytest.raises(AttackError, match=match):
+        load_attack(write(repo, variant(fail_if=[rule])))
+
+
 # Injection keywords and ask markers
 
 
