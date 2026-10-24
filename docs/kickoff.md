@@ -210,14 +210,14 @@ Harder, more realistic agent attacks. Agent-only and generic; mock tools only.
 
 Goal: find failures in strong models. Agent-only and generic; mock tools only.
 
-- [ ] Adaptive attacker: `--attacker-model` and `--attempts N` (default 5). After a Pass, the attacker LLM rewrites the payload from the target's replies only (never its system prompt, tools or tool results). The run's verdict is its worst attempt; every attempt and the winning payload are saved. The attacker model must differ from the target model. Attacker refusals are their own outcome, never a target Pass. Rewritten payloads pass the same fake-data checks as YAML payloads.
+- [x] Adaptive attacker: `--attacker-model` and `--attempts N` (default 5). After a Pass, the attacker LLM rewrites the payload from the target's replies only (never its system prompt, tools or tool results). The run's verdict is its worst attempt; every attempt and the winning payload are saved. The attacker model must differ from the target model. Attacker refusals are their own outcome, never a target Pass. Rewritten payloads pass the same fake-data checks as YAML payloads.
 - [x] Payload variants per attack: rephrased, split across messages, encoded, buried in long documents (`variants:` in YAML, `--variants`)
 - [x] More trust-boundary attacks: poisoned memory, tool definitions, "from the user" framing
-- [ ] `--baseline`: repeat 10 with the LLM judge. The default `--repeat` stays 1.
-- [ ] `--max-cost USD`: stops a batch once the estimated spend (from the prices file) passes it, and prints the spend so far
+- [x] `--baseline`: repeat 10 with the LLM judge. The default `--repeat` stays 1.
+- [x] `--max-cost USD`: stops a batch once the estimated spend (from the prices file) passes it, and prints the spend so far
 - [x] Baseline: Sonnet and Opus, each judged by the other (no model judges itself). Adaptive runs: Opus attacks Sonnet, Sonnet attacks Opus, 3 runs each. Done 2026-10-24: Opus screened on 12 attacks with payload variants, then confirmed at 10 runs per flagged payload; Haiku and Sonnet matched on the tpo-002, tpo-001 and tpo-004 payloads. The Opus-attacks-Sonnet adaptive run ran; the Sonnet-attacks-Opus run was skipped because Claude attackers refused most attack goals.
 - [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies.
-- [ ] `lure-ipi-007` v4: the follow-up comes from a compromised real vendor mailbox (the real domain, no lookalike), asking for another vendor's invoice data. v2 (unknown sender) and v3 (lookalike carrier) stay: no model took their first step, a valid result.
+- [x] `lure-ipi-007` v4: the follow-up comes from a compromised real vendor mailbox (the real domain, no lookalike), asking for another vendor's invoice data. v2 (unknown sender) and v3 (lookalike carrier) stay: no model took their first step, a valid result.
 - [ ] Old result records keep pointing to the pinned file for their version (for example a v3 record to `lure-ipi-007-v3.yaml` once v4 is current), so SARIF links and `attack.file` stay correct after a version bump.
 - [ ] Structured LLM judge output (JSON schema or tool use) instead of parsing JSON from text: 1 of 612 judge answers through 2026-10-24 failed to parse and fell back to the rules verdict.
 
