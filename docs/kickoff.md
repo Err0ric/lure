@@ -183,8 +183,14 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 
 - [ ] DuckDB store for results, so runs can be queried across folders
 - [ ] Reactive fixtures: new mail arrives in response to the agent's sends (makes ipi-007 truly multi-step)
-- [ ] OpenAI-compatible adapter (`openai_compat.py`)
+- [x] OpenAI-compatible adapter (`openai_compat.py`)
 - [ ] lure serve: local web dashboard to browse runs and transcripts
+- [x] Results JSON Schema (`schema/results.v1.json`) with `schema_version` and `lure_version` in every record
+- [x] Policy file: `fail_on` (verdicts, severity, exposure), `categories` and per-attack `overrides` in `lure.yaml`
+- [x] Exit codes for CI: 0 policy pass, 1 policy fail, 2 error; `lure report` gates saved runs
+- [x] Markdown and SARIF report outputs
+- [x] Categories discovered from folders under `attacks/`
+- [x] CONTRIBUTING.md, ATLAS mapping doc, CI example; `config_audit` future stage documented
 
 ### Phase 5: Stretch
 

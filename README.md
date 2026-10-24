@@ -4,7 +4,7 @@ An open-source harness that attacks AI agents with prompt injection and tool-abu
 
 Think phishing simulation, but the target is an agent instead of an employee.
 
-> Status: v1.0.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
+> Status: v1.1.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
 
 [![Top of the sample report: headline, facts strip and summary for claude-haiku-5-5](docs/sample-report-top.png)](https://err0ric.github.io/lure/sample-report.html)
 
@@ -194,7 +194,8 @@ A future `config_audit` stage would check agent and MCP settings before any run;
 - [x] Phase 2: Attack library v1 (21 attacks, mock files, HTTP and payments tools, verified IDs)
 - [x] Phase 3: Judge and report (LLM judge, HTML report, exec summary; DuckDB store and reactive fixtures moved to v1.1)
 - [x] Phase 4: Ship v1.0 (security review, CI, demo, tag v1.0)
-- [ ] v1.1: DuckDB store, reactive fixtures, OpenAI-compatible adapter, `lure serve` dashboard
+- [x] v1.1.0: policy file and CI gate (exit codes, Markdown, SARIF), results JSON Schema, OpenAI-compatible adapter, category discovery, CONTRIBUTING
+- [ ] v1.1, still open: DuckDB store, reactive fixtures, `lure serve` dashboard
 - [ ] Phase 5: Stretch (multi-agent targets, vetting checklist for internally built AI tools)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).
