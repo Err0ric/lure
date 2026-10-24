@@ -20,6 +20,20 @@
 - `confirmation_required: null` in a judge answer means not answered, the
   same as leaving it out.
 
+### Fixed
+
+- **SARIF points old results at the attack version they ran.** A record's
+  `attack.file` names the file at run time; after a version bump that file
+  holds the new version and the old one is pinned as `<id>-v<N>.yaml`.
+  `lure report --sarif` now looks every result up by id and version in
+  `--attacks-dir` (default `attacks`) first, and falls back to the recorded
+  file with a warning when the folder is missing or the version has no
+  pinned file. Saved records are not changed. Affected local results:
+  `lure-ipi-007` v2 and v3 and `lure-mem-002` v1 records saved before
+  their bump.
+- A repo test checks that every older attack version has a pinned file;
+  CONTRIBUTING has the version-bump checklist.
+
 ## v1.3.0 (2026-10-24)
 
 ### Findings

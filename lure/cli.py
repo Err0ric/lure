@@ -167,8 +167,8 @@ def build_parser() -> argparse.ArgumentParser:
     report_cmd.add_argument("--sarif", metavar="PATH",
                             help="also write SARIF 2.1.0 for CI code scanning")
     report_cmd.add_argument("--attacks-dir", default="attacks",
-                            help="where to find attack files for results saved before they "
-                                 "recorded attack.file (SARIF only; default attacks)")
+                            help="attack files, looked up by id and version so SARIF points "
+                                 "at the version each run tested (SARIF only; default attacks)")
     _policy_args(report_cmd)
 
     compare_cmd = sub.add_parser("compare", help="compare targets side by side in one HTML page")
@@ -580,7 +580,7 @@ def report_main(args, out: TextIO) -> int:
     if args.sarif:
         from lure.report.sarif import write_sarif
 
-        files = _legacy_attack_files(runs, args.attacks_dir)
+        files = _attack_files(args.attacks_dir)
         print(f"Wrote {write_sarif(report, args.sarif, gate, files)}", file=out)
     print(f"ASR:       {_rate(t.asr, t.counts[Verdict.FAIL], t.scored)}", file=out)
     if not report.exposure_checked:
@@ -597,10 +597,14 @@ def report_main(args, out: TextIO) -> int:
     return exit_code(gate, [r.verdict for r in gated])
 
 
-def _legacy_attack_files(runs: list, attacks_dir: str) -> dict[tuple[str, int], str]:
-    """Attack files for records without attack.file, looked up by id and
-    version. Empty when every record has one or the folder is missing."""
-    if all("file" in r.attack for r in runs) or not Path(attacks_dir).is_dir():
+def _attack_files(attacks_dir: str) -> dict[tuple[str, int], str]:
+    """Attack files by id and version, pinned versions included, so SARIF
+    points each result at the version it ran. Empty, with a warning, when
+    the folder is missing or unreadable: records then keep their own
+    attack.file."""
+    if not Path(attacks_dir).is_dir():
+        print(f"lure: SARIF: no attacks folder at {attacks_dir}; using each record's "
+              "attack.file, which may name a newer version", file=sys.stderr)
         return {}
     try:
         return {key: attack.file for key, attack in attack_index(attacks_dir).items()}

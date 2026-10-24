@@ -46,8 +46,10 @@ def message(value: object, limit: int = MAX_TEXT) -> str:
 def render_sarif(report: Report, gate: PolicyResult | None = None,
                  attack_files: dict[tuple[str, int], str] | None = None,
                  warn: TextIO = sys.stderr) -> dict[str, Any]:
-    """The SARIF log. `attack_files` maps (id, version) to the attack file for
-    records saved before attack.file was recorded."""
+    """The SARIF log. `attack_files` maps (id, version) to its attack file in
+    the attacks folder now. It wins over a record's attack.file, which names
+    the file at run time: after a version bump that file holds the new
+    version and the old one is pinned as <id>-v<N>.yaml."""
     by_key: dict[tuple[str, int], list[Run]] = {}
     for run in sorted(report.runs, key=lambda r: (r.key, r.started_at)):
         by_key.setdefault(run.key, []).append(run)
@@ -117,7 +119,13 @@ def _result(key: tuple[str, int], runs: list[Run], exposed: set[str], target: st
     exposed_runs = [r for r in runs if str(r.path) in exposed]
     if not found and not exposed_runs:
         return None
-    uri = runs[-1].attack.get("file") or attack_files.get(key)
+    recorded = runs[-1].attack.get("file")
+    uri = attack_files.get(key) or recorded
+    if uri == recorded and recorded in attack_files.values():
+        # The index has the file, but for another version: v<N> was not pinned.
+        now = next(v for (_, v), f in attack_files.items() if f == recorded)
+        print(f"lure: SARIF: {attack_id} v{version} points at {recorded}, which now holds "
+              f"v{now}; no pinned file for v{version} was found", file=warn)
     if uri is None:
         print(f"lure: SARIF: no attack file for {attack_id} v{version} (saved by Lure 1.0.0; "
               "pass --attacks-dir); its result is left out", file=warn)

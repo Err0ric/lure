@@ -551,3 +551,18 @@ def test_pinned_version_file_loads(repo):
 def test_pinned_version_file_invalid(repo, name, version, match):
     with pytest.raises(AttackError, match=match):
         load_attack(write(repo, variant(version=version), name=name))
+
+
+def test_every_older_version_is_pinned():
+    """A version bump pins the old file as <id>-v<N>.yaml, so results from
+    older versions still find the file they ran."""
+    missing = []
+    for path in sorted((REPO / "attacks").rglob("*.yaml")):
+        attack = load_attack(path)
+        if attack.pinned:
+            continue
+        for v in range(1, attack.version):
+            pinned = path.with_name(f"{attack.id}-v{v}.yaml")
+            if not pinned.is_file() or load_attack(pinned).version != v:
+                missing.append(pinned.relative_to(REPO).as_posix())
+    assert missing == []

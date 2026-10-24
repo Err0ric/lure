@@ -305,7 +305,7 @@
           "minimum": 1
         },
         "file": {
-          "description": "The attack YAML, relative to the folder holding attacks/ (absolute if outside it).",
+          "description": "The attack YAML at run time, relative to the folder holding attacks/ (absolute if outside it). After a version bump it holds the newer version; reports look the run's version up by id and version.",
           "type": "string",
           "minLength": 1
         },

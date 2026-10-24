@@ -95,6 +95,16 @@ stricter rule, a new system prompt): bump `version`, and keep the old one as
 `<id>-v<N>.yaml` so its findings stay reproducible. Folder runs use only the
 current version.
 
+- [ ] Copy `<id>.yaml` to `<id>-v<N>.yaml` (N is the old version) before
+      editing, byte-identical
+- [ ] Edit `<id>.yaml` and raise `version` to N+1
+- [ ] Run the tests: `test_every_older_version_is_pinned` fails if any
+      older version has no pinned file
+
+Saved results keep the `attack.file` they ran with, which now names the
+new version. `lure report --sarif` looks each result up by id and version
+in `--attacks-dir`, so it points at the pinned file.
+
 ## Multi-step attacks
 
 Four building blocks make an attack harder than one poisoned document. All

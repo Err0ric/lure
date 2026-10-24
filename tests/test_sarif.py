@@ -161,3 +161,55 @@ def test_policy_file_path_and_hash_are_recorded(results, tmp_path):
     recorded = json.loads(out.read_text())["runs"][0]["properties"]["policy"]
     assert recorded["path"] == str(policy)
     assert recorded["sha256"] == hashlib.sha256(policy.read_bytes()).hexdigest()
+
+
+def restamp(folder, file):
+    """Records as if the attack was bumped after the run: attack.file names
+    the current file, which now holds a newer version."""
+    for path in folder.glob("*.json"):
+        data = json.loads(path.read_text())
+        data["attack"]["file"] = file(data["attack"])
+        path.write_text(json.dumps(data))
+    return folder
+
+
+def uri(result):
+    return result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+
+
+def test_index_wins_over_a_stale_recorded_file(results):
+    restamp(results, lambda a: f"attacks/x/{a['id']}.yaml")
+    files = {("lure-jbk-002", 1): "attacks/jailbreak/lure-jbk-002-v1.yaml"}
+    found = by_rule(sarif(results, files=files))
+    assert uri(found["lure-jbk-002"]) == "attacks/jailbreak/lure-jbk-002-v1.yaml"
+    assert uri(found["lure-ipi-001"]) == "attacks/x/lure-ipi-001.yaml"  # not indexed: recorded
+
+
+def test_recorded_file_holding_another_version_warns(results):
+    restamp(results, lambda a: f"attacks/jailbreak/{a['id']}.yaml")
+    files = {("lure-jbk-002", 2): "attacks/jailbreak/lure-jbk-002.yaml"}
+    warn = io.StringIO()
+    found = by_rule(sarif(results, files=files, warn=warn))
+    assert uri(found["lure-jbk-002"]) == "attacks/jailbreak/lure-jbk-002.yaml"
+    assert ("lure-jbk-002 v1 points at attacks/jailbreak/lure-jbk-002.yaml, which now holds v2"
+            in warn.getvalue())
+
+
+def test_cli_points_old_versions_at_their_pinned_file(results, tmp_path, capsys):
+    restamp(results, lambda a: f"attacks/jailbreak/{a['id']}.yaml" if a["id"] == "lure-jbk-002"
+            else a["file"])
+    path = tmp_path / "lure.sarif"
+    cli.main(["report", str(results), "--out", str(tmp_path / "r.html"), "--sarif", str(path),
+              "--attacks-dir", str(IPI_001.source.parents[1])], out=io.StringIO())
+    found = by_rule(json.loads(path.read_text()))
+    assert uri(found["lure-jbk-002"]).endswith("attacks/jailbreak/lure-jbk-002-v1.yaml")
+    assert "now holds" not in capsys.readouterr().err
+
+
+def test_cli_without_attacks_folder_keeps_recorded_files(results, tmp_path, capsys):
+    path = tmp_path / "lure.sarif"
+    cli.main(["report", str(results), "--out", str(tmp_path / "r.html"), "--sarif", str(path),
+              "--attacks-dir", str(tmp_path / "missing")], out=io.StringIO())
+    assert "no attacks folder at" in capsys.readouterr().err
+    assert sorted(by_rule(json.loads(path.read_text()))) == [
+        "lure-ipi-001", "lure-jbk-002", "lure-tab-002"]
