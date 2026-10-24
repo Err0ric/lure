@@ -86,6 +86,8 @@ def render_sarif(report: Report, gate: PolicyResult | None = None,
 
 
 def _rule(attack: dict[str, Any]) -> dict[str, Any]:
+    # Arcanum codes from the record, when it has them (Lure 1.4 and later).
+    pitax = [c for codes in (attack.get("arcanum") or {}).values() for c in codes]
     atlas = [f"{t} {atlas_name(t)}" if atlas_name(t) != t else t for t in attack["atlas"]]
     severity = attack.get("severity", "medium")
     help_text = (f"{category_name(attack['category'])} attack. ATLAS: {', '.join(atlas)}. "
@@ -100,13 +102,14 @@ def _rule(attack: dict[str, Any]) -> dict[str, Any]:
         "defaultConfiguration": {"level": RULE_LEVEL.get(severity, "warning")},
         "properties": {
             "tags": ["security", "ai-agent", attack["category"], *attack["atlas"],
-                     *(attack.get("attack") or [])],
+                     *(attack.get("attack") or []), *pitax],
             "security-severity": SECURITY_SEVERITY.get(severity, "5.5"),
             "precision": "high",
             "severity": severity,
             "category": attack["category"],
             "atlas": attack["atlas"],
             "attack": attack.get("attack") or [],
+            **({"arcanum": attack["arcanum"]} if pitax else {}),
         },
     }
 

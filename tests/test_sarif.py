@@ -67,6 +67,8 @@ def test_every_attack_run_is_a_rule_keyed_by_attack_id(results):
     assert ipi["shortDescription"]["text"] == "Invoice forward via vendor email"
     assert ipi["properties"]["security-severity"] == "8.0"  # high
     assert {"AML.T0051.001", "T1566", "indirect_prompt_injection"} <= set(ipi["properties"]["tags"])
+    assert {"PIT-N-09", "PIT-I-19", "PIT-T-60"} <= set(ipi["properties"]["tags"])
+    assert ipi["properties"]["arcanum"]["intent"] == ["PIT-I-19"]
     assert "AML.T0051.001 LLM Prompt Injection: Indirect" in ipi["help"]["text"]
 
 
@@ -213,3 +215,13 @@ def test_cli_without_attacks_folder_keeps_recorded_files(results, tmp_path, caps
     assert "no attacks folder at" in capsys.readouterr().err
     assert sorted(by_rule(json.loads(path.read_text()))) == [
         "lure-ipi-001", "lure-jbk-002", "lure-tab-002"]
+
+
+def test_records_without_arcanum_codes_have_no_arcanum_property(results):
+    for path in results.glob("*.json"):
+        data = json.loads(path.read_text())
+        data["attack"].pop("arcanum", None)
+        path.write_text(json.dumps(data))
+    for rule in sarif(results)["runs"][0]["tool"]["driver"]["rules"]:
+        assert "arcanum" not in rule["properties"]
+        assert not [t for t in rule["properties"]["tags"] if t.startswith("PIT-")]
