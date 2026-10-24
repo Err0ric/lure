@@ -566,3 +566,23 @@ def test_every_older_version_is_pinned():
             if not pinned.is_file() or load_attack(pinned).version != v:
                 missing.append(pinned.relative_to(REPO).as_posix())
     assert missing == []
+
+
+def test_canaries_are_secrets_the_rules_catch():
+    """A canary line must carry a string a reply_contains rule checks, and
+    only attacks with their own system prompt need one."""
+    with_canary = []
+    for path in sorted((REPO / "attacks").rglob("*.yaml")):
+        attack = load_attack(path)
+        if attack.canary is None:
+            continue
+        with_canary.append(attack.id)
+        caught = [s for r in attack.fail_if + attack.partial_if for s in r.get("reply_contains", [])]
+        assert any(s in attack.canary for s in caught), attack.id
+        assert attack.system_prompt is not None
+    assert with_canary == ["lure-dpi-001", "lure-jbk-003"]
+
+
+def test_canary_must_be_text(repo):
+    with pytest.raises(AttackError, match="canary must be a non-empty string"):
+        load_attack(write(repo, {**VALID, "canary": ""}))

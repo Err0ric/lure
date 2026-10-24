@@ -62,7 +62,7 @@ REQUIRED_KEYS = (
 )
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
-    "followup_tasks", "responders", "goal", "variants", "arcanum",
+    "followup_tasks", "responders", "goal", "variants", "arcanum", "canary",
 )
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
@@ -233,6 +233,9 @@ class Attack:
     # Arcanum Prompt Injection Taxonomy codes by pillar (input, intent,
     # technique, evasion). Empty for pinned versions, which stay unmapped.
     arcanum: dict[str, list[str]] = field(default_factory=dict)
+    # A secret line appended to a profiled agent's own system prompt, for
+    # attacks whose reply_contains rules catch a leaked system prompt.
+    canary: str | None = None
 
     @property
     def multi_turn(self) -> bool:
@@ -441,6 +444,9 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     goal = data.get("goal")
     if goal is not None and (not isinstance(goal, str) or not goal.strip()):
         raise fail("goal must be a non-empty string")
+    canary = data.get("canary")
+    if canary is not None and (not isinstance(canary, str) or not canary.strip()):
+        raise fail("canary must be a non-empty string")
     arcanum = data.get("arcanum", {})
     if bad := arcanum_problems(arcanum):
         raise fail("; ".join(bad))
@@ -581,6 +587,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         variants=variants,
         root=root,
         arcanum=merge(arcanum),
+        canary=canary,
     )
 
 
