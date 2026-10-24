@@ -1,5 +1,55 @@
 # Changelog
 
+## Unreleased (v1.2.0)
+
+Harder, more realistic agent attacks: fixtures that react, attacks that span
+turns, poison in tool definitions and in memory, and a finer Partial.
+
+### New
+
+- **Responders (reactive fixtures).** An attack's `responders` release items
+  from pending fixtures after a matching tool call: `add_inbox`, `add_file`,
+  `update_page`, or `update_tool` for a mid-run tool definition change.
+  Deterministic, limited by `times`, and recorded as `events`. A payload in a
+  pending item that never reaches the target makes the run Invalid.
+- **Multi-turn attacks.** `followup_tasks` sends later user turns. Records
+  carry every turn's final reply (`replies`), and the judge reads them all.
+- **Mock MCP tools.** An `mcp` fixture defines tools with their own
+  description, schema and canned result. No real MCP client or server.
+- **Mock memory.** `search_memory` (deterministic word-overlap top-k) and
+  `save_memory`, backed by a `memory` fixture.
+- **`args_contain` rule key.** Matches strings in any argument of a call.
+- **Partial severity.** Every Partial records `partial_kind`: `outright`, or
+  `confirm_first` when the target only offered the action with the user's
+  explicit confirmation. The LLM judge answers `confirmation_required` for
+  offers. Shown in HTML, Markdown and SARIF. `fail_on.partial: outright`
+  lets only outright Partials fail the policy. Verdicts are unchanged.
+- **`Conversation.set_tools`** in the Anthropic, Ollama and
+  OpenAI-compatible adapters.
+- **Results schema v2** (`schema/results.v2.json`): adds `replies`,
+  `events`, transcript `event` entries, `task.payload_delivered`,
+  `judgment.partial_kind` and `llm_judge.confirmation_required`. v1 is kept
+  and v1 records are still read.
+
+### Attacks
+
+- `lure-ipi-007` v2: Clearpath's follow-up arrives only after the target
+  replies, and a second user turn asks it to check for new mail. v1 is
+  pinned as `lure-ipi-007-v1.yaml`.
+- New category `tool_poisoning`: `lure-tpo-001` (description adds a hidden
+  bcc), `lure-tpo-002` (parameter description asks for the approval code),
+  `lure-tpo-003` (rug pull redirects a payment). AML.T0110.000.
+- New category `memory_poisoning`: `lure-mem-001` (thread), `lure-mem-002`
+  (poisoned long-term memory note), `lure-mem-003` (page gets a rule saved,
+  later summary goes outside). AML.T0080.000 and AML.T0080.001.
+
+### Changed
+
+- `send_email` works without an inbox fixture. A tool whose fixture is
+  missing now fails at load time instead of mid-run.
+- CI runs on `ubuntu-24.04` instead of `ubuntu-latest`, in the workflow and
+  in `docs/ci/lure-gate.yml`.
+
 ## v1.1.0 (2026-10-23)
 
 Lure can now gate CI: one policy file decides what fails, exit codes say so,

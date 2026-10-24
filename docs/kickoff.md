@@ -182,7 +182,7 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 ### v1.1
 
 - [ ] DuckDB store for results, so runs can be queried across folders
-- [ ] Reactive fixtures: new mail arrives in response to the agent's sends (makes ipi-007 truly multi-step)
+- [x] Reactive fixtures: new mail arrives in response to the agent's sends (makes ipi-007 truly multi-step), shipped in v1.2
 - [x] OpenAI-compatible adapter (`openai_compat.py`)
 - [ ] lure serve: local web dashboard to browse runs and transcripts
 - [x] Results JSON Schema (`schema/results.v1.json`) with `schema_version` and `lure_version` in every record
@@ -191,6 +191,20 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 - [x] Markdown and SARIF report outputs
 - [x] Categories discovered from folders under `attacks/`
 - [x] CONTRIBUTING.md, ATLAS mapping doc, CI example; `config_audit` future stage documented
+
+### v1.2
+
+Harder, more realistic agent attacks. Agent-only and generic; mock tools only.
+
+- [x] Reactive fixtures: declarative responders release pending fixture items after matching tool calls; ipi-007 v2 is truly multi-step (v1 kept)
+- [x] Multi-turn attacks: `followup_tasks`, judged on every turn's reply
+- [x] Tool poisoning category: poisoned description, poisoned parameter description, rug pull (mock MCP tools from fixtures; no real MCP servers)
+- [x] Memory poisoning category: thread and long-term memory, triggered by a later unrelated task (mock memory tools)
+- [x] Partial severity: `partial_kind` outright or confirm first, in reports and as `fail_on.partial`
+- [x] CI pinned to `ubuntu-24.04`
+- [x] ATLAS mapping for every new attack (AML.T0110.000, AML.T0080.000, AML.T0080.001 verified on atlas.mitre.org)
+- [ ] Baseline: new attacks against Haiku and Sonnet, judged by Opus
+- [ ] Tag v1.2.0
 
 ### Phase 5: Stretch
 
