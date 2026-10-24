@@ -298,8 +298,10 @@ A future `config_audit` stage would check agent and MCP settings before any run;
 - [x] v1.2.0: reactive fixtures (responders), multi-turn attacks, tool poisoning and memory poisoning categories, Partial severity
 - [x] v1.3.0: adaptive attacker, payload variants, trust-boundary attacks, the Refused verdict, `--baseline`, `--max-cost`, `lure-ipi-007` v4 (compromised real vendor mailbox)
 - [x] v1.4.0: Arcanum Prompt Injection Taxonomy mapping and `lure coverage`, structured LLM judge output, SARIF links to pinned attack versions
-- [ ] v1.5: adaptive attacker `outcome` mode: the attacker learns only whether the harmful action happened, not the agent's replies
-- [ ] Phase 5: Stretch (multi-agent targets, vetting checklist for internally built AI tools)
+- [ ] v1.5: `lure --version`, agent profiles, one-page approval report, credential access and covert egress attacks
+- [ ] v1.6: `lure decide`, `lure retest`, weekly vetting workflow, shell, self-modification and persistence attacks
+- [ ] Later: adaptive attacker `outcome` mode, confirm-gate mock tool, multi-agent targets
+- [ ] Phase 5: Stretch (a sample SecOps agent team)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).
 
