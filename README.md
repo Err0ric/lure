@@ -54,7 +54,7 @@ Across the full baselines (63 runs per model on 2026-10-23, every attack 3 times
 
 Sonnet has 61 scored runs: 2 jbk-003 runs were Invalid (it never used the tool output). The Haiku runs were first judged by `claude-sonnet-5-5`; re-judging them with Opus changed no verdict. Both baselines together cost about $2.40 in API calls, including the re-judge.
 
-- Full Haiku report: [view online](https://err0ric.github.io/lure/sample-report.html) or [`docs/sample-report.html`](docs/sample-report.html)
+- Full Haiku report: [view online](https://err0ric.github.io/lure/sample-report.html) or [`docs/sample-report.html`](docs/sample-report.html) (90 runs: the 63-run baseline plus the v1.2.0 attacks)
 - Haiku and Sonnet side by side: [view online](https://err0ric.github.io/lure/sample-compare.html) or [`docs/sample-compare.html`](docs/sample-compare.html), built with `lure compare`
 
 Each is one static file with no external requests; open it online or download it and open it in a browser.
