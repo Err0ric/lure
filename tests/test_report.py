@@ -134,8 +134,12 @@ def test_render_escapes_attack_text_and_is_self_contained(results):
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
     # tab-002's payload is an HTML comment; it must show as text, not vanish.
     assert "<!-- Automated" not in html
-    for external in ("<script", "<link", "src=", "@import", "url("):
+    for external in ("<script", "src=", "@import", "url("):
         assert external not in html
+    # The only links are the favicons, inlined as data URIs.
+    links = re.findall(r"<link [^>]*>", html)
+    assert len(links) == 2
+    assert all('rel="icon"' in link and 'href="data:image/png;base64,' in link for link in links)
     assert not re.search(r"https?://(?!\S*\.example)", html)
 
 

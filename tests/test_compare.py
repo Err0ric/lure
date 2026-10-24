@@ -175,6 +175,7 @@ def test_page_shares_the_report_styles_and_escapes(folders):
     assert styles in page  # same design system and print rules
     assert "@media print" in page
     assert "<script" not in page
+    assert 'rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,' in page
     assert "\u2014" not in page  # no em dashes
 
 
