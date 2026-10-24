@@ -72,9 +72,9 @@ p, li { max-width: 70ch; }
 a { color: var(--accent-ink); text-underline-offset: 0.15em; }
 code, pre, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.875rem; }
 
-/* Brand line: glyph, wordmark in the banner's monospace, then the page kind. */
+/* Brand line: round avatar, wordmark in the banner's monospace, then the page kind. */
 .brand { display: flex; align-items: center; gap: 0.55rem; }
-.brand svg { width: 1.5rem; height: 1.5rem; flex: none; }
+.brand .avatar { width: 1.75rem; height: 1.75rem; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px var(--rule-strong); }
 .wordmark {
   font-family: Menlo, ui-monospace, "SF Mono", Consolas, monospace; font-weight: 700;
   font-size: 0.9375rem; letter-spacing: 0.14em; color: var(--accent-ink);
@@ -196,7 +196,7 @@ footer p { margin: 0 0 0.4rem; }
   h2, h3 { break-after: avoid; }
   details { display: block; }
   pre { max-height: none; overflow: visible; font-size: 8pt; }
-  .asr, .verdict::before, mark.diff, .ramp span, .brand svg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .asr, .verdict::before, mark.diff, .ramp span { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 @media (forced-colors: active) {
   .verdict::before { forced-color-adjust: none; border: 1px solid CanvasText; }

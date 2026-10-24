@@ -10,9 +10,9 @@
   The light theme and print stay white with the same violet.
 - **Exposure in red.** Exposure values above 0 show in red (#FF3B5C dark,
   #C4183A light); red is otherwise kept for Fail.
-- **Header.** The favicon glyph and a "LURE" wordmark sit above the serif
-  headline. Both pages embed the favicon as a data URI, so they stay
-  single-file and work offline.
+- **Header.** A small round avatar and a "LURE" wordmark sit above the
+  serif headline; the drawn glyph is the browser favicon. Both are
+  embedded as data URIs, so the pages stay single-file and work offline.
 - **Heatmap.** Cells in attack and target rows keep their own text color
   (a row style overrode it), and the legend reads "Stronger color means a
   higher influenced rate", true in both themes.

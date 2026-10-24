@@ -1,13 +1,8 @@
-{# Brand line for the page header: the favicon glyph (same shapes as glyph()
-   in scripts/make_brand.py, 256 grid), the wordmark, then the page kind. #}
+{# Brand line for the page header: the avatar (from _avatar.html.j2, made by
+   scripts/make_brand.py), the wordmark, then the page kind. #}
 {% macro brand(kind) %}
 <p class="kicker brand">
-  <svg viewBox="0 0 256 256" aria-hidden="true" focusable="false">
-    <rect width="256" height="256" rx="56" fill="#10051f"/>
-    <path fill="#a970ff" d="M64 132Q14 64 72 18Q42 80 106 116ZM192 132Q242 64 184 18Q214 80 150 116Z"/>
-    <path fill="#ff3b5c" d="M58 146Q92 132 122 172Q82 178 58 146ZM198 146Q164 132 134 172Q174 178 198 146Z"/>
-    <rect x="60" y="208" width="136" height="12" rx="6" fill="#a970ff"/>
-  </svg>
+  {% include "_avatar.html.j2" %}
   <span class="wordmark">LURE</span><span class="sep" aria-hidden="true"></span><span>{{ kind }}</span>
 </p>
 {% endmacro %}
