@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Report and compare restyled to the brand.** Dark theme on a
+  purple-black base (#10051F) with text at WCAG AA, violet accent
+  (#A970FF) for the headline and footer rules, links and the heatmap.
+  The light theme and print stay white with the same violet.
+- **Exposure in red.** Exposure values above 0 show in red (#FF3B5C dark,
+  #C4183A light); red is otherwise kept for Fail.
+- **Header.** The favicon glyph and a "LURE" wordmark sit above the serif
+  headline. Both pages embed the favicon as a data URI, so they stay
+  single-file and work offline.
+- **Heatmap.** Cells in attack and target rows keep their own text color
+  (a row style overrode it), and the legend reads "Stronger color means a
+  higher influenced rate", true in both themes.
+
+### Docs
+
+- New logo, README banner, social preview, avatar and favicon in
+  `docs/assets/`, built with `scripts/make_brand.py` (Pillow, a dev extra).
+- Sample report and comparison rebuilt from the v1.2.0 results (90 runs
+  per model: the 63-run baseline plus the v1.2.0 attacks), with a new
+  dark README screenshot.
+- Demo GIF re-recorded on `lure-tpo-002`, the poisoned tool parameter: a
+  live Haiku run that Fails.
+
 ## v1.2.0 (2026-10-23)
 
 Harder, more realistic agent attacks: fixtures that react, attacks that span
