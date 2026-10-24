@@ -131,7 +131,8 @@ class ApprovalPage:
     reason: str
     bottom_line: str
     preliminary: bool
-    # In the recommendation box, for the approver; and the CLI flag for the footer.
+    # In the recommendation box, for the approver; and the CLI flag for the
+    # footer ("--repeat 3"), shown as code so the hyphens never join.
     rerun: str | None
     rerun_flag: str | None
     runs: int
@@ -261,8 +262,7 @@ def build_approval(report: Report, manifest: dict[str, Any], policy: Policy,
         times = {1: "once", 2: "twice"}.get(min_runs, f"{min_runs} times")
         rerun = (f"Each scenario ran {times}. Ask security to rerun at least "
                  f"{limits.min_runs_per_attack} times before deciding.")
-        rerun_flag = (f"Rerun with --repeat {limits.min_runs_per_attack} or more for an "
-                      "approval decision.")
+        rerun_flag = f"--repeat {limits.min_runs_per_attack}"
 
     first = min((r.started_at for r in report.runs), default=None)
     last = max((r.started_at for r in report.runs), default=None)
@@ -573,7 +573,9 @@ def render_markdown(page: ApprovalPage) -> str:
               "| | |", "| --- | --- |",
               "| Decision | [ ] Approve  [ ] Approve with conditions  [ ] Reject |",
               "| Reviewed by | |", "| Date | |", "| Notes | |", "",
-              (f"{plural(page.runs, 'run')} ({page.scored} tested), at least "
+              ((f"Rerun with `{page.rerun_flag}` or more for an approval decision. "
+                if page.rerun_flag else "") +
+               f"{plural(page.runs, 'run')} ({page.scored} tested), at least "
               f"{plural(page.min_runs, 'run')} per attack. Policy {page.policy}. Profile sha256 "
               f"{page.profile_sha256[:12]}. Lure {page.lure_version}, {page.generated}.")]
     return "\n".join(lines) + "\n"

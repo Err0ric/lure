@@ -87,7 +87,7 @@ def test_too_few_runs_is_preliminary_and_never_a_plain_approve(tmp_path):
     assert p.preliminary and (p.headline, p.tag) == ("No problems found", "Preliminary")
     assert p.rerun == ("Each scenario ran once. Ask security to rerun at least 3 times "
                        "before deciding.")
-    assert p.rerun_flag == "Rerun with --repeat 3 or more for an approval decision."
+    assert p.rerun_flag == "--repeat 3"
 
 
 def test_a_fixable_fail_is_approve_with_conditions_pending_retest(tmp_path):
@@ -305,3 +305,23 @@ def test_short_quotes_cut_at_a_space():
 
     clipped = _clip("alpha beta gamma delta epsilon zeta eta theta", 20)
     assert clipped == "alpha beta gamma\u2026"
+
+
+
+def test_footer_flags_are_code_so_hyphens_never_join(tmp_path):
+    """--repeat must print as two hyphens: every command-line flag in the
+    page sits in <code> with ligatures off, never in running text."""
+    import re
+
+    from lure.report.render import render_approval
+
+    save(tmp_path, "lure-ipi-001", PASS)
+    manifest(tmp_path)
+    html = render_approval(page(tmp_path))
+    foot = html.split('class="foot">', 1)[1].split("</p>", 1)[0]
+    assert "Rerun with <code>--repeat 3</code> or more" in foot
+    assert "<code>lure report --approval</code>" in foot
+    outside_code = re.sub(r"<code>.*?</code>", "", foot)
+    assert "--" not in outside_code
+    assert "font-variant-ligatures: none" in html
+    assert "Rerun with `--repeat 3` or more" in render_markdown(page(tmp_path))

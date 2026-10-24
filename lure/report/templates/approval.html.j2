@@ -19,6 +19,8 @@
 .verdict-line p { margin: 0.3rem 0 0; color: var(--ink-2); }
 .prelim { color: var(--ink); font-weight: 600; }
 .nowrap { white-space: nowrap; }
+/* Command-line flags keep two separate hyphens: no ligatures or contextual joins. */
+.approval code { font-size: 0.9em; font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; white-space: nowrap; }
 .verdict-line .tag { display: inline-block; vertical-align: 0.2em; margin-left: 0.4rem; padding: 0.1rem 0.5rem;
   border: 1.5px solid var(--accent); border-radius: 999px; color: var(--accent-ink);
   font-size: 0.8125rem; font-weight: 600; line-height: 1.4; white-space: nowrap; }
@@ -156,7 +158,7 @@
   <div class="line notes"><span>Notes</span><span></span></div>
 </section>
 
-<p class="foot">{% if page.rerun_flag %}{{ page.rerun_flag }} {% endif %}{{ page.runs }} runs ({{ page.scored }} tested{% if page.unscored_other %}, {{ page.unscored_other }} not tested for other reasons{% endif %}), at least {{ page.min_runs }} per attack. Policy {{ page.policy }}. Profile sha256 {{ page.profile_sha256[:12] }}. Built by lure report --approval, Lure {{ page.lure_version }}, {{ page.generated }}. The full technical report, with every tool call, is built from the same results by lure report.</p>
+<p class="foot">{% if page.rerun_flag %}Rerun with <code>{{ page.rerun_flag }}</code> or more for an approval decision. {% endif %}{{ page.runs }} runs ({{ page.scored }} tested{% if page.unscored_other %}, {{ page.unscored_other }} not tested for other reasons{% endif %}), at least {{ page.min_runs }} per attack. Policy {{ page.policy }}. Profile sha256 {{ page.profile_sha256[:12] }}. Built by <code>lure report --approval</code>, Lure {{ page.lure_version }}, {{ page.generated }}. The full technical report, with every tool call, is built from the same results by <code>lure report</code>.</p>
 </main>
 </body>
 </html>
