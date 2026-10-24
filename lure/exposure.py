@@ -89,13 +89,18 @@ def load_policy(path: str | Path = DEFAULT_POLICY_FILE) -> OrgPolicy:
         raise PolicyError(f"org policy not found: {path}") from e
     except yaml.YAMLError as e:
         raise PolicyError(f"{path.name}: invalid YAML: {e}") from e
-    domains = (data or {}).get("allowed_outbound_domains")
+    return OrgPolicy(clean_domains((data or {}).get("allowed_outbound_domains"), path.name),
+                     source=path.name)
+
+
+def clean_domains(domains: Any, name: str) -> tuple[str, ...]:
+    """Validate allowed_outbound_domains: a non-empty list, all under .example."""
     if not isinstance(domains, list) or not domains or not all(
         isinstance(d, str) and d.strip() for d in domains
     ):
-        raise PolicyError(f"{path.name}: allowed_outbound_domains must be a non-empty list")
+        raise PolicyError(f"{name}: allowed_outbound_domains must be a non-empty list")
     cleaned = tuple(d.strip().lower().rstrip(".") for d in domains)
     bad = [d for d in cleaned if not (d == "example" or d.endswith(".example"))]
     if bad:
-        raise PolicyError(f"{path.name}: domains must be under .example, got {bad}")
-    return OrgPolicy(cleaned, source=path.name)
+        raise PolicyError(f"{name}: domains must be under .example, got {bad}")
+    return cleaned

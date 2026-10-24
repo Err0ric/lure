@@ -1,0 +1,222 @@
+"""The org policy file (lure.yaml): what to run and what fails the policy.
+
+One file holds every org-level rule:
+
+  allowed_outbound_domains  the exposure check (lure/exposure.py)
+  fail_on                   which runs fail the policy: verdicts at or above
+                            a severity, and exposure
+  categories                which attack categories a folder run includes
+  overrides                 per attack: enabled, and its own fail_on keys
+
+Every key is optional. With no file, the built-in default applies: a Fail
+on an attack of any severity fails the policy, and exposure is not checked.
+fail_on.exposure defaults to true whenever allowed_outbound_domains is set.
+"""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Iterable
+from dataclasses import dataclass, field, replace
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from lure.attacks import ID_RE, SEVERITIES
+from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError, clean_domains
+from lure.judge.rules import Verdict
+from lure.rescore import rebuild_calls
+from lure.tools.call_log import ToolCall
+
+POLICY_VERSION = 1
+BUILT_IN = "built-in default"
+KEYS = ("policy_version", "allowed_outbound_domains", "fail_on", "categories", "overrides")
+FAIL_ON_KEYS = ("verdicts", "min_severity", "exposure")
+OVERRIDE_KEYS = ("enabled", "fail_on")
+# Verdicts that are findings. Invalid and Error runs did not test the target.
+FAIL_ON_VERDICTS = (Verdict.FAIL, Verdict.PARTIAL, Verdict.REVIEW)
+CATEGORY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+@dataclass(frozen=True)
+class FailOn:
+    verdicts: tuple[Verdict, ...] = (Verdict.FAIL,)
+    min_severity: str = "low"
+    exposure: bool = False
+
+    def covers(self, severity: str) -> bool:
+        return SEVERITIES.index(severity) >= SEVERITIES.index(self.min_severity)
+
+
+@dataclass(frozen=True)
+class Override:
+    enabled: bool | None = None
+    # Only the keys the override sets; the rest come from the policy's fail_on.
+    fail_on: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class PolicyRun:
+    """What the policy needs from one run, saved or just finished."""
+
+    attack_id: str
+    version: int
+    severity: str
+    verdict: Verdict
+    calls: list[ToolCall]
+    where: str
+
+    @classmethod
+    def from_result(cls, result) -> PolicyRun:
+        a = result.attack
+        return cls(a.id, a.version, a.severity, result.judgment.verdict, result.log.calls,
+                   str(result.saved_to or a.id))
+
+    @classmethod
+    def from_record(cls, record: dict[str, Any], where: str) -> PolicyRun:
+        a = record["attack"]
+        return cls(a["id"], a.get("version", 1), a["severity"],
+                   Verdict(record["judgment"]["verdict"]), rebuild_calls(record), where)
+
+
+@dataclass(frozen=True)
+class Violation:
+    attack_id: str
+    version: int
+    where: str
+    # "verdict" or "exposure"
+    kind: str
+    detail: str
+
+
+@dataclass(frozen=True)
+class Policy:
+    fail_on: FailOn = FailOn()
+    exposure: OrgPolicy | None = None
+    # None means every category.
+    categories: tuple[str, ...] | None = None
+    overrides: dict[str, Override] = field(default_factory=dict)
+    source: str = BUILT_IN
+
+    def enabled(self, attack_id: str, category: str) -> bool:
+        """A per-attack override wins over the categories list."""
+        override = self.overrides.get(attack_id)
+        if override is not None and override.enabled is not None:
+            return override.enabled
+        return self.categories is None or category in self.categories
+
+    def fail_on_for(self, attack_id: str) -> FailOn:
+        override = self.overrides.get(attack_id)
+        return replace(self.fail_on, **override.fail_on) if override else self.fail_on
+
+    def check(self, run: PolicyRun) -> list[Violation]:
+        """Why this run fails the policy; empty if it does not."""
+        rules = self.fail_on_for(run.attack_id)
+        found = []
+        if run.verdict in rules.verdicts and rules.covers(run.severity):
+            found.append(Violation(run.attack_id, run.version, run.where, "verdict",
+                                   f"{run.verdict.value} on a {run.severity} severity attack"))
+        if rules.exposure and self.exposure is not None:
+            for c in self.exposure.check(run.calls):
+                found.append(Violation(run.attack_id, run.version, run.where, "exposure",
+                                       f"call #{c['index']} {c['tool']} to "
+                                       f"{', '.join(c['outside'])}"))
+        return found
+
+    def evaluate(self, runs: Iterable[PolicyRun]) -> list[Violation]:
+        return [v for run in runs for v in self.check(run)]
+
+
+def load(path: str | Path) -> Policy:
+    path = Path(path)
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as e:
+        raise PolicyError(f"policy not found: {path}") from e
+    except yaml.YAMLError as e:
+        raise PolicyError(f"{path.name}: invalid YAML: {e}") from e
+    return parse(data if data is not None else {}, path.name)
+
+
+def parse(data: Any, name: str = DEFAULT_POLICY_FILE) -> Policy:
+    def fail(msg: str) -> PolicyError:
+        return PolicyError(f"{name}: {msg}")
+
+    if not isinstance(data, dict):
+        raise fail("must be a YAML mapping")
+    _no_unknown(data, KEYS, "", fail)
+    version = data.get("policy_version", POLICY_VERSION)
+    if version != POLICY_VERSION:
+        raise fail(f"policy_version must be {POLICY_VERSION}, got {version!r}")
+
+    exposure = None
+    if "allowed_outbound_domains" in data:
+        exposure = OrgPolicy(clean_domains(data["allowed_outbound_domains"], name), source=name)
+    fail_on_data = _mapping(data.get("fail_on", {}), "fail_on", fail)
+    fail_on = FailOn(exposure=exposure is not None)
+    fail_on = replace(fail_on, **_fail_on(fail_on_data, "fail_on", exposure, fail))
+
+    categories = data.get("categories", "all")
+    if categories == "all":
+        categories = None
+    elif (isinstance(categories, list) and categories
+          and all(isinstance(c, str) and CATEGORY_RE.match(c) for c in categories)):
+        categories = tuple(categories)
+    else:
+        raise fail("categories must be all, or a non-empty list of category folder names")
+
+    overrides = {}
+    for attack_id, value in _mapping(data.get("overrides", {}), "overrides", fail).items():
+        where = f"overrides.{attack_id}"
+        if not isinstance(attack_id, str) or not ID_RE.match(attack_id):
+            raise fail(f"overrides key {attack_id!r} must be an attack id like lure-xxx-001")
+        value = _mapping(value, where, fail)
+        _no_unknown(value, OVERRIDE_KEYS, where + ".", fail)
+        enabled = value.get("enabled")
+        if enabled is not None and not isinstance(enabled, bool):
+            raise fail(f"{where}.enabled must be true or false")
+        own = _fail_on(_mapping(value.get("fail_on", {}), where + ".fail_on", fail),
+                       where + ".fail_on", exposure, fail)
+        overrides[attack_id] = Override(enabled, own)
+    return Policy(fail_on, exposure, categories, overrides, name)
+
+
+def _fail_on(data: dict, where: str, exposure: OrgPolicy | None, fail) -> dict[str, Any]:
+    """The fail_on keys set in `data`, validated."""
+    _no_unknown(data, FAIL_ON_KEYS, where + ".", fail)
+    out: dict[str, Any] = {}
+    if "verdicts" in data:
+        allowed = {v.value.lower(): v for v in FAIL_ON_VERDICTS}
+        verdicts = data["verdicts"]
+        if not isinstance(verdicts, list) or not all(
+            isinstance(v, str) and v.lower() in allowed for v in verdicts
+        ):
+            raise fail(f"{where}.verdicts must be a list drawn from "
+                       f"{[v.value for v in FAIL_ON_VERDICTS]} (empty: no verdict fails)")
+        out["verdicts"] = tuple(dict.fromkeys(allowed[v.lower()] for v in verdicts))
+    if "min_severity" in data:
+        if data["min_severity"] not in SEVERITIES:
+            raise fail(f"{where}.min_severity must be one of {list(SEVERITIES)}")
+        out["min_severity"] = data["min_severity"]
+    if "exposure" in data:
+        if not isinstance(data["exposure"], bool):
+            raise fail(f"{where}.exposure must be true or false")
+        if data["exposure"] and exposure is None:
+            raise fail(f"{where}.exposure: true needs allowed_outbound_domains")
+        out["exposure"] = data["exposure"]
+    return out
+
+
+def _mapping(value: Any, where: str, fail) -> dict:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise fail(f"{where} must be a mapping")
+    return value
+
+
+def _no_unknown(data: dict, keys: tuple[str, ...], prefix: str, fail) -> None:
+    unknown = sorted(str(k) for k in set(data) - set(keys))
+    if unknown:
+        raise fail(f"unknown keys {[prefix + k for k in unknown]}; expected {list(keys)}")

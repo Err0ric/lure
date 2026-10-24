@@ -126,7 +126,7 @@ def test_rescore_adds_exposure_without_the_target():
 def test_cli_org_policy_errors_are_bad_input(tmp_path, capsys):
     code = cli.main(["rescore", str(tmp_path), "--org-policy", str(tmp_path / "nope.yaml")])
     assert code == cli.EXIT_BAD_INPUT
-    assert "org policy not found" in capsys.readouterr().err
+    assert "policy not found" in capsys.readouterr().err
 
 
 def test_cli_rescore_applies_the_policy(tmp_path):
@@ -227,4 +227,4 @@ def test_exposure_only_keeps_the_saved_judgment(tmp_path):
 def test_exposure_only_rejects_llm_judge_or_no_policy(tmp_path, capsys):
     assert cli.main(["rescore", str(tmp_path), "--exposure-only", "--no-org-policy"]) == 2
     assert cli.main(["rescore", str(tmp_path), "--exposure-only", "--judge", "llm"]) == 2
-    assert "--exposure-only needs an org policy" in capsys.readouterr().err
+    assert "--exposure-only needs a policy with allowed_outbound_domains" in capsys.readouterr().err

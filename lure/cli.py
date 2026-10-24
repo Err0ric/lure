@@ -18,12 +18,14 @@ from typing import TextIO
 
 from dotenv import find_dotenv, load_dotenv
 
+from lure import policy as policy_file
 from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacks import AttackError, load_attack
 from lure.batch import SummaryRow, collect_attack_paths, summarize
-from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError, load_policy
+from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
+from lure.policy import Policy
 from lure.rescore import (
     add_exposure,
     attack_changed,
@@ -123,20 +125,32 @@ def _judge_args(parser: argparse.ArgumentParser) -> None:
 
 
 def _policy_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--org-policy", help="org policy file with allowed_outbound_domains "
-                                             f"(default {DEFAULT_POLICY_FILE} if present)")
-    parser.add_argument("--no-org-policy", action="store_true",
-                        help="skip the exposure check")
+    parser.add_argument("--policy", "--org-policy", dest="policy",
+                        help=f"policy file (default {DEFAULT_POLICY_FILE} if present, "
+                             "else the built-in default); see lure.example.yaml")
+    parser.add_argument("--no-policy", "--no-org-policy", dest="no_policy", action="store_true",
+                        help="ignore the policy file: built-in default, no exposure check")
 
 
-def _org_policy(args) -> OrgPolicy | None:
-    """The explicit --org-policy file, else lure.yaml in the current folder if
-    it exists. A file that is named but missing or invalid is an error."""
-    if args.no_org_policy:
-        return None
-    if args.org_policy:
-        return load_policy(args.org_policy)
-    return load_policy(DEFAULT_POLICY_FILE) if Path(DEFAULT_POLICY_FILE).is_file() else None
+def _policy(args) -> Policy:
+    """The explicit --policy file, else lure.yaml in the current folder if it
+    exists, else the built-in default. A file that is named but missing or
+    invalid is an error."""
+    if args.no_policy:
+        return Policy()
+    if args.policy:
+        return policy_file.load(args.policy)
+    if Path(DEFAULT_POLICY_FILE).is_file():
+        return policy_file.load(DEFAULT_POLICY_FILE)
+    return Policy()
+
+
+def _note_legacy(records: list[dict]) -> None:
+    """Say once when results predate the schema version (Lure 1.0.0)."""
+    n = sum("schema_version" not in r for r in records)
+    if n:
+        print(f"lure: note: {n} of {len(records)} records are from Lure 1.0.0 (no "
+              "schema_version); fields such as attack.file are missing", file=sys.stderr)
 
 
 def _llm_judge(args) -> LLMJudge | None:
@@ -166,13 +180,13 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         return compare_main(args, out)
     try:
         # Load every attack first so a bad file fails before any model call.
+        policy = _policy(args)
         paths = collect_attack_paths(args.attack)
-        attacks = [load_attack(p) for p in paths]
+        attacks = _enabled_attacks([load_attack(p) for p in paths], policy, args.attack, out)
         for a in attacks:
             build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
         adapter = make_adapter(args.target, args.model)
         llm_judge = _llm_judge(args)
-        org_policy = _org_policy(args)
     except (AttackError, ToolboxError, AdapterError, PolicyError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
@@ -181,7 +195,7 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     results: list[RunResult] = []
     for i, (attack, n) in enumerate(plan, 1):
         result = run_attack(attack, adapter, max_turns=args.max_turns, llm_judge=llm_judge,
-                            org_policy=org_policy)
+                            org_policy=policy.exposure)
         result.save(args.results_dir)
         results.append(result)
         if batch:
@@ -196,12 +210,32 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     return EXIT_OK
 
 
+def _enabled_attacks(attacks: list, policy: Policy, target: str, out: TextIO) -> list:
+    """A folder run leaves out attacks the policy disables. An attack file
+    named directly always runs."""
+    if not Path(target).is_dir():
+        for a in attacks:
+            if not policy.enabled(a.id, a.category):
+                print(f"Note: {a.id} is disabled in {policy.source}; running it because it "
+                      "was named directly.", file=out)
+        return attacks
+    kept = [a for a in attacks if policy.enabled(a.id, a.category)]
+    skipped = [a.id for a in attacks if a not in kept]
+    if not kept:
+        raise AttackError(f"every attack under {target} is disabled in {policy.source}")
+    if skipped:
+        print(f"Skipped (disabled in {policy.source}): {', '.join(skipped)}", file=out)
+    return kept
+
+
 def report_main(args, out: TextIO) -> int:
     from lure.report.data import ReportError, build_report, load_runs
     from lure.report.render import write_report
 
     try:
-        report = build_report(load_runs(args.results), target=args.target)
+        runs = load_runs(args.results)
+        _note_legacy([r.record for r in runs])
+        report = build_report(runs, target=args.target)
     except (ReportError, FileNotFoundError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
@@ -340,12 +374,13 @@ def rescore_main(args, out: TextIO) -> int:
         index = attack_index(args.attacks_dir)
         paths = record_paths(args.results)
         llm_judge = _llm_judge(args)
-        org_policy = _org_policy(args)
+        org_policy = _policy(args).exposure
     except (AttackError, AdapterError, FileNotFoundError, PolicyError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
     if args.exposure_only and (org_policy is None or args.judge != "rules"):
-        print("lure: --exposure-only needs an org policy and no --judge llm", file=sys.stderr)
+        print("lure: --exposure-only needs a policy with allowed_outbound_domains and no "
+              "--judge llm", file=sys.stderr)
         return EXIT_BAD_INPUT
     first_dir = next((Path(p) for p in args.results if Path(p).is_dir()), Path("results"))
     out_dir = Path(args.out) if args.out else first_dir / "rescored"
@@ -367,6 +402,7 @@ def rescore_main(args, out: TextIO) -> int:
     if not picked:
         print("lure: no matching results to rescore", file=sys.stderr)
         return EXIT_BAD_INPUT
+    _note_legacy([record for _, record, _ in picked])
 
     if args.exposure_only:
         return _exposure_only(picked, org_policy, out_dir, out)
