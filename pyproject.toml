@@ -18,7 +18,8 @@ lure = "lure.cli:main"
 
 [project.optional-dependencies]
 # rfc3339-validator lets jsonschema check the date-time format in tests.
-dev = ["jsonschema>=4.23", "pytest>=8", "rfc3339-validator>=0.1.4", "ruff>=0.17"]
+# pillow builds the brand images (scripts/make_brand.py); not needed to run Lure.
+dev = ["jsonschema>=4.23", "pytest>=8", "pillow>=11", "rfc3339-validator>=0.1.4", "ruff>=0.17"]
 
 [build-system]
 requires = ["setuptools>=77"]
