@@ -233,6 +233,7 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
 ### v1.5
 
 - [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies. The attacker is a local open-weights model via Ollama (Claude attackers refused most exfiltration goals in v1.3); pick the model when this starts.
+- [ ] `lure --version` prints the installed version (`lure.__version__`) and exits 0. Today it prints usage and exits with an error, because a subcommand is required.
 
 ### Phase 5: Stretch
 
