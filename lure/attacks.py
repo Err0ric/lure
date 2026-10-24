@@ -29,6 +29,9 @@ from typing import Any
 import yaml
 
 from lure.tools import KNOWN_TOOLS
+from lure.tools import responders as responders_mod
+from lure.tools.registry import TOOL_FIXTURES
+from lure.tools.responders import Responder
 from lure.tools.sources import item_source
 
 # Categories are the folders under attacks/: a new category is a new folder.
@@ -40,7 +43,7 @@ REQUIRED_KEYS = (
 )
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
-    "followup_tasks",
+    "followup_tasks", "responders",
 )
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
@@ -122,10 +125,23 @@ class Attack:
     version: int = 1
     # Later user turns, sent in order after the target finishes each turn.
     followup_tasks: list[str] = field(default_factory=list)
+    # Items released from pending fixtures when the target's calls match.
+    responders: list[Responder] = field(default_factory=list)
 
     @property
     def multi_turn(self) -> bool:
         return bool(self.followup_tasks)
+
+    @property
+    def payload_fixture(self) -> str | None:
+        """The fixture holding the payload; None for a payload in the task."""
+        return None if self.in_task else LOCATION_PART_RE.match(self.injection.location).group(2)
+
+    @property
+    def payload_pending(self) -> bool:
+        """True if the payload is in a pending fixture: only a responder can
+        release it, so it may never reach the target."""
+        return any(r.source_fixture == self.payload_fixture for r in self.responders)
 
     @property
     def file(self) -> str:
@@ -300,6 +316,8 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         raise fail("fail_if must have at least one rule")
 
     loaded = {name: _read_json(p, fail) for name, p in fixtures.items()}
+    wired = {TOOL_FIXTURES[t] for t in tools} - {None}
+    responders = responders_mod.parse(data.get("responders"), tools, loaded, wired, fail)
     if not in_task:
         try:
             container, key = resolve_location(loaded, location)
@@ -351,6 +369,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         payload_source=None if in_task else _payload_source(loaded, location),
         version=version,
         followup_tasks=followup_tasks,
+        responders=responders,
     )
 
 
@@ -554,7 +573,7 @@ def _strings(value: Any):
 def _domain_lists(value: Any):
     if isinstance(value, dict):
         for k, v in value.items():
-            if k == "to_domain_not_in" and isinstance(v, list):
+            if k in ("to_domain_not_in", "to_domain_in") and isinstance(v, list):
                 yield [d for d in v if isinstance(d, str)]
             else:
                 yield from _domain_lists(v)

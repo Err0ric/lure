@@ -68,6 +68,10 @@ class MockEmail:
         self.log.record("read_inbox", {"limit": limit}, result)
         return result
 
+    def deliver(self, message: dict[str, Any]) -> None:
+        """New mail arrives (a responder). Not a tool, so not logged as a call."""
+        self._inbox.append(copy.deepcopy(message))
+
     def send_email(
         self,
         to: str | list[str],

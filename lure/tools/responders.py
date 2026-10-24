@@ -1,0 +1,199 @@
+"""Responders: fixtures that react to what the target does.
+
+A responder watches the tool-call log. When a successful call matches its
+`on` conditions, it releases an item from a pending fixture into a mock:
+new mail arrives, a file appears or changes, a page changes. That turns a
+static fixture into a multi-step attack: the follow-up only exists once the
+target has taken the first step.
+
+    responders:
+      - on: {tool: send_email, to_domain_in: [clearpath-recon.example],
+             body_contains: [confirmed]}
+        then: {add_inbox: inbox_followups[0]}
+        times: 1
+
+Responders are declarative and deterministic: the same calls always release
+the same items in the same order. Each firing is an event in the run's
+transcript and record. Pending fixtures are never given to a tool directly;
+only a responder can release them.
+
+Safety: a responder only changes the in-memory mocks of the run.
+"""
+
+from __future__ import annotations
+
+import copy
+import re
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
+from lure.tools.call_log import ToolCall
+from lure.tools.calls import (
+    arg_strings,
+    contains_any,
+    failed,
+    in_domains,
+    message_text,
+    recipients,
+)
+from lure.tools.mock_email import REQUIRED_FIELDS as INBOX_FIELDS
+from lure.tools.mock_email import FixtureError
+from lure.tools.mock_files import check_files
+from lure.tools.mock_http import check_web
+
+# Action -> the fixture (and so the mock) it changes.
+ACTIONS = {"add_inbox": "inbox", "add_file": "files", "update_page": "web"}
+TRIGGER_KEYS = ("tool", "to_domain_in", "body_contains", "args_contain")
+KEYS = ("on", "then", "times")
+# A pending item: fixture name and index, like inbox_followups[0].
+SOURCE_RE = re.compile(r"^([A-Za-z_]\w*)\[(\d+)\]$")
+
+
+@dataclass(frozen=True)
+class Responder:
+    on: dict[str, Any]
+    action: str
+    # The pending item it releases, like inbox_followups[0].
+    source: str
+    times: int = 1
+
+    @property
+    def source_fixture(self) -> str:
+        return SOURCE_RE.match(self.source).group(1)
+
+    @property
+    def source_index(self) -> int:
+        return int(SOURCE_RE.match(self.source).group(2))
+
+    def item(self, fixtures: dict[str, Any]) -> Any:
+        return fixtures[self.source_fixture][self.source_index]
+
+    def matches(self, call: ToolCall) -> bool:
+        on = self.on
+        if call.tool != on["tool"] or failed(call):
+            return False
+        if "to_domain_in" in on:
+            domains = [d.lower() for d in on["to_domain_in"]]
+            if not any(in_domains(r, domains) for r in recipients(call)):
+                return False
+        if "body_contains" in on and not contains_any(message_text(call), on["body_contains"]):
+            return False
+        return "args_contain" not in on or contains_any(
+            "\n".join(arg_strings(call.args)).lower(), on["args_contain"])
+
+
+def parse(value: Any, tools: list[str], fixtures: dict[str, Any], wired: set[str],
+          fail: Callable[[str], Exception]) -> list[Responder]:
+    """Validate an attack's responders. `fixtures` are the loaded fixtures and
+    `wired` the fixture names the attack's tools read."""
+    if value is None:
+        return []
+    if not isinstance(value, list) or not value:
+        raise fail("responders must be a non-empty list")
+    found = []
+    for i, r in enumerate(value):
+        where = f"responders[{i}]"
+        if not isinstance(r, dict) or not {"on", "then"} <= set(r) or not set(r) <= set(KEYS):
+            raise fail(f"{where} must have on and then, and optionally times")
+        found.append(Responder(_trigger(r["on"], tools, where, fail),
+                               *_action(r["then"], fixtures, wired, where, fail),
+                               _times(r.get("times", 1), where, fail)))
+    return found
+
+
+def _trigger(on: Any, tools: list[str], where: str, fail) -> dict[str, Any]:
+    if not isinstance(on, dict) or "tool" not in on:
+        raise fail(f"{where}.on must be a mapping with a tool")
+    unknown = sorted(set(on) - set(TRIGGER_KEYS))
+    if unknown:
+        raise fail(f"{where}.on unknown keys {unknown}; known: {list(TRIGGER_KEYS)}")
+    if on["tool"] not in tools:
+        raise fail(f"{where}.on tool {on['tool']!r} is not in this attack's tools")
+    for k in TRIGGER_KEYS[1:]:
+        if k in on and (not isinstance(on[k], list) or not on[k]
+                        or not all(isinstance(t, str) and t.strip() for t in on[k])):
+            raise fail(f"{where}.on {k} must be a non-empty list of non-empty strings")
+    return dict(on)
+
+
+def _action(then: Any, fixtures: dict[str, Any], wired: set[str], where: str,
+            fail) -> tuple[str, str]:
+    if not isinstance(then, dict) or len(then) != 1 or next(iter(then)) not in ACTIONS:
+        raise fail(f"{where}.then must be one of {list(ACTIONS)}, like add_inbox: name[0]")
+    action, source = next(iter(then.items()))
+    m = SOURCE_RE.match(source) if isinstance(source, str) else None
+    if not m:
+        raise fail(f"{where}.then {action} must name a pending item like inbox_followups[0]")
+    name, index = m.group(1), int(m.group(2))
+    if name not in fixtures:
+        raise fail(f"{where}.then {action}: no fixture {name!r}")
+    if name in wired:
+        raise fail(f"{where}.then {action}: {name!r} is read by a tool; a responder "
+                   "releases items from a pending fixture no tool reads")
+    if ACTIONS[action] not in wired:
+        raise fail(f"{where}.then {action} needs a tool that reads the "
+                   f"{ACTIONS[action]!r} fixture")
+    items = fixtures[name]
+    if not isinstance(items, list) or index >= len(items):
+        raise fail(f"{where}.then {action}: {source} not found")
+    try:
+        check_item(action, items[index])
+    except FixtureError as e:
+        raise fail(f"{where}.then {action}: {source}: {e}") from None
+    return action, source
+
+
+def _times(value: Any, where: str, fail) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise fail(f"{where}.times must be a whole number of at least 1")
+    return value
+
+
+def check_item(action: str, item: Any) -> None:
+    """The item must be valid in the fixture the action changes."""
+    if action == "add_inbox":
+        if not isinstance(item, dict):
+            raise FixtureError("must be an object")
+        missing = [f for f in INBOX_FIELDS if f not in item]
+        if missing:
+            raise FixtureError(f"missing fields {missing}")
+    elif action == "add_file":
+        check_files([item])
+    elif action == "update_page":
+        check_web([item])
+
+
+class Engine:
+    """Runs an attack's responders against the mocks of one run."""
+
+    def __init__(self, responders: list[Responder], fixtures: dict[str, Any],
+                 mocks: dict[str, Any]) -> None:
+        self._responders = responders
+        self._fixtures = fixtures
+        self._mocks = mocks
+        self._fired = [0] * len(responders)
+        self.events: list[dict[str, Any]] = []
+
+    def after_call(self, index: int, call: ToolCall) -> list[dict[str, Any]]:
+        """Fire every responder the call matches; return the new events."""
+        new = []
+        for i, r in enumerate(self._responders):
+            if self._fired[i] >= r.times or not r.matches(call):
+                continue
+            self._fired[i] += 1
+            self._apply(r)
+            new.append({"responder": i, "after_call": index, "action": r.action,
+                        "source": r.source})
+        self.events += new
+        return new
+
+    def _apply(self, r: Responder) -> None:
+        item = copy.deepcopy(r.item(self._fixtures))
+        mock = self._mocks[ACTIONS[r.action]]
+        if r.action == "add_inbox":
+            mock.deliver(item)
+        elif r.action == "add_file":
+            mock.put(item["path"], item["content"])
+        elif r.action == "update_page":
+            mock.put_page(item)

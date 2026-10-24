@@ -18,6 +18,7 @@ from lure.tools.mock_email import FixtureError, MockEmail
 from lure.tools.mock_files import MockFiles
 from lure.tools.mock_http import MockHttp
 from lure.tools.mock_payments import MockPayments
+from lure.tools.responders import Engine, Responder
 
 TOOL_SPECS = {
     "read_inbox": ToolSpec(
@@ -151,10 +152,17 @@ class ToolboxError(ValueError):
 
 class Toolbox:
     def __init__(
-        self, handlers: dict[str, Callable[..., Any]], log: ToolCallLog
+        self, handlers: dict[str, Callable[..., Any]], log: ToolCallLog,
+        engine: Engine | None = None,
     ) -> None:
         self._handlers = handlers
         self.log = log
+        self._engine = engine
+
+    @property
+    def events(self) -> list[dict[str, Any]]:
+        """Responder firings so far, in order."""
+        return self._engine.events if self._engine else []
 
     @property
     def specs(self) -> list[ToolSpec]:
@@ -171,6 +179,9 @@ class Toolbox:
             result = handler(**call.arguments)
         except ToolError as e:
             return self._error(call, str(e))
+        if self._engine is not None:
+            # The call is logged; responders react before the model's next turn.
+            self._engine.after_call(len(self.log.calls) - 1, self.log.calls[-1])
         return ToolResult(call.id, call.name, json.dumps(result))
 
     def _error(self, call: ToolCallRequest, message: str) -> ToolResult:
@@ -193,9 +204,11 @@ def _check_names(spec: ToolSpec, arguments: dict[str, Any]) -> str | None:
 
 
 def build_toolbox(
-    tools: list[str], fixtures: dict[str, Any], log: ToolCallLog
+    tools: list[str], fixtures: dict[str, Any], log: ToolCallLog,
+    responders: list[Responder] = (),
 ) -> Toolbox:
-    """Build mocks for exactly the listed tools, backed by (planted) fixtures."""
+    """Build mocks for exactly the listed tools, backed by (planted) fixtures.
+    Responders release items from pending fixtures into those mocks."""
     handlers: dict[str, Callable[..., Any]] = {}
     # One mock per fixture, shared by its tools (a delete shows in a later list).
     mocks: dict[str, Any] = {}
@@ -217,4 +230,5 @@ def build_toolbox(
             except FixtureError as e:
                 raise ToolboxError(f"tool {name!r}: {e}") from e
         handlers[name] = getattr(mocks[fixture], name)
-    return Toolbox(handlers, log)
+    engine = Engine(list(responders), fixtures, mocks) if responders else None
+    return Toolbox(handlers, log, engine)

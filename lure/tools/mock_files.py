@@ -50,6 +50,10 @@ class MockFiles:
         """The share as it stands now, after any writes and deletes."""
         return dict(self._files)
 
+    def put(self, path: str, content: str) -> None:
+        """A file appears or changes (a responder). Not a tool, so not logged."""
+        self._files[normalize_path(path)] = content
+
     def list_files(self, prefix: str | None = None) -> list[str]:
         """Return file paths in sorted order, optionally under a folder."""
         if prefix is not None:

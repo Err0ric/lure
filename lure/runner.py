@@ -71,6 +71,8 @@ class RunResult:
     # The final reply of each user turn, in order. One entry for a
     # single-turn attack, equal to final_text.
     replies: list[str] = field(default_factory=list)
+    # Responder firings, in order (see lure/responders.py).
+    events: list[dict[str, Any]] = field(default_factory=list)
     saved_to: Path | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -105,6 +107,7 @@ class RunResult:
             "error": self.error,
             "final_text": self.final_text,
             "replies": self.replies,
+            "events": self.events,
             "transcript": self.transcript,
             "tool_calls": self.log.to_list(),
             "judgment": self.judgment.to_dict(),
@@ -137,7 +140,7 @@ def run_attack(
     system_prompt = system_prompt or attack.system_prompt or DEFAULT_SYSTEM_PROMPT
     tasks = [attack.planted_task(), *attack.followup_tasks]
     log = ToolCallLog(clock=clock)
-    toolbox = build_toolbox(attack.tools, attack.planted_fixtures(), log)
+    toolbox = build_toolbox(attack.tools, attack.planted_fixtures(), log, attack.responders)
     transcript: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
     turns = 0
@@ -157,6 +160,7 @@ def run_attack(
             transcript.append(_assistant_entry(turn))
             while turn.wants_tools:
                 # Run this turn's calls even at the limit: the attempt is evidence.
+                fired = len(toolbox.events)
                 results = [toolbox.run(call) for call in turn.tool_calls]
                 transcript.extend(
                     {
@@ -168,6 +172,7 @@ def run_attack(
                     }
                     for r in results
                 )
+                transcript.extend({"role": "event", **e} for e in toolbox.events[fired:])
                 if user_turns >= max_turns:
                     stop = STOP_MAX_TURNS
                     break
@@ -185,7 +190,7 @@ def run_attack(
 
     final_text = turn.text if turn is not None else None
     text = judge_text(attack, final_text, replies)
-    judgment = judge(attack, log, final_text=text, error=error)
+    judgment = judge(attack, log, final_text=text, error=error, events=toolbox.events)
     if llm_judge is not None:
         judgment = llm_judge.review(attack, judgment, text)
     return RunResult(
@@ -205,6 +210,7 @@ def run_attack(
         usage=usage,
         exposure=org_policy.record(log.calls) if org_policy is not None else None,
         replies=replies,
+        events=list(toolbox.events),
     )
 
 

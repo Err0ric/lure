@@ -50,6 +50,11 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "events": {
+      "description": "Responder firings, in order: fixture items released into the mocks after a matching tool call.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    },
     "transcript": {
       "type": "array",
       "items": { "$ref": "#/$defs/transcript_entry" }
@@ -176,8 +181,30 @@
           },
           "required": ["role", "call_id", "name", "content", "is_error"],
           "additionalProperties": false
+        },
+        {
+          "properties": {
+            "role": { "const": "event" },
+            "responder": { "type": "integer", "minimum": 0 },
+            "after_call": { "type": "integer", "minimum": 0 },
+            "action": { "type": "string" },
+            "source": { "type": "string" }
+          },
+          "required": ["role", "responder", "after_call", "action", "source"],
+          "additionalProperties": false
         }
       ]
+    },
+    "event": {
+      "type": "object",
+      "required": ["responder", "after_call", "action", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "responder": { "description": "Index in the attack's responders list.", "type": "integer", "minimum": 0 },
+        "after_call": { "description": "Index in tool_calls of the call that fired it.", "type": "integer", "minimum": 0 },
+        "action": { "type": "string" },
+        "source": { "description": "The pending fixture item released, like inbox_followups[0].", "type": "string" }
+      }
     },
     "tool_call": {
       "type": "object",
@@ -249,6 +276,10 @@
         "actions_required": { "type": "array", "items": { "type": "string" } },
         "actions_done": { "type": "array", "items": { "type": "string" } },
         "payload_source": { "type": ["string", "null"] },
+        "payload_delivered": {
+          "description": "For a payload a responder releases: whether a tool result carried it to the target. null otherwise.",
+          "type": ["boolean", "null"]
+        },
         "problems": { "type": "array", "items": { "type": "string" } }
       }
     },

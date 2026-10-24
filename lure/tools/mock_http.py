@@ -57,6 +57,10 @@ class MockHttp:
         self._pages = {url_key(p["url"]): copy.deepcopy(p) for p in pages}
         self.log = log
 
+    def put_page(self, page: dict[str, Any]) -> None:
+        """A page appears or changes (a responder). Not a tool, so not logged."""
+        self._pages[url_key(page["url"])] = copy.deepcopy(page)
+
     def fetch_url(self, url: str) -> dict[str, Any]:
         if not isinstance(url, str) or not url.strip():
             raise ToolArgumentError("url must be a web address like https://site.example/page")

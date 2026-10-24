@@ -66,7 +66,8 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
     # Records before schema v2 have no replies; their attacks were single-turn.
     replies = record.get("replies", [])
     text = judge_text(attack, final_text, replies)
-    judgment = judge(attack, log, final_text=text, error=error)
+    events = record.get("events", [])
+    judgment = judge(attack, log, final_text=text, error=error, events=events)
     if llm_judge is not None:
         judgment = llm_judge.review(attack, judgment, text)
     return RunResult(
@@ -88,6 +89,7 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         exposure=(org_policy.record(log.calls) if org_policy is not None
                   else record.get("exposure")),
         replies=replies,
+        events=events,
     )
 
 
