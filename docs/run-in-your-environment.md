@@ -6,7 +6,9 @@ This page gets you from a fresh checkout to a gated CI run against a model you c
 
 Lure tests a **model** against Lure's own scenarios. Each attack gives the model a normal task (summarize the inbox, pay an invoice), Lure's mock tools, and Lure's system prompt for that scenario. One piece of content the model reads carries an attack, and Lure checks the tool-call log for the harmful action.
 
-That tells you how a model behaves as an agent under attack. It does **not** yet test your agent as you built it: your system prompt, your tool set and your guardrails are not used. Profiles (bring your own agent) are planned for v1.5: you describe your agent's system prompt and tools, and Lure runs the matching attacks against that setup, still with mock tools only.
+That tells you how a model behaves as an agent under attack. To test your agent as you built it, with its own system prompt and tool names, use a profile (step 7). Released Lure versions up to 1.4.0 do not have profiles; they arrive in v1.5 and are on `main` now.
+
+The scenarios are accounts payable either way: vendor email, invoices and payments at `corp.example`.
 
 Nothing Lure runs has real side effects. The model only ever gets mock tools that log the call and return fake data: no email is sent, nothing is paid or deleted, and no web page is fetched. The only network calls are to the model API you choose (and to the LLM judge, if you use one).
 
@@ -121,6 +123,19 @@ lure report results/first-run/ --out reports/first-run.html \
 `lure report` re-gates saved results without calling the model again, so you can change the policy and re-check for free.
 
 A ready-to-copy GitHub Actions workflow (pinned actions, SARIF upload, job summary) is at https://github.com/Err0ric/lure/blob/main/docs/ci/lure-gate.yml. Give it an API key scoped to that job, and pick a cheap model and a `--max-cost` cap.
+
+## 7. Test your own agent with a profile
+
+A profile describes your agent: model, real system prompt, and its tools mapped to Lure's mock tools. Lure runs the attacks those tools cover, under your prompt and with your tool names, and skips the rest with the reason.
+
+```bash
+cp profiles/example-ap-agent.yaml profiles/my-agent.yaml   # gitignored; edit it
+lure run --profile profiles/my-agent.yaml --prices prices.yaml --max-cost 0.50
+```
+
+**The profile's system prompt is sent to the model API it names.** For a work agent, use an organization-approved API account or a local model, never a personal key.
+
+Every tool call still goes to a mock. Full reference: https://github.com/Err0ric/lure/blob/main/docs/profiles.md
 
 ## Next
 

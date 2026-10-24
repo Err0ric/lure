@@ -144,6 +144,7 @@ Other useful commands:
 
 | Command | What it does |
 | --- | --- |
+| `lure run --profile profiles/example-ap-agent.yaml` | Test your own agent: its system prompt and tool names over Lure's mocks. See [`docs/profiles.md`](docs/profiles.md); the prompt goes to the model API the profile names |
 | `lure run ... --target ollama --model llama3.1:8b` | Test a local model (set `LURE_OLLAMA_URL` in `.env` if it is not on localhost) |
 | `lure run ... --target openai --model <model>` | Test any OpenAI-compatible server: set `LURE_OPENAI_BASE_URL` and, if it needs one, `LURE_OPENAI_API_KEY` in `.env` |
 | `lure report results/my-run/ --md report.md --sarif lure.sarif` | Also write a Markdown report and SARIF 2.1.0 for CI code scanning |

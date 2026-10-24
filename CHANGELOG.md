@@ -2,8 +2,27 @@
 
 ## Unreleased (v1.5)
 
+### Changed
+
+- `lure run` without `--target` now exits 2 with "lure run needs attack
+  files or folders and --target, or --profile" (argparse's usage error
+  before, also exit 2).
+
 ### New
 
+- **Profiles: test your own agent.** `lure run --profile profiles/<name>.yaml`
+  runs the attacks an agent's tools cover, under its real system prompt and
+  with its own tool names and descriptions, over Lure's mock tools as
+  always. A profile maps each of the agent's tools to a mock tool
+  (`maps_to`); attacks that need a tool the agent lacks, or third-party
+  tools it does not load, are skipped with the reason. `lure-dpi-001` and
+  `lure-jbk-003` append a fake secret (`canary:`) to the agent's prompt so
+  their leak rules still apply. Results go to
+  `results/<profile>/<timestamp>/` with a `manifest.json`; records carry a
+  `profile` block and `tool_calls[].alias` (both optional, schema v3), and
+  reports name the profile. See `docs/profiles.md`. The profile's system
+  prompt is sent to the model API it names: for a work agent use an
+  organization-approved account or a local model.
 - **`lure --version`** prints the installed version (`lure 1.4.0`) and
   exits 0. Before, it printed usage and exited 2, because a subcommand was
   required.
