@@ -61,7 +61,7 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
     stamps = iter(datetime.fromisoformat(c["timestamp"]) for c in calls)
     log = ToolCallLog(clock=lambda: next(stamps))
     for c in calls:
-        log.record(c["tool"], c["args"], c.get("result"))
+        log.record(c["tool"], c["args"], c.get("result"), c.get("alias"))
     final_text, error = record.get("final_text"), record.get("error")
     # Records before schema v2 have no replies; their attacks were single-turn.
     replies = record.get("replies", [])
@@ -100,8 +100,8 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
 
 
 def rebuild_calls(record: dict[str, Any]) -> list[ToolCall]:
-    return [ToolCall(datetime.fromisoformat(c["timestamp"]), c["tool"], c["args"], c.get("result"))
-            for c in record.get("tool_calls", [])]
+    return [ToolCall(datetime.fromisoformat(c["timestamp"]), c["tool"], c["args"], c.get("result"),
+                     c.get("alias")) for c in record.get("tool_calls", [])]
 
 
 def add_exposure(record: dict[str, Any], org_policy: OrgPolicy, source: Path, out_dir: Path,

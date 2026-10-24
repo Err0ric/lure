@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from lure.adapters.base import ToolCallRequest, ToolResult, ToolSpec
@@ -193,12 +194,19 @@ class Toolbox:
     def __init__(
         self, handlers: dict[str, Callable[..., Any]], log: ToolCallLog,
         engine: Engine | None = None, specs: dict[str, ToolSpec] | None = None,
+        aliases: dict[str, ToolAlias] | None = None,
     ) -> None:
         self._handlers = handlers
         self.log = log
         self._engine = engine
         # Live definitions: a responder may change one mid-run (update_tool).
         self._specs = specs if specs is not None else {n: TOOL_SPECS[n] for n in handlers}
+        # Canonical name -> the name and description the target sees instead.
+        self._aliases = {n: a for n, a in (aliases or {}).items() if n in handlers}
+        self._by_alias = {a.name: n for n, a in self._aliases.items()}
+        clash = sorted(set(self._by_alias) & (set(handlers) - set(self._aliases)))
+        if clash:
+            raise ToolboxError(f"tool name {clash[0]!r} is both an alias and another tool")
         # Called when a new session starts (memory relabels this session's notes).
         self.session_hooks: list[Callable[[], None]] = []
 
@@ -213,27 +221,43 @@ class Toolbox:
 
     @property
     def specs(self) -> list[ToolSpec]:
-        return [self._specs[name] for name in self._handlers]
+        """The definitions the target sees: aliased tools under their alias."""
+        return [self._shown(name) for name in self._handlers]
+
+    def _shown(self, name: str) -> ToolSpec:
+        spec, alias = self._specs[name], self._aliases.get(name)
+        return spec if alias is None else ToolSpec(alias.name, alias.description, spec.parameters)
+
+    def _canonical(self, called: str) -> str | None:
+        """The Lure tool behind a called name. An aliased tool answers only
+        to its alias, as the target was never told the canonical name."""
+        if called in self._by_alias:
+            return self._by_alias[called]
+        return called if called in self._handlers and called not in self._aliases else None
 
     def run(self, call: ToolCallRequest) -> ToolResult:
-        handler = self._handlers.get(call.name)
-        if handler is None:
+        name = self._canonical(call.name)
+        if name is None:
             return self._error(call, f"unknown tool {call.name!r}")
-        problem = _check_names(self._specs[call.name], call.arguments)
+        problem = _check_names(self._shown(name), call.arguments)
         if problem:
-            return self._error(call, problem)
+            return self._error(call, problem, name)
+        self.log.alias = self._aliases[name].name if name in self._aliases else None
         try:
-            result = handler(**call.arguments)
+            result = self._handlers[name](**call.arguments)
         except ToolError as e:
-            return self._error(call, str(e))
+            return self._error(call, str(e), name)
+        finally:
+            self.log.alias = None
         if self._engine is not None:
             # The call is logged; responders react before the model's next turn.
             self._engine.after_call(len(self.log.calls) - 1, self.log.calls[-1])
         return ToolResult(call.id, call.name, json.dumps(result))
 
-    def _error(self, call: ToolCallRequest, message: str) -> ToolResult:
+    def _error(self, call: ToolCallRequest, message: str, name: str | None = None) -> ToolResult:
         # Log failed attempts too: an attempted send is still evidence.
-        self.log.record(call.name, call.arguments, {"error": message})
+        alias = call.name if name is not None and name != call.name else None
+        self.log.record(name or call.name, call.arguments, {"error": message}, alias)
         return ToolResult(call.id, call.name, message, is_error=True)
 
 
@@ -250,12 +274,22 @@ def _check_names(spec: ToolSpec, arguments: dict[str, Any]) -> str | None:
     return None
 
 
+@dataclass(frozen=True)
+class ToolAlias:
+    """How a profiled agent names and describes one of Lure's mock tools."""
+
+    name: str
+    description: str
+
+
 def build_toolbox(
     tools: list[str], fixtures: dict[str, Any], log: ToolCallLog,
-    responders: list[Responder] = (),
+    responders: list[Responder] = (), aliases: dict[str, ToolAlias] | None = None,
 ) -> Toolbox:
     """Build mocks for exactly the listed tools, backed by (planted) fixtures.
-    Responders release items from pending fixtures into those mocks."""
+    Responders release items from pending fixtures into those mocks. Aliases
+    rename built-in tools for the target; the log and the judge keep Lure's
+    names."""
     handlers: dict[str, Callable[..., Any]] = {}
     # One mock per fixture, shared by its tools (a delete shows in a later list).
     mocks: dict[str, Any] = {}
@@ -288,7 +322,7 @@ def build_toolbox(
             specs[name] = TOOL_SPECS[name]
             handlers[name] = getattr(mocks[fixture], name)
     engine = Engine(list(responders), fixtures, mocks, specs) if responders else None
-    toolbox = Toolbox(handlers, log, engine, specs)
+    toolbox = Toolbox(handlers, log, engine, specs, aliases)
     if "memory" in mocks:
         toolbox.session_hooks.append(mocks["memory"].end_session)
     return toolbox

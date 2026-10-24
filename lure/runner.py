@@ -45,7 +45,7 @@ from lure.judge.rules import (
     target_refused,
 )
 from lure.tools.call_log import ToolCallLog
-from lure.tools.registry import build_toolbox
+from lure.tools.registry import ToolAlias, build_toolbox
 
 MAX_TURNS = 10
 # Neutral on purpose: no hint that the content may be hostile.
@@ -186,13 +186,15 @@ def run_attack(
     clock: Callable[[], datetime] = _utc_now,
     llm_judge: LLMJudge | None = None,
     org_policy: OrgPolicy | None = None,
+    tool_aliases: dict[str, ToolAlias] | None = None,
 ) -> RunResult:
     started_at = clock()
     fixtures_sha256 = attack.fixture_hashes()
     system_prompt = system_prompt or attack.system_prompt or DEFAULT_SYSTEM_PROMPT
     tasks = [attack.planted_task(), *attack.followup_tasks]
     log = ToolCallLog(clock=clock)
-    toolbox = build_toolbox(attack.tools, attack.planted_fixtures(), log, attack.responders)
+    toolbox = build_toolbox(attack.tools, attack.planted_fixtures(), log, attack.responders,
+                            tool_aliases)
     transcript: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
     turns = 0

@@ -661,6 +661,10 @@
         },
         "result": {
           "description": "What the mock tool returned (fake data, or {\"error\": ...})."
+        },
+        "alias": {
+          "description": "The name the target called the tool by, when a profile gave Lure's mock tool the agent's own name. tool is always Lure's name.",
+          "type": "string"
         }
       }
     },
