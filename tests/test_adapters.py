@@ -83,6 +83,20 @@ def test_ollama_sends_task_and_tools():
     assert turn.stop_reason == "stop"
 
 
+def test_ollama_records_token_counts():
+    reply = {**ollama_reply("hi"), "prompt_eval_count": 812, "eval_count": 96}
+    adapter, _ = make_ollama((200, reply))
+    turn = adapter.start("s", []).send_task("t")
+    assert turn.usage == {"input_tokens": 812, "output_tokens": 96}
+
+
+def test_ollama_missing_token_counts_are_left_out():
+    adapter, _ = make_ollama((200, {**ollama_reply("hi"), "eval_count": 7}))
+    assert adapter.start("s", []).send_task("t").usage == {"output_tokens": 7}
+    adapter, _ = make_ollama((200, ollama_reply("hi")))
+    assert adapter.start("s", []).send_task("t").usage == {}
+
+
 def test_ollama_custom_model_and_url():
     adapter, rec = make_ollama(
         (200, ollama_reply("hi")), model="qwen3:8b", base_url="http://gpu-box:11434"

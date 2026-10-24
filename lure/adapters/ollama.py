@@ -97,6 +97,7 @@ class OllamaConversation(Conversation):
             tool_calls=[self._parse_call(c) for c in message.get("tool_calls") or []],
             stop_reason=data.get("done_reason"),
             raw=data,
+            usage=_usage(data),
         )
 
     def _parse_call(self, call: dict[str, Any]) -> ToolCallRequest:
@@ -114,6 +115,13 @@ class OllamaConversation(Conversation):
             name=fn.get("name", ""),
             arguments=args,
         )
+
+
+def _usage(data: dict[str, Any]) -> dict[str, int]:
+    """Ollama's prompt_eval_count and eval_count, as input and output tokens.
+    A count Ollama leaves out (for example a fully cached prompt) is left out."""
+    counts = {"input_tokens": data.get("prompt_eval_count"), "output_tokens": data.get("eval_count")}
+    return {k: v for k, v in counts.items() if isinstance(v, int) and not isinstance(v, bool)}
 
 
 def _function_tools(tools: list[ToolSpec]) -> list[dict[str, Any]]:

@@ -64,6 +64,15 @@
   (a row style overrode it), and the legend reads "Stronger color means a
   higher influenced rate", true in both themes.
 
+### Fixed
+
+- **Prices for tagged local models.** A prices-file name like
+  `llama3.1:8b` was read as `8b`, so `--max-cost` refused Ollama models and
+  compare showed no cost for them. Tags now stay part of the name.
+- **Ollama token counts.** The Ollama adapter records `prompt_eval_count`
+  and `eval_count` as input and output tokens, so local target, judge and
+  attacker usage is no longer empty.
+
 ### Docs
 
 - New logo, README banner, social preview, avatar and favicon in
