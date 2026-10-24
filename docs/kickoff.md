@@ -211,7 +211,7 @@ Harder, more realistic agent attacks. Agent-only and generic; mock tools only.
 Goal: find failures in strong models. Agent-only and generic; mock tools only.
 
 - [ ] Adaptive attacker: `--attacker-model` and `--attempts N` (default 5). After a Pass, the attacker LLM rewrites the payload from the target's replies only (never its system prompt, tools or tool results). The run's verdict is its worst attempt; every attempt and the winning payload are saved. The attacker model must differ from the target model. Attacker refusals are their own outcome, never a target Pass. Rewritten payloads pass the same fake-data checks as YAML payloads.
-- [ ] Payload variants per attack: rephrased, split across messages, encoded, buried in long documents (`variants:` in YAML, `--variants`)
+- [x] Payload variants per attack: rephrased, split across messages, encoded, buried in long documents (`variants:` in YAML, `--variants`)
 - [ ] More trust-boundary attacks: poisoned memory, tool definitions, "from the user" framing
 - [ ] `--baseline`: repeat 10 with the LLM judge. The default `--repeat` stays 1.
 - [ ] `--max-cost USD`: stops a batch once the estimated spend (from the prices file) passes it, and prints the spend so far
