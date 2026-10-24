@@ -216,7 +216,7 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
 - [x] `--baseline`: repeat 10 with the LLM judge. The default `--repeat` stays 1.
 - [x] `--max-cost USD`: stops a batch once the estimated spend (from the prices file) passes it, and prints the spend so far
 - [x] Baseline: Sonnet and Opus, each judged by the other (no model judges itself). Adaptive runs: Opus attacks Sonnet, Sonnet attacks Opus, 3 runs each. Done 2026-10-24: Opus screened on 12 attacks with payload variants, then confirmed at 10 runs per flagged payload; Haiku and Sonnet matched on the tpo-002, tpo-001 and tpo-004 payloads. The Opus-attacks-Sonnet adaptive run ran; the Sonnet-attacks-Opus run was skipped because Claude attackers refused most attack goals.
-- [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies.
+- Adaptive attacker `outcome` mode moved to v1.5
 - [x] `lure-ipi-007` v4: the follow-up comes from a compromised real vendor mailbox (the real domain, no lookalike), asking for another vendor's invoice data. v2 (unknown sender) and v3 (lookalike carrier) stay: no model took their first step, a valid result.
 - [x] Old result records keep pointing to the pinned file for their version (for example a v3 record to `lure-ipi-007-v3.yaml` once v4 is current), so SARIF links and `attack.file` stay correct after a version bump. Shipped in v1.4: SARIF looks results up by id and version; records are not rewritten.
 - [x] Structured LLM judge output (JSON schema or tool use) instead of parsing JSON from text: 1 of 612 judge answers through 2026-10-24 failed to parse and fell back to the rules verdict. Shipped in v1.4: provider-enforced JSON schema, `llm_judge.structured` in records.
@@ -227,6 +227,12 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
   - Required attribution, verbatim, as the taxonomy's site specifies (README, THIRD_PARTY.md and the coverage report): "Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com)."
   - Citation for THIRD_PARTY.md: Haddix, J. (2026). Arcanum Prompt Injection Taxonomy (v1.6.1). Arcanum Information Security. https://www.arcanum-sec.com/pitax
   - Shipped in v1.4: taxonomy vendored at commit `e02cf5b6e202`, all 31 current attacks mapped (pinned versions unmapped), `lure coverage` writes `docs/arcanum-coverage.md`, codes in records and SARIF, credit in README and THIRD_PARTY.md.
+- [x] Structured LLM judge output and pinned `attack.file` links (v1.3 carry-overs, above)
+- [ ] Tag v1.4.0
+
+### v1.5
+
+- [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies. The attacker is a local open-weights model via Ollama (Claude attackers refused most exfiltration goals in v1.3); pick the model when this starts.
 
 ### Phase 5: Stretch
 

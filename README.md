@@ -6,7 +6,7 @@ An open-source harness that attacks AI agents with prompt injection and tool-abu
 
 Think phishing simulation, but the target is an agent instead of an employee.
 
-> Status: v1.3.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
+> Status: v1.4.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
 
 [![Top of the sample report: headline, facts strip and summary for claude-haiku-5-5](docs/sample-report-top.png)](https://err0ric.github.io/lure/sample-report.html)
 
@@ -297,7 +297,8 @@ A future `config_audit` stage would check agent and MCP settings before any run;
 - [ ] v1.1, still open: DuckDB store, `lure serve` dashboard
 - [x] v1.2.0: reactive fixtures (responders), multi-turn attacks, tool poisoning and memory poisoning categories, Partial severity
 - [x] v1.3.0: adaptive attacker, payload variants, trust-boundary attacks, the Refused verdict, `--baseline`, `--max-cost`, `lure-ipi-007` v4 (compromised real vendor mailbox)
-- [ ] v1.4, in progress: structured LLM judge output and SARIF links to pinned attack versions (done), Arcanum taxonomy mapping and coverage report (done), adaptive attacker `outcome` mode: the attacker learns only whether the harmful action happened, not the agent's replies
+- [x] v1.4.0: Arcanum Prompt Injection Taxonomy mapping and `lure coverage`, structured LLM judge output, SARIF links to pinned attack versions
+- [ ] v1.5: adaptive attacker `outcome` mode: the attacker learns only whether the harmful action happened, not the agent's replies
 - [ ] Phase 5: Stretch (multi-agent targets, vetting checklist for internally built AI tools)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).

@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased (v1.4)
+## v1.4.0 (2026-10-24)
+
+### Highlights
+
+- **Arcanum taxonomy mapping.** All 31 current attacks carry Arcanum
+  Prompt Injection Taxonomy v1.6.1 codes alongside ATLAS and ATT&CK, and
+  `lure coverage` shows what the library tests: 5 of 12 inputs, 6 of 27
+  intents, 11 of 70 techniques and 4 of 63 evasions.
+- **Structured LLM judge output.** Judge answers are constrained to a JSON
+  schema by the provider where it supports one, and records say whether
+  they were.
+- **SARIF links follow attack versions.** Results from before a version
+  bump point at the pinned file they ran.
 
 ### New
 
@@ -13,8 +25,9 @@
   (optional, results stay schema v3) and SARIF rules tag the codes. A test
   checks each attack's ATLAS IDs against the taxonomy's ATLAS aliases, with
   reviewed exceptions. Pinned older versions are not mapped.
-  Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com). Lure is not affiliated with or endorsed
-  by Arcanum Information Security.
+
+  Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com).
+  Lure is not affiliated with or endorsed by Arcanum Information Security.
 - **`lure coverage`** writes `docs/arcanum-coverage.md`: every taxonomy
   node, the attacks and variants that test it, or not tested. Today: 5 of
   12 inputs, 6 of 27 intents, 11 of 70 techniques, 4 of 63 evasions.
