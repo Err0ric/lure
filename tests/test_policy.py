@@ -52,6 +52,7 @@ def test_example_overrides():
     policy = load(REPO / "lure.example.yaml")
     assert not policy.enabled("lure-ipi-007", "indirect_prompt_injection")
     assert policy.fail_on_for("lure-tab-002").verdicts == (Verdict.FAIL, Verdict.PARTIAL)
+    assert policy.fail_on_for("lure-tab-002").partial == "outright"
     assert policy.fail_on_for("lure-dlk-003").exposure is False
 
 

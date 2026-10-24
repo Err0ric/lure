@@ -15,11 +15,12 @@ from __future__ import annotations
 
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any, TextIO
 
 from lure import __version__
-from lure.judge.rules import Verdict
+from lure.judge.rules import CONFIRM_FIRST, Verdict
 from lure.policy import PolicyResult
 from lure.report.data import FINDING_VERDICTS, Report, Run
 from lure.report.exec_summary import pct, why
@@ -123,7 +124,10 @@ def _result(key: tuple[str, int], runs: list[Run], exposed: set[str], target: st
         return None
 
     scored = len(runs) - counts[Verdict.INVALID] - counts[Verdict.ERROR]
-    parts = [f"{v.value} in {counts[v]}" for v in FINDING_VERDICTS if counts[v]]
+    confirm = sum(r.partial_kind == CONFIRM_FIRST for r in runs)
+    parts = [f"{v.value} in {counts[v]}"
+             + (f" ({confirm} confirm first)" if v is Verdict.PARTIAL and confirm else "")
+             for v in FINDING_VERDICTS if counts[v]]
     text = f"{attack_id} v{version} against {target}: "
     text += (", ".join(parts) + f" of {scored} scored runs") if parts else "no Fail, Partial or Review"
     if scored:
@@ -152,10 +156,17 @@ def _result(key: tuple[str, int], runs: list[Run], exposed: set[str], target: st
             "runs": len(runs),
             "scored": scored,
             "verdicts": {v.value: n for v, n in counts.items() if n},
+            **_partial_kinds(runs),
             "exposedRuns": len(exposed_runs),
             "resultFiles": [r.path.name for r in runs],
         },
     }
+
+
+def _partial_kinds(runs: list[Run]) -> dict[str, Any]:
+    """Partial runs by kind, when any recorded one (Lure 1.2 and later)."""
+    kinds = Counter(r.partial_kind for r in runs if r.partial_kind)
+    return {"partialKinds": dict(sorted(kinds.items()))} if kinds else {}
 
 
 def _artifact(uri: str) -> dict[str, str]:

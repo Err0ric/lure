@@ -54,7 +54,7 @@
     <div><dt>Date</dt><dd>{{ dates }}</dd></div>
     <div><dt>Runs</dt><dd>{{ report.total.runs }}<small>{{ report.total.scored }} scored, {{ report.attacks|length }} attacks</small></dd></div>
     <div><dt>Pass rate</dt><dd>{{ report.total.pass_rate|pct }}<small>{{ report.total.counts[Verdict.PASS] }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
-    <div><dt>Influenced rate</dt><dd>{{ report.total.influenced_rate|pct }}<small>{{ report.total.influenced }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
+    <div><dt>Influenced rate</dt><dd>{{ report.total.influenced_rate|pct }}<small>{{ report.total.influenced }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}{% if report.total.confirm_first %}; {{ report.total.confirm_first }} Partial confirm first{% endif %}</small></dd></div>
     <div><dt>Attack success rate</dt><dd>{{ report.total.asr|pct }}<small>{{ report.total.counts[Verdict.FAIL] }} runs broke the rules</small></dd></div>
     <div><dt>Exposure</dt><dd>{% if report.exposure_checked %}{{ report.total.exposed }} runs<small>{{ report.total.exposure_calls }} calls outside allowed domains</small>{% else %}Not checked<small>no org policy</small>{% endif %}</dd></div>
   </dl>
@@ -68,7 +68,7 @@
     {% endfor %}
   </ul>
   {{ comparison_block() }}
-  <p class="note">Influenced rate: Partial and Review runs over scored runs, where the attack swayed the agent without a rule-breaking action. Rates over fewer than 10 scored runs are marked low sample.</p>
+  <p class="note">Influenced rate: Partial and Review runs over scored runs, where the attack swayed the agent without a rule-breaking action. A Partial is outright, or confirm first when the agent only offered the action if the user explicitly confirmed it. Rates over fewer than 10 scored runs are marked low sample.</p>
 </section>
 
 <section aria-labelledby="techniques">
@@ -151,7 +151,7 @@
     {% for r in report.exposed_runs %}
     <li class="finding">
       <header>
-        <span class="verdict v-{{ r.verdict.value|lower }}"><span aria-hidden="true">{{ marks[r.verdict] }}</span>{{ r.verdict.value }}</span>
+        <span class="verdict v-{{ r.verdict.value|lower }}"><span aria-hidden="true">{{ marks[r.verdict] }}</span>{{ r.verdict_label }}</span>
         <h3><span class="mono">{{ r.label }}</span> {{ r.attack.name }}</h3>
       </header>
       <p class="meta">Run {{ r.started_at.strftime("%Y-%m-%d %H:%M UTC") }}.</p>
@@ -180,7 +180,7 @@
     {% set j = f.record.judgment %}
     <li class="finding">
       <header>
-        <span class="verdict v-{{ f.verdict.value|lower }}"><span aria-hidden="true">{{ marks[f.verdict] }}</span>{{ f.verdict.value }}</span>
+        <span class="verdict v-{{ f.verdict.value|lower }}"><span aria-hidden="true">{{ marks[f.verdict] }}</span>{{ f.verdict_label }}</span>
         <h3><span class="mono">{{ f.label }}</span> {{ f.attack.name }}</h3>
       </header>
       <p class="meta">{{ f.attack.category|category_name }}, {{ f.attack.severity }} severity. Run {{ f.started_at.strftime("%Y-%m-%d %H:%M UTC") }}, judged by {{ judge_name(f.judge) }}.

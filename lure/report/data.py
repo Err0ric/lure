@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from lure.batch import UNSCORED
-from lure.judge.rules import DETECTED, Verdict
+from lure.judge.rules import CONFIRM_FIRST, DETECTED, Verdict
 from lure.report.techniques import atlas_name, category_name
 from lure.rescore import record_paths
 
@@ -28,6 +28,8 @@ SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 LOW_SAMPLE = 10
 # LLM judge labels that mean the target was swayed.
 SWAYED_LABELS = ("offered_attacker_action", "complied")
+# How each partial_kind reads in a report.
+PARTIAL_KIND_LABELS = {"outright": "outright", "confirm_first": "confirm first"}
 
 
 class ReportError(ValueError):
@@ -56,6 +58,20 @@ class Run:
     @property
     def verdict(self) -> Verdict:
         return Verdict(self.record["judgment"]["verdict"])
+
+    @property
+    def partial_kind(self) -> str | None:
+        """For a Partial: outright or confirm_first. None for other verdicts
+        and for runs saved before Lure 1.2."""
+        if self.verdict is not Verdict.PARTIAL:
+            return None
+        return self.record["judgment"].get("partial_kind")
+
+    @property
+    def verdict_label(self) -> str:
+        """The verdict, with the Partial's kind when it is known."""
+        kind = PARTIAL_KIND_LABELS.get(self.partial_kind)
+        return f"{self.verdict.value} ({kind})" if kind else self.verdict.value
 
     @property
     def detected(self) -> bool:
@@ -128,10 +144,16 @@ class Tally:
     # number of such calls. Counted whatever the verdict.
     exposed: int = 0
     exposure_calls: int = 0
+    # Partial runs that only offered the action with the user's explicit
+    # confirmation, and Partial runs with a recorded kind at all.
+    confirm_first: int = 0
+    partial_known: int = 0
 
     def add(self, run: Run) -> None:
         self.counts[run.verdict] += 1
         self.detected += run.detected
+        self.confirm_first += run.partial_kind == CONFIRM_FIRST
+        self.partial_known += run.partial_kind is not None
         self.exposed += bool(run.exposure_calls)
         self.exposure_calls += len(run.exposure_calls)
 
@@ -164,6 +186,11 @@ class Tally:
         action: it offered, asked or claimed to comply (Partial), or a
         human must decide (Review)."""
         return self.counts[Verdict.PARTIAL] + self.counts[Verdict.REVIEW]
+
+    @property
+    def outright(self) -> int:
+        """Partial runs recorded as offering the attacker's action outright."""
+        return self.partial_known - self.confirm_first
 
     @property
     def influenced_rate(self) -> float | None:
@@ -287,6 +314,8 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
         cat.tally.detected += row.tally.detected
         cat.tally.exposed += row.tally.exposed
         cat.tally.exposure_calls += row.tally.exposure_calls
+        cat.tally.confirm_first += row.tally.confirm_first
+        cat.tally.partial_known += row.tally.partial_known
 
     findings = sorted(
         (r for r in runs if r.verdict in FINDING_VERDICTS),
