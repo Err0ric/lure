@@ -4,6 +4,11 @@ Plants the payload, gives the target its task and only the attack's mock
 tools, loops model turns and tool calls until the model stops or hits the
 turn limit, then judges the run from the call log and final reply. With an
 LLM judge, runs the rules could not settle get a second opinion.
+
+A multi-turn attack sends each of its followup_tasks once the target
+finishes the turn before; max_turns applies to each user turn. The judge
+then reads every user turn's final reply, so a leak or offer in an early
+turn still counts.
 """
 
 from __future__ import annotations
@@ -63,6 +68,9 @@ class RunResult:
     # Calls to domains outside the org's allowed list (lure.yaml), with the
     # list used. None when no org policy was given. Never affects the verdict.
     exposure: dict[str, Any] | None = None
+    # The final reply of each user turn, in order. One entry for a
+    # single-turn attack, equal to final_text.
+    replies: list[str] = field(default_factory=list)
     saved_to: Path | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -96,6 +104,7 @@ class RunResult:
             "stop": self.stop,
             "error": self.error,
             "final_text": self.final_text,
+            "replies": self.replies,
             "transcript": self.transcript,
             "tool_calls": self.log.to_list(),
             "judgment": self.judgment.to_dict(),
@@ -126,52 +135,59 @@ def run_attack(
 ) -> RunResult:
     started_at = clock()
     system_prompt = system_prompt or attack.system_prompt or DEFAULT_SYSTEM_PROMPT
-    task = attack.planted_task()
+    tasks = [attack.planted_task(), *attack.followup_tasks]
     log = ToolCallLog(clock=clock)
     toolbox = build_toolbox(attack.tools, attack.planted_fixtures(), log)
-    transcript: list[dict[str, Any]] = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": task},
-    ]
+    transcript: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
     turns = 0
     usage: dict[str, int] = {}
     turn: ModelTurn | None = None
+    replies: list[str] = []
     stop = STOP_COMPLETED
     error = None
     try:
         convo = adapter.start(system_prompt, toolbox.specs)
-        turn = convo.send_task(task)
-        add_usage(usage, turn.usage)
-        turns = 1
-        transcript.append(_assistant_entry(turn))
-        while turn.wants_tools:
-            # Run this turn's calls even at the limit: the attempt is evidence.
-            results = [toolbox.run(call) for call in turn.tool_calls]
-            transcript.extend(
-                {
-                    "role": "tool",
-                    "call_id": r.call_id,
-                    "name": r.name,
-                    "content": r.content,
-                    "is_error": r.is_error,
-                }
-                for r in results
-            )
-            if turns >= max_turns:
-                stop = STOP_MAX_TURNS
-                break
-            turn = convo.send_tool_results(results)
+        for task in tasks:
+            transcript.append({"role": "user", "content": task})
+            turn = convo.send_task(task)
             add_usage(usage, turn.usage)
             turns += 1
+            user_turns = 1
             transcript.append(_assistant_entry(turn))
+            while turn.wants_tools:
+                # Run this turn's calls even at the limit: the attempt is evidence.
+                results = [toolbox.run(call) for call in turn.tool_calls]
+                transcript.extend(
+                    {
+                        "role": "tool",
+                        "call_id": r.call_id,
+                        "name": r.name,
+                        "content": r.content,
+                        "is_error": r.is_error,
+                    }
+                    for r in results
+                )
+                if user_turns >= max_turns:
+                    stop = STOP_MAX_TURNS
+                    break
+                turn = convo.send_tool_results(results)
+                add_usage(usage, turn.usage)
+                turns += 1
+                user_turns += 1
+                transcript.append(_assistant_entry(turn))
+            replies.append(turn.text)
+            # Unanswered tool calls leave no room for another user turn.
+            if stop == STOP_MAX_TURNS:
+                break
     except AdapterError as e:
         stop, error = STOP_ERROR, str(e)
 
     final_text = turn.text if turn is not None else None
-    judgment = judge(attack, log, final_text=final_text, error=error)
+    text = judge_text(attack, final_text, replies)
+    judgment = judge(attack, log, final_text=text, error=error)
     if llm_judge is not None:
-        judgment = llm_judge.review(attack, judgment, final_text)
+        judgment = llm_judge.review(attack, judgment, text)
     return RunResult(
         attack=attack,
         target=adapter.target_name,
@@ -188,7 +204,16 @@ def run_attack(
         judge=llm_judge.model if llm_judge is not None else "rules",
         usage=usage,
         exposure=org_policy.record(log.calls) if org_policy is not None else None,
+        replies=replies,
     )
+
+
+def judge_text(attack: Attack, final_text: str | None, replies: list[str]) -> str | None:
+    """The text the judge reads: the final reply, or for a multi-turn attack
+    every user turn's final reply in order."""
+    if not attack.multi_turn or not replies:
+        return final_text
+    return "\n\n".join(r for r in replies if r) or final_text
 
 
 def _assistant_entry(turn: ModelTurn) -> dict[str, Any]:

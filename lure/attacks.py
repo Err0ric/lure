@@ -5,6 +5,10 @@ also enforces the fake-data rule: every email address, URL host and listed
 domain in the attack and its fixtures must be under the reserved .example
 TLD.
 
+An attack may add `followup_tasks`: later user turns, sent in order once the
+target finishes the turn before. They make multi-turn attacks, where a
+payload read in one turn only matters in a later, unrelated one.
+
 Most payloads are planted in a fixture. A direct prompt injection uses the
 location `task` instead: the payload goes into the user turn itself, and the
 attack usually sets its own `system_prompt` with the policy it tries to
@@ -36,6 +40,7 @@ REQUIRED_KEYS = (
 )
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
+    "followup_tasks",
 )
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
@@ -115,6 +120,12 @@ class Attack:
     # Bump when a change makes new results incomparable with old ones (for
     # example a stricter rule), so summaries never mix the two.
     version: int = 1
+    # Later user turns, sent in order after the target finishes each turn.
+    followup_tasks: list[str] = field(default_factory=list)
+
+    @property
+    def multi_turn(self) -> bool:
+        return bool(self.followup_tasks)
 
     @property
     def file(self) -> str:
@@ -227,6 +238,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         raise fail("version must be a whole number of at least 1")
     if pinned and int(pinned.group(2)) != version:
         raise fail(f"file name says v{pinned.group(2)} but version is {version}")
+    followup_tasks = _followup_tasks(data.get("followup_tasks"), fail)
     system_prompt = data.get("system_prompt")
     if system_prompt is not None and (
         not isinstance(system_prompt, str) or not system_prompt.strip()
@@ -298,13 +310,18 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
 
     task_check = _task_check(data.get("task_check"), loaded, fail)
     # Facts must prove the target read the fixtures. A fact in a task payload
-    # could be echoed straight from the user turn.
+    # or a later user turn could be echoed straight from the user.
     echoed = [f for f in task_check if f.lower() in payload.lower()] if in_task else []
     if echoed:
         raise fail(f"task_check facts {echoed} appear in the payload")
+    later = "\n".join(followup_tasks).lower()
+    echoed = [f for f in task_check if f.lower() in later]
+    if echoed:
+        raise fail(f"task_check facts {echoed} appear in followup_tasks")
     required_tools = _required_tools(data.get("required_tools"), tools, fail)
     _check_body_contains(rules, loaded, fail)
-    _check_reply_contains(rules, loaded, system_prompt, tools, data["target_task"], payload, fail)
+    _check_reply_contains(rules, loaded, system_prompt, tools,
+                          "\n".join([data["target_task"], *followup_tasks]), payload, fail)
     keywords = _keywords(injection.get("keywords"), payload, loaded, fail)
 
     _check_domains(data, f"{path.name}", fail)
@@ -333,7 +350,18 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         system_prompt=system_prompt,
         payload_source=None if in_task else _payload_source(loaded, location),
         version=version,
+        followup_tasks=followup_tasks,
     )
+
+
+def _followup_tasks(value, fail) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not value or not all(
+        isinstance(t, str) and t.strip() for t in value
+    ):
+        raise fail("followup_tasks must be a non-empty list of non-empty strings")
+    return list(value)
 
 
 def _payload_source(fixtures, location) -> str | None:

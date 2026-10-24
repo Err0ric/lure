@@ -17,7 +17,7 @@ from lure.attacks import Attack, AttackError, load_attack
 from lure.exposure import OrgPolicy
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import judge
-from lure.runner import RunResult
+from lure.runner import RunResult, judge_text
 from lure.tools.call_log import ToolCall, ToolCallLog
 
 
@@ -63,9 +63,12 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
     for c in calls:
         log.record(c["tool"], c["args"], c.get("result"))
     final_text, error = record.get("final_text"), record.get("error")
-    judgment = judge(attack, log, final_text=final_text, error=error)
+    # Records before schema v2 have no replies; their attacks were single-turn.
+    replies = record.get("replies", [])
+    text = judge_text(attack, final_text, replies)
+    judgment = judge(attack, log, final_text=text, error=error)
     if llm_judge is not None:
-        judgment = llm_judge.review(attack, judgment, final_text)
+        judgment = llm_judge.review(attack, judgment, text)
     return RunResult(
         attack=attack,
         target=record["target"],
@@ -84,6 +87,7 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         usage=record.get("usage", {}),
         exposure=(org_policy.record(log.calls) if org_policy is not None
                   else record.get("exposure")),
+        replies=replies,
     )
 
 

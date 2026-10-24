@@ -45,6 +45,11 @@
     "stop": { "enum": ["completed", "max_turns", "error"] },
     "error": { "type": ["string", "null"] },
     "final_text": { "type": ["string", "null"] },
+    "replies": {
+      "description": "The final reply of each user turn, in order. A multi-turn attack (followup_tasks) is judged on all of them.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "transcript": {
       "type": "array",
       "items": { "$ref": "#/$defs/transcript_entry" }

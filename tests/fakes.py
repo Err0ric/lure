@@ -32,6 +32,7 @@ class ScriptedAdapter(ModelAdapter):
         self.system = None
         self.tools = None
         self.task = None
+        self.tasks = []
         self.tool_results = []
 
     def start(self, system, tools):
@@ -53,6 +54,7 @@ class _ScriptedConversation(Conversation):
 
     def send_task(self, task):
         self.adapter.task = task
+        self.adapter.tasks.append(task)
         return self.adapter.next_turn()
 
     def send_tool_results(self, results):
