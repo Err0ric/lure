@@ -22,6 +22,11 @@ htmlcov/
 results/
 reports/
 
+# Profiles can hold a real agent's system prompt: keep them out of git,
+# except the example.
+profiles/*
+!profiles/example-ap-agent.yaml
+
 # OS / editor
 .DS_Store
 .vscode/

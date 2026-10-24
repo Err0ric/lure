@@ -117,6 +117,8 @@ class RunResult:
     cost: dict[str, float] | None = None
     # The saved result and attempt whose payload this run replays.
     replay: dict[str, Any] | None = None
+    # The profile the run used (lure run --profile); None otherwise.
+    profile: dict[str, Any] | None = None
     saved_to: Path | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -162,6 +164,7 @@ class RunResult:
             "adaptive": self.adaptive,
             "cost": self.cost,
             "replay": self.replay,
+            **({"profile": self.profile} if self.profile is not None else {}),
         }
 
     def save(self, results_dir: str | Path) -> Path:

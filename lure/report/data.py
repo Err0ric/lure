@@ -379,6 +379,17 @@ class Report:
     exposed_runs: list[Run] = field(default_factory=list)
 
     @property
+    def profiles(self) -> list[str]:
+        """Profiles (lure run --profile) the runs used, by name."""
+        return sorted({r.record["profile"]["name"] for r in self.runs if r.record.get("profile")})
+
+    @property
+    def canary_attacks(self) -> list[str]:
+        """Attacks whose runs had a canary line appended to the profile's prompt."""
+        return sorted({r.attack["id"] for r in self.runs
+                       if (r.record.get("profile") or {}).get("canary_appended")})
+
+    @property
     def adaptive(self) -> bool:
         """True when the runs are adaptive (build_report never mixes the two)."""
         return any(r.adaptive for r in self.runs)

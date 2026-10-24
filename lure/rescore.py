@@ -20,6 +20,9 @@ from lure.judge.rules import apply_refusal, judge, target_refused
 from lure.runner import RunResult, judge_text
 from lure.tools.call_log import ToolCall, ToolCallLog
 
+# A profile run's summary (lure run --profile), next to its records.
+MANIFEST = "manifest.json"
+
 
 def attack_index(attacks_dir: str | Path) -> dict[tuple[str, int], Attack]:
     """Every attack under the folder, pinned versions included, by (id, version)."""
@@ -40,7 +43,7 @@ def record_paths(paths: list[str | Path]) -> list[Path]:
     found: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
-            found += sorted(f for f in p.glob("*.json") if f.is_file())
+            found += sorted(f for f in p.glob("*.json") if f.is_file() and f.name != MANIFEST)
         elif p.is_file():
             found.append(p)
         else:

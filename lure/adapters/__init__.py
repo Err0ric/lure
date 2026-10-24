@@ -8,7 +8,11 @@ from lure.adapters.base import (
     ToolSpec,
 )
 
+# Providers Lure has an adapter for.
+TARGETS = ("ollama", "anthropic", "openai")
+
 __all__ = [
+    "TARGETS",
     "AdapterError",
     "Conversation",
     "ModelAdapter",

@@ -51,6 +51,7 @@
   <h1>{{ headline }}</h1>
   <dl class="facts">
     <div><dt>Target</dt><dd>{{ model }}<small>{{ report.target }}</small></dd></div>
+    {% if report.profiles %}<div><dt>Agent profile</dt><dd>{{ report.profiles|join(", ") }}<small>the agent's own system prompt and tool names over Lure's mock tools; accounts payable scenarios{% if report.canary_attacks %}; a canary line was appended to the prompt for {{ report.canary_attacks|join(", ") }}{% endif %}</small></dd></div>{% endif %}
     <div><dt>Judge</dt><dd>
       {% if report.judges|length == 1 %}{{ judge_names[0][0] }}{% else %}Mixed<small>{% for name, n in judge_names %}{{ name }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</small>{% endif %}
     </dd></div>

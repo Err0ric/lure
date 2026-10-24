@@ -51,6 +51,12 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
         (f"Target `{report.target}`, judged by {text(judges)}, "
         f"{t.runs} runs of {report.scope}, {date_range(report.first, report.last)}."),
     ]
+    if report.profiles:
+        lines[-1] += (f" Agent profile {text(', '.join(report.profiles))}: the agent's own system "
+                      "prompt and tool names over Lure's mock tools, accounts payable scenarios.")
+        if report.canary_attacks:
+            lines[-1] += (" A canary line was appended to the prompt for "
+                          f"{text(', '.join(report.canary_attacks))}.")
     if report.adaptive:
         lines[-1] += (f" Adaptive attacker {text(', '.join(report.attackers))}, worst case: it "
                       "sees the agent's replies. Each run is its worst attempt, so rates are not "

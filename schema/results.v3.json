@@ -252,6 +252,26 @@
         }
       ]
     },
+    "profile": {
+      "description": "The profile this run used (lure run --profile): the agent's own system prompt and tool names over Lure's mock tools. Missing for runs without a profile.",
+      "type": "object",
+      "required": ["name", "sha256", "prompt_source", "canary_appended", "tools"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "prompt_source": {"const": "profile"},
+        "canary_appended": {
+          "description": "True when the attack's canary line was appended to the profile's system prompt.",
+          "type": "boolean"
+        },
+        "tools": {
+          "description": "The agent's tool name -> the Lure mock tool it maps to.",
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        }
+      }
+    },
     "replay": {
       "description": "The saved result whose payload this run replays (--payload-from). Null otherwise.",
       "oneOf": [

@@ -135,8 +135,8 @@ def test_bad_attack_file(tmp_path, capsys):
 
 
 def test_target_is_required(capsys):
-    with pytest.raises(SystemExit):
-        cli.main(["run", IPI_001])
+    assert cli.main(["run", IPI_001]) == cli.EXIT_BAD_INPUT
+    assert "needs attack files or folders and --target, or --profile" in capsys.readouterr().err
 
 
 def test_unknown_target_rejected(capsys):

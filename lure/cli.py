@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TextIO
@@ -23,6 +24,7 @@ from dotenv import find_dotenv, load_dotenv
 
 from lure import __version__
 from lure import policy as policy_file
+from lure.adapters import TARGETS
 from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacker import MAX_TOKENS as ATTACKER_MAX_TOKENS
 from lure.attacker import Attacker
@@ -43,7 +45,11 @@ from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import CONFIRM_FIRST, DETECTED, HEURISTIC, Judgment, Verdict
 from lure.policy import Policy, PolicyResult, PolicyRun
 from lure.prices import PricesError, load_prices
+from lure.profiles import Profile, ProfileError, Skipped, load_profile
+from lure.profiles import prepare as prepare_for_profile
+from lure.profiles import select as select_for_profile
 from lure.rescore import (
+    MANIFEST,
     add_exposure,
     attack_changed,
     attack_index,
@@ -56,7 +62,6 @@ from lure.runner import DEFAULT_ATTEMPTS, MAX_TURNS, RunResult, run_adaptive, ru
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
 
-TARGETS = ("ollama", "anthropic", "openai")
 JUDGES = ("rules", "llm")
 
 # lure run and lure report: 0 when no run fails the policy, 1 when one does,
@@ -109,8 +114,14 @@ def build_parser() -> argparse.ArgumentParser:
                         help="print the installed Lure version and exit")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="run attacks against a target")
-    run.add_argument("attack", nargs="+", help="attack YAML files, or folders of them")
-    run.add_argument("--target", choices=TARGETS, required=True)
+    run.add_argument("attack", nargs="*", help="attack YAML files, or folders of them "
+                                               "(default attacks with --profile)")
+    run.add_argument("--profile", metavar="PROFILE",
+                     help="bring your own agent: a profile YAML with the agent's model, system "
+                          "prompt and tools (mapped to Lure's mocks); runs the attacks its "
+                          "tools cover. See docs/profiles.md")
+    run.add_argument("--target", choices=TARGETS,
+                     help="model provider (required without --profile)")
     run.add_argument("--model", help="model name (default depends on target)")
     run.add_argument("--max-turns", type=int, default=MAX_TURNS)
     run.add_argument("--repeat", type=_positive_int,
@@ -273,6 +284,7 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     if args.command == "coverage":
         return coverage_main(args, out)
     try:
+        profile = _apply_profile(args)
         # Load every attack first so a bad file fails before any model call.
         policy = _policy(args)
         attacks = []
@@ -280,14 +292,22 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
             _check_categories(policy, target)
             loaded = [load_attack(p) for p in collect_attack_paths(target)]
             attacks += _enabled_attacks(loaded, policy, target, out)
+        skipped: list[Skipped] = []
+        if profile is not None:
+            attacks, skipped = select_for_profile(profile, attacks)
+            print_profile_plan(profile, attacks, skipped, out)
+            if not attacks:
+                raise AttackError("the profile's tools cover none of these attacks; see "
+                                  "the skipped list above")
         replay = None
         if args.payload_from:
             attacks, replay = _replay(attacks, args, out)
         elif args.attempt:
             raise AttackError("--attempt needs --payload-from")
         selected = _plan_variants(attacks, args, out)
+        aliases = profile.aliases if profile is not None else None
         for a in selected:
-            build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
+            build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog(), aliases=aliases)
         adapter = make_adapter(args.target, args.model)
         llm_judge = _llm_judge(args)
         attacker = _attacker(args, attacks, adapter)
@@ -296,7 +316,7 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
                               "no model judges itself: pick another --judge-model")
         budget = _budget(args, [adapter, llm_judge and llm_judge.adapter,
                                 attacker and attacker.adapter])
-    except (AttackError, ToolboxError, AdapterError, PolicyError, PricesError) as e:
+    except (AttackError, ToolboxError, AdapterError, PolicyError, PricesError, ProfileError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
     if not selected:
@@ -307,11 +327,16 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
              or args.repeat > 1)
     plan = [(a, n) for a in selected for n in range(1, args.repeat + 1)]
     results: list[RunResult] = []
+    started = datetime.now(UTC)
     for i, (attack, n) in enumerate(plan, 1):
         if budget is not None and not budget.allows_another():
             break
         kwargs = {"max_turns": args.max_turns, "llm_judge": llm_judge,
                   "org_policy": policy.exposure}
+        canary = False
+        if profile is not None:
+            attack, prompt, canary = prepare_for_profile(profile, attack)
+            kwargs |= {"system_prompt": prompt, "tool_aliases": profile.aliases}
         if attacker is not None:
             result = run_adaptive(attack, adapter, attacker, args.attempts or DEFAULT_ATTEMPTS,
                                   budget, **kwargs)
@@ -321,6 +346,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
                 costs = budget.charge_attempt(result.target, result.usage, result.judgment.llm)
                 result.cost = {**dict.fromkeys(ROLES, 0.0), **costs, "total": sum(costs.values())}
         result.replay = replay
+        if profile is not None:
+            result.profile = profile.record(canary)
         result.save(args.results_dir)
         results.append(result)
         if batch:
@@ -346,9 +373,79 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         print(f"           estimate from recorded tokens at the rates in {budget.prices.source}",
               file=out)
     gate = policy.gate([PolicyRun.from_result(r) for r in results])
+    if profile is not None:
+        path = write_manifest(profile, args, policy, results, skipped, started, stopped)
+        print(file=out)
+        print(f"Manifest:  {path}", file=out)
     print(file=out)
     print_policy(gate, out)
     return exit_code(gate, [r.judgment.verdict for r in results], stopped)
+
+
+def _apply_profile(args) -> Profile | None:
+    """With --profile: fill target, model, attacks, policy and the results
+    folder from the profile where the command line left them out."""
+    if not args.profile:
+        if not args.attack or not args.target:
+            raise AttackError("lure run needs attack files or folders and --target, "
+                              "or --profile")
+        return None
+    profile = load_profile(args.profile)
+    args.target = args.target or profile.target
+    args.model = args.model or profile.model
+    args.attack = args.attack or ["attacks"]
+    if args.policy is None and not args.no_policy and profile.policy is not None:
+        args.policy = str(profile.policy)
+    if args.results_dir == "results":
+        args.results_dir = str(Path("results") / profile.name
+                               / datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"))
+    return profile
+
+
+def print_profile_plan(profile: Profile, attacks: list, skipped: list, out: TextIO) -> None:
+    print(f"Profile:   {profile.name} ({len(profile.tools)} tools, {profile.path})", file=out)
+    print(f"Attacks:   {len(attacks)} the agent's tools cover, {len(skipped)} skipped", file=out)
+    for s in skipped:
+        print(f"  skipped {s.attack.id}: {s.reason}", file=out)
+    canaries = [a.id for a in attacks if a.canary]
+    if canaries:
+        print(f"Canary:    a secret line is appended to the profile's prompt for "
+              f"{', '.join(canaries)}", file=out)
+    print(file=out)
+
+
+def write_manifest(profile: Profile, args, policy: Policy, results: list, skipped: list,
+                   started: datetime, stopped: bool) -> Path:
+    """manifest.json next to a profile run's records: what ran, under which
+    profile, policy and settings, and what was skipped and why."""
+    path = Path(args.results_dir) / MANIFEST
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = {
+        "manifest_version": 1,
+        "lure_version": __version__,
+        "profile": {"name": profile.name, "path": str(profile.path), "sha256": profile.sha256,
+                    "owner": profile.owner, "role": profile.role,
+                    "tools": [{"name": t.name, "maps_to": t.maps_to} for t in profile.tools],
+                    "third_party_tools": profile.third_party_tools},
+        "target": results[0].target if results else f"{args.target}:{args.model or 'default'}",
+        "judge": results[0].judge if results else args.judge,
+        "repeat": args.repeat,
+        "variants": args.variants,
+        "policy": {"source": policy.source, "path": policy.path, "sha256": policy.sha256},
+        "started_at": started.isoformat(),
+        "finished_at": datetime.now(UTC).isoformat(),
+        "stopped_at_max_cost": stopped,
+        "runs": [{"file": r.saved_to.name if r.saved_to else None, "attack": r.attack.id,
+                  "version": r.attack.version,
+                  "variant": r.attack.variant.id if r.attack.variant else None,
+                  "verdict": r.judgment.verdict.value,
+                  "canary_appended": bool(r.profile and r.profile["canary_appended"])}
+                 for r in results],
+        "skipped": [{"attack": s.attack.id, "version": s.attack.version, "reason": s.reason}
+                    for s in skipped],
+    }
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return path
 
 
 def _plan_variants(attacks: list[Attack], args, out: TextIO) -> list[Attack]:
