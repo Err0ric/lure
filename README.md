@@ -1,3 +1,5 @@
+![Lure: agent security harness. A purple-team demon peeks over a terminal running send_email(?)](docs/assets/banner.png)
+
 # Lure
 
 An open-source harness that attacks AI agents with prompt injection and tool-abuse scenarios, scores each run from the tool-call log, and maps every result to MITRE ATLAS and ATT&CK.
