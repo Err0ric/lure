@@ -114,7 +114,8 @@ def build_parser() -> argparse.ArgumentParser:
                      help=f"run each attack N times (default 1, or {BASELINE_REPEAT} with --baseline)")
     run.add_argument("--baseline", action="store_true",
                      help=f"baseline settings: --repeat {BASELINE_REPEAT} --judge llm "
-                          "(either can still be set explicitly)")
+                          "(either can still be set explicitly); the judge model must "
+                          "differ from the target")
     _judge_args(run)
     run.add_argument("--attacker-model",
                      help="adaptive attacker: this model rewrites the payload after each "

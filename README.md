@@ -99,6 +99,21 @@ lure run attacks/ --target anthropic --model claude-haiku-5-5 \
 lure report results/my-run/ --out reports/my-run.html
 ```
 
+For a baseline you will publish, use `--baseline` (10 runs per attack, LLM judge) with a judge model that differs from the target, and cap the spend:
+
+```bash
+lure run attacks/ --target anthropic --model claude-sonnet-5-5 \
+  --baseline --judge-model claude-opus-5-5 \
+  --prices prices.yaml --max-cost 20 --results-dir results/baseline-sonnet
+```
+
+| Baseline detail | |
+| --- | --- |
+| Settings | `--baseline` means `--repeat 10 --judge llm`; an explicit `--repeat` or `--judge` still wins. Without `--baseline` the default is 1 run with the rules judge |
+| Judge model | The LLM judge defaults to `claude-haiku-5-5`, and no model judges itself: a Haiku target needs another `--judge-model`, or the run exits 2 before any call |
+| Sample size | Reports mark a rate over fewer than 10 *scored* runs as low sample. Invalid and Error runs are not scored, so an attack with one Invalid run in 10 is still marked |
+| Cost | `--prices` prints the estimated spend for target, judge and attacker; `--max-cost` stops the batch before it passes the cap and exits 3. Copy `prices.example.yaml` and check current rates first |
+
 Other useful commands:
 
 | Command | What it does |
