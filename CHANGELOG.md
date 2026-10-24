@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased (v1.5)
+
+### New
+
+- **`lure --version`** prints the installed version (`lure 1.4.0`) and
+  exits 0. Before, it printed usage and exited 2, because a subcommand was
+  required.
+
 ## v1.4.0 (2026-10-24)
 
 ### Highlights

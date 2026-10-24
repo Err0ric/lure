@@ -21,6 +21,7 @@ from typing import TextIO
 
 from dotenv import find_dotenv, load_dotenv
 
+from lure import __version__
 from lure import policy as policy_file
 from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacker import MAX_TOKENS as ATTACKER_MAX_TOKENS
@@ -104,6 +105,8 @@ def make_judge_adapter(target: str, model: str | None) -> ModelAdapter:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lure")
+    parser.add_argument("--version", action="version", version=f"lure {__version__}",
+                        help="print the installed Lure version and exit")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="run attacks against a target")
     run.add_argument("attack", nargs="+", help="attack YAML files, or folders of them")

@@ -358,3 +358,19 @@ def test_batch_progress_marks_llm_judged(tmp_path, fake_target, fake_judge):
 def test_unknown_judge_rejected():
     with pytest.raises(SystemExit):
         cli.main(["run", IPI_001, "--target", "ollama", "--judge", "gpt"])
+
+
+def test_version_prints_the_installed_version_and_exits_0(capsys):
+    from lure import __version__
+
+    with pytest.raises(SystemExit) as e:
+        cli.main(["--version"])
+    assert e.value.code == 0
+    assert capsys.readouterr().out.strip() == f"lure {__version__}"
+
+
+def test_no_command_still_prints_usage_and_exits_2(capsys):
+    with pytest.raises(SystemExit) as e:
+        cli.main([])
+    assert e.value.code == 2
+    assert "usage: lure" in capsys.readouterr().err
