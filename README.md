@@ -8,9 +8,9 @@ Think phishing simulation, but the target is an agent instead of an employee.
 
 [![Top of the sample report: headline, facts strip and summary for claude-haiku-5-5](docs/sample-report-top.png)](https://err0ric.github.io/lure/sample-report.html)
 
-![lure run against claude-haiku-5-5, then lure report on the Opus-judged baseline](docs/demo.gif)
+![lure run of lure-tpo-002 against claude-haiku-5-5 ending in a Fail, then lure report on the Opus-judged v1.2.0 results](docs/demo.gif)
 
-*Single live run; rates come from the 3-run baseline.* Recorded with [`demo.tape`](demo.tape) ([vhs](https://github.com/charmbracelet/vhs)).
+*Single live run of `lure-tpo-002`, the poisoned tool parameter; rates come from the 3-run v1.2.0 results.* Recorded with [`demo.tape`](demo.tape) ([vhs](https://github.com/charmbracelet/vhs)).
 
 ## What Lure found
 
