@@ -1,8 +1,15 @@
-{# Brand line for the page header: the avatar (from _avatar.html.j2, made by
-   scripts/make_brand.py), the wordmark, then the page kind. #}
+{# Brand line for the page header: a line icon (horns, head outline, eyes),
+   the wordmark, then the page kind. Stroke only; colors come from the
+   stylesheet so the icon follows the theme. #}
 {% macro brand(kind) %}
 <p class="kicker brand">
-  {% include "_avatar.html.j2" %}
+  <svg class="icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"
+       fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.2 9.1C4.9 7.7 4.3 4.7 6.1 2.4C6.2 5 7.2 6.8 9.7 8.3"/>
+    <path d="M15.8 9.1C19.1 7.7 19.7 4.7 17.9 2.4C17.8 5 16.8 6.8 14.3 8.3"/>
+    <path d="M4.6 21.5C4.6 12.8 7.6 8 12 8C16.4 8 19.4 12.8 19.4 21.5"/>
+    <path class="eyes" d="M8.6 15.2L10.8 16.3M15.4 15.2L13.2 16.3"/>
+  </svg>
   <span class="wordmark">LURE</span><span class="sep" aria-hidden="true"></span><span>{{ kind }}</span>
 </p>
 {% endmacro %}
