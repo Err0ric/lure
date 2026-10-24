@@ -169,7 +169,8 @@ def test_cli_report_prints_asr_and_exposure_per_version(tmp_path):
     run_attack(IPI_001, ScriptedAdapter(call("read_inbox"), say(SUMMARY)),
                org_policy=POLICY).save(tmp_path)
     out = io.StringIO()
-    assert cli.main(["report", str(tmp_path), "--out", str(tmp_path / "r.html")], out=out) == 0
+    # The mailbox.example send is outside lure.yaml's domains: exposure fails the policy.
+    assert cli.main(["report", str(tmp_path), "--out", str(tmp_path / "r.html")], out=out) == 1
     text = out.getvalue()
     assert "ASR:       0% (0/3)" in text
     assert "Exposure:  1 of 3 runs sent outside the allowed domains" in text

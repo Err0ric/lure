@@ -164,7 +164,7 @@ def test_pretty_args_keeps_text_exact():
 def test_cli_report(results, tmp_path):
     out = io.StringIO()
     target = tmp_path / "out" / "report.html"
-    assert cli.main(["report", str(results), "--out", str(target)], out=out) == 0
+    assert cli.main(["report", str(results), "--out", str(target)], out=out) == cli.EXIT_POLICY_FAIL
     assert target.read_text().startswith("<!doctype html>")
     assert "7 runs of 4 attacks against fake:haiku, 3 findings" in out.getvalue()
 

@@ -25,7 +25,7 @@ from lure.batch import SummaryRow, collect_attack_paths, summarize
 from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
-from lure.policy import Policy
+from lure.policy import Policy, PolicyRun, Violation
 from lure.rescore import (
     add_exposure,
     attack_changed,
@@ -42,9 +42,14 @@ from lure.tools.registry import ToolboxError, build_toolbox
 TARGETS = ("ollama", "anthropic")
 JUDGES = ("rules", "llm")
 
+# lure run and lure report: 0 when no run fails the policy, 1 when one does,
+# 2 when the input is bad or a run errored (and nothing fails the policy).
+# The other commands use 0 and 2 only.
 EXIT_OK = 0
-EXIT_RUN_ERROR = 1
-EXIT_BAD_INPUT = 2
+EXIT_POLICY_FAIL = 1
+EXIT_ERROR = 2
+EXIT_BAD_INPUT = EXIT_ERROR
+EXIT_RUN_ERROR = EXIT_ERROR
 
 
 def make_adapter(target: str, model: str | None) -> ModelAdapter:
@@ -103,6 +108,7 @@ def build_parser() -> argparse.ArgumentParser:
     report_cmd.add_argument("--out", default="report.html", help="output file (default report.html)")
     report_cmd.add_argument("--target", help="only runs against this target, e.g. "
                                              "anthropic:claude-haiku-5-5 (needed if results mix targets)")
+    _policy_args(report_cmd)
 
     compare_cmd = sub.add_parser("compare", help="compare targets side by side in one HTML page")
     compare_cmd.add_argument("results", nargs="+",
@@ -205,9 +211,39 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     if batch:
         print(file=out)
         print_summary(summarize(results), out)
-    if any(r.judgment.verdict is Verdict.ERROR for r in results):
-        return EXIT_RUN_ERROR
+    violations = policy.evaluate(PolicyRun.from_result(r) for r in results)
+    print(file=out)
+    print_policy(policy, violations, len(results), out)
+    return exit_code(violations, [r.judgment.verdict for r in results])
+
+
+def exit_code(violations: list[Violation], verdicts: list[Verdict]) -> int:
+    """A policy failure wins over a run error: a confirmed finding stands
+    even if another run broke."""
+    if violations:
+        return EXIT_POLICY_FAIL
+    if Verdict.ERROR in verdicts:
+        return EXIT_ERROR
     return EXIT_OK
+
+
+def print_policy(policy: Policy, violations: list[Violation], runs: int, out: TextIO) -> None:
+    """One line per attack version that failed the policy, with run counts."""
+    failed: dict[tuple[str, int], dict[str, set[str]]] = {}
+    for v in violations:
+        failed.setdefault((v.attack_id, v.version), {}).setdefault(v.kind, set()).add(v.where)
+    failed_runs = len({v.where for v in violations})
+    status = "FAIL" if violations else "PASS"
+    print(f"Policy:    {status} ({policy.source}): {failed_runs} of {runs} "
+          f"run{'' if runs == 1 else 's'} failed", file=out)
+    if runs == 1:
+        for v in violations:
+            print(f"  {v.kind}: {v.detail}", file=out)
+        return
+    for (attack_id, version), by_kind in failed.items():
+        parts = [f"{kind} in {len(where)} run{'' if len(where) == 1 else 's'}"
+                 for kind, where in by_kind.items()]
+        print(f"  {attack_id} v{version}: {', '.join(parts)}", file=out)
 
 
 def _enabled_attacks(attacks: list, policy: Policy, target: str, out: TextIO) -> list:
@@ -233,12 +269,14 @@ def report_main(args, out: TextIO) -> int:
     from lure.report.render import write_report
 
     try:
+        policy = _policy(args)
         runs = load_runs(args.results)
         _note_legacy([r.record for r in runs])
         report = build_report(runs, target=args.target)
-    except (ReportError, FileNotFoundError) as e:
+    except (ReportError, FileNotFoundError, PolicyError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
+    runs = [r for r in runs if r.record["target"] == report.target]
     path = write_report(report, args.out)
     t = report.total
     print(f"Wrote {path}: {t.runs} runs of {len(report.attacks)} attacks against {report.target}, "
@@ -246,12 +284,26 @@ def report_main(args, out: TextIO) -> int:
     print(f"ASR:       {_rate(t.asr, t.counts[Verdict.FAIL], t.scored)}", file=out)
     if not report.exposure_checked:
         print("Exposure:  not checked (no org policy in these results)", file=out)
-        return EXIT_OK
-    print(f"Exposure:  {t.exposed} of {t.runs} runs sent outside the allowed domains", file=out)
-    for a in report.attacks:
-        if a.tally.exposed:
-            print(f"  {a.label}: {a.tally.exposed} of {a.tally.runs} runs", file=out)
-    return EXIT_OK
+    else:
+        print(f"Exposure:  {t.exposed} of {t.runs} runs sent outside the allowed domains",
+              file=out)
+        for a in report.attacks:
+            if a.tally.exposed:
+                print(f"  {a.label}: {a.tally.exposed} of {a.tally.runs} runs", file=out)
+    return _gate_saved(policy, runs, out)
+
+
+def _gate_saved(policy: Policy, runs: list, out: TextIO) -> int:
+    """Apply the policy to saved runs. Attacks the policy disables are left
+    out, as a folder run would leave them out."""
+    checked = [r for r in runs if policy.enabled(r.attack["id"], r.attack["category"])]
+    violations = policy.evaluate(PolicyRun.from_record(r.record, str(r.path)) for r in checked)
+    print(file=out)
+    if len(checked) < len(runs):
+        n = len(runs) - len(checked)
+        print(f"Not gated (disabled in {policy.source}): {n} run{'' if n == 1 else 's'}", file=out)
+    print_policy(policy, violations, len(checked), out)
+    return exit_code(violations, [r.verdict for r in checked])
 
 
 def compare_main(args, out: TextIO) -> int:
