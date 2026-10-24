@@ -23,7 +23,7 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | --- | --- | --- |
 | AML.T0048.000 | External Harms: Financial Harm | lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-tab-001, lure-tpo-003 |
 | AML.T0051.000 | LLM Prompt Injection: Direct | lure-dpi-001, lure-dpi-002, lure-dpi-003, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-jbk-003 |
-| AML.T0051.001 | LLM Prompt Injection: Indirect | lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-mem-001, lure-mem-003, lure-mem-004, lure-tab-001, lure-tab-002, lure-tab-003 |
+| AML.T0051.001 | LLM Prompt Injection: Indirect | lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-mem-001, lure-mem-003, lure-mem-004, lure-tab-001, lure-tab-002, lure-tab-003 |
 | AML.T0053 | AI Agent Tool Invocation | lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-tab-001, lure-tab-002, lure-tab-003, lure-tpo-003 |
 | AML.T0054 | LLM Jailbreak | lure-dpi-003, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-jbk-003 |
 | AML.T0056 | Extract LLM System Prompt | lure-dpi-001, lure-jbk-003 |
@@ -31,8 +31,8 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | AML.T0068 | LLM Prompt Obfuscation | lure-ipi-004, lure-jbk-003; every `encoded` variant |
 | AML.T0069.002 | Discover LLM System Information: System Prompt | lure-dpi-001 |
 | AML.T0080.000 | AI Agent Context Poisoning: Memory | lure-mem-002 v1, lure-mem-002 v2, lure-mem-003, lure-mem-004, lure-mem-005 |
-| AML.T0080.001 | AI Agent Context Poisoning: Thread | lure-ipi-007 v2, lure-ipi-007 v3, lure-mem-001 |
-| AML.T0086 | Exfiltration via AI Agent Tool Invocation | lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-tab-003, lure-tpo-001, lure-tpo-002, lure-tpo-004 |
+| AML.T0080.001 | AI Agent Context Poisoning: Thread | lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-mem-001 |
+| AML.T0086 | Exfiltration via AI Agent Tool Invocation | lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-tab-003, lure-tpo-001, lure-tpo-002, lure-tpo-004 |
 | AML.T0101 | Data Destruction via AI Agent Tool Invocation | lure-tab-002 |
 | AML.T0110.000 | AI Agent Tool Poisoning: Definition and Instructions | lure-tpo-001, lure-tpo-002, lure-tpo-003, lure-tpo-004 |
 
@@ -42,9 +42,9 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | --- | --- | --- |
 | T1005 | Data from Local System | lure-dlk-003, lure-tab-003 |
 | T1027 | Obfuscated Files or Information | lure-ipi-004 |
-| T1048 | Exfiltration Over Alternative Protocol | lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-tab-003, lure-tpo-001, lure-tpo-004 |
+| T1048 | Exfiltration Over Alternative Protocol | lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-tab-003, lure-tpo-001, lure-tpo-004 |
 | T1485 | Data Destruction | lure-tab-002 |
-| T1566 | Phishing | lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-008, lure-ipi-009 |
+| T1566 | Phishing | lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009 |
 | T1567 | Exfiltration Over Web Service | lure-tpo-002 |
 | T1656 | Impersonation | lure-ipi-005, lure-ipi-007 v3, lure-ipi-009, lure-tpo-004 |
 | T1657 | Financial Theft | lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-tab-001, lure-tpo-003 |
@@ -67,7 +67,8 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | [lure-ipi-006](../attacks/indirect_prompt_injection/lure-ipi-006.yaml) | Indirect prompt injection | high | AML.T0051.001, AML.T0086 | T1566, T1048 |
 | [lure-ipi-007 v1](../attacks/indirect_prompt_injection/lure-ipi-007-v1.yaml) | Indirect prompt injection | high | AML.T0051.001, AML.T0086 | T1566, T1048 |
 | [lure-ipi-007 v2](../attacks/indirect_prompt_injection/lure-ipi-007-v2.yaml) | Indirect prompt injection | high | AML.T0051.001, AML.T0080.001, AML.T0086 | T1566, T1048 |
-| [lure-ipi-007 v3](../attacks/indirect_prompt_injection/lure-ipi-007.yaml) | Indirect prompt injection | high | AML.T0051.001, AML.T0080.001, AML.T0086 | T1566, T1656, T1048 |
+| [lure-ipi-007 v3](../attacks/indirect_prompt_injection/lure-ipi-007-v3.yaml) | Indirect prompt injection | high | AML.T0051.001, AML.T0080.001, AML.T0086 | T1566, T1656, T1048 |
+| [lure-ipi-007 v4](../attacks/indirect_prompt_injection/lure-ipi-007.yaml) | Indirect prompt injection | high | AML.T0051.001, AML.T0080.001, AML.T0086 | T1566, T1048 |
 | [lure-ipi-008](../attacks/indirect_prompt_injection/lure-ipi-008.yaml) | Indirect prompt injection | critical | AML.T0051.001, AML.T0057, AML.T0086 | T1566, T1048 |
 | [lure-ipi-009](../attacks/indirect_prompt_injection/lure-ipi-009.yaml) | Indirect prompt injection | high | AML.T0051.001, AML.T0086 | T1566, T1048, T1656 |
 | [lure-ipi-010](../attacks/indirect_prompt_injection/lure-ipi-010.yaml) | Indirect prompt injection | high | AML.T0051.001, AML.T0086 | T1048 |

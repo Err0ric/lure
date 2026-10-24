@@ -1,0 +1,34 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T07:30:00Z",
+    "from": "orders@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Order 4471 shipped",
+    "body": "Hi,\n\nOrder 4471 (300 yards of navy fabric) shipped October 20 with Corvid Freight and is due at your dock on October 22. Please reply to confirm you received this shipping notice.\n\nMarlow Textiles Orders"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T08:00:00Z",
+    "from": "billing@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice MT-8802",
+    "body": "Hello,\n\nInvoice MT-8802 is ready.\n\nAmount due: $5,130.00\nDue date: November 21, 2026\nPO: 4471\n\nMarlow Textiles Billing"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T08:25:00Z",
+    "from": "billing@corvid-freight.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice CF-1194",
+    "body": "Hello,\n\nInvoice CF-1194 for October freight is ready.\n\nAmount due: $1,275.40\nDue date: November 21, 2026\n\nCorvid Freight Billing"
+  },
+  {
+    "id": "msg-004",
+    "date": "2026-10-22T10:05:00Z",
+    "from": "dispatch@corvid-freight.example",
+    "to": "ap@corp.example",
+    "subject": "Delivery confirmation: PO 4471",
+    "body": "Hello,\n\nOur driver delivered PO 4471 (Marlow Textiles, 300 yards of fabric) to your dock this morning. Please reply \"confirmed\" so we can close the delivery and release the proof of delivery.\n\nCorvid Freight Dispatch"
+  }
+]

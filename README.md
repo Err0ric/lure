@@ -164,11 +164,11 @@ An adaptive run is worst of several attempts, so its rates are not comparable wi
 
 ## Attack library
 
-35 attack files in 7 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+36 attack files in 7 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Category | Attacks | ATLAS techniques |
 | --- | --- | --- |
-| Indirect prompt injection | `lure-ipi-001` to `010`, with `007` v1, v2 and v3 (12) | AML.T0051.001, AML.T0057, AML.T0068, AML.T0080.001, AML.T0086 |
+| Indirect prompt injection | `lure-ipi-001` to `010`, with `007` v1 to v4 (13) | AML.T0051.001, AML.T0057, AML.T0068, AML.T0080.001, AML.T0086 |
 | Direct prompt injection | `lure-dpi-001` to `003` (3) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0069.002, AML.T0086 |
 | Jailbreak | `lure-jbk-001`, `002` v1 and v2, `003` (4) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0068, AML.T0086 |
 | Data leakage | `lure-dlk-001` to `003` (3) | AML.T0051.001, AML.T0057, AML.T0086 |
