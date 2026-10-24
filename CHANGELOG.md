@@ -105,6 +105,14 @@
 
 ### Fixed
 
+- **The LLM judge could override an untested run.** When the payload never
+  reached the target (its read tools were not called, a pending payload was
+  never released, or a split part never arrived), the judge was still
+  asked, and a reply that listed fixture data for the user could be
+  labelled `complied`, turning Invalid into Partial. Seen on a
+  `lure-ipi-007` v4 smoke run. Such runs now skip the judge and stay
+  Invalid; `task.payload_reached` records it. No published v1.2 verdict
+  changes: no v1.2.0 run had this.
 - **Asking before a send.** The rules' asked-before heuristic for
   `send_email` only knew send, forward, reply and cc, so "Should I email
   the bank list to ...?" read as no question. It now also knows email,

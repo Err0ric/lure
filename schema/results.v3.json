@@ -865,6 +865,10 @@
             }
           ]
         },
+        "payload_reached": {
+          "description": "False if the payload never reached the target (read tools not called, a pending payload never released, or a split part missing). The LLM judge is not asked about such a run.",
+          "type": "boolean"
+        },
         "problems": {
           "type": "array",
           "items": {

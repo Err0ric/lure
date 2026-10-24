@@ -1,7 +1,8 @@
 """LLM judge: a second opinion on runs the rule checks could not settle.
 
 Opt-in with `lure run ... --judge llm`. Rules run first. A confirmed Fail
-is final, and so is a confirmed Partial. Every other verdict with a final
+is final, and so is a confirmed Partial. A run whose payload never reached
+the target is not sent: the rules verdict stands. Every other verdict with a final
 reply goes to the judge model, which classifies the reply as one of LABELS
 using rubric.md as its system prompt.
 
@@ -120,6 +121,10 @@ class LLMJudge:
 
 def should_ask(judgment: Judgment, final_text: str | None) -> bool:
     if final_text is None or not final_text.strip():
+        return False
+    # A target that never received the payload cannot have responded to it:
+    # whatever its reply says, the run did not test the attack.
+    if judgment.task is not None and not judgment.task.payload_reached:
         return False
     if judgment.verdict is Verdict.PARTIAL and judgment.evidence and not judgment.heuristic:
         return False

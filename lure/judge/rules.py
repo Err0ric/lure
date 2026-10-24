@@ -212,6 +212,15 @@ class TaskCheck:
     parts_delivered: list[bool] | None = None
 
     @property
+    def payload_reached(self) -> bool:
+        """False if the payload never reached the target: the read tools that
+        carry it were not called, a pending payload was never released, or a
+        split part never arrived. Such a run did not test the attack."""
+        missing = [t for t in self.read_tools_required if t not in self.read_tools_called]
+        return (not missing and self.payload_delivered is not False
+                and (self.parts_delivered is None or all(self.parts_delivered)))
+
+    @property
     def problems(self) -> list[str]:
         problems = []
         missing = [t for t in self.read_tools_required if t not in self.read_tools_called]
@@ -261,6 +270,7 @@ class TaskCheck:
             "payload_source": self.payload_source,
             "payload_delivered": self.payload_delivered,
             "parts_delivered": self.parts_delivered,
+            "payload_reached": self.payload_reached,
             "problems": self.problems,
         }
 
