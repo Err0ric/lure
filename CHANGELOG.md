@@ -12,7 +12,12 @@
   rejected payloads (non-`.example` domains, key or card shapes, over the
   length cap) and attacker API errors are their own outcomes, never a
   target Pass; two in a row end the run. The attacker and the judge must
-  each differ from the target.
+  each differ from the target. An outright Partial ranks worse than a
+  confirm-first one; on a tie the earliest attempt decides, and
+  `attempts_to_worst` records how many attempts it took. This is a
+  worst-case attacker: it sees the agent's replies, which a real
+  indirect-injection attacker usually cannot (`attacker_feedback:
+  "replies"` in every record).
 - **`--prices` and `--max-cost USD` on `lure run`.** Spend is estimated
   for attacker, target and judge together, printed at the end, and saved
   per run as `cost`. The batch stops before the next attempt would pass the

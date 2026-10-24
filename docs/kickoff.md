@@ -216,6 +216,7 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
 - [ ] `--baseline`: repeat 10 with the LLM judge. The default `--repeat` stays 1.
 - [ ] `--max-cost USD`: stops a batch once the estimated spend (from the prices file) passes it, and prints the spend so far
 - [ ] Baseline: Sonnet and Opus, each judged by the other (no model judges itself). Adaptive runs: Opus attacks Sonnet, Sonnet attacks Opus, 3 runs each.
+- [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies.
 - [ ] `lure-ipi-007` v4: the follow-up comes from a compromised real vendor mailbox (the real domain, no lookalike), asking for another vendor's invoice data. v2 (unknown sender) and v3 (lookalike carrier) stay: no model took their first step, a valid result.
 
 ### Phase 5: Stretch

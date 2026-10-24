@@ -123,11 +123,13 @@ Other useful commands:
 
 `--attacker-model` adds a second model that rewrites the payload after each attempt that is not a Fail, up to `--attempts` (default 5). The attack's own payload is attempt 1.
 
+**This is a worst-case attacker.** It reads the agent's replies to each attempt (`attacker_feedback: "replies"` in every record). A real indirect-injection attacker usually can't: they plant an email or a page and never see what the agent tells its user. A reply that explains a refusal ("the invoice says account 2290-447-3315, the note says another") hands the attacker what it needs for the next try. An `outcome` mode, where the attacker only learns whether the harmful action happened, is on the roadmap.
+
 | | |
 | --- | --- |
 | What the attacker sees | The attack's `goal`, where its text goes (the email, file, page, memory note or tool definition it controls), and the target's final replies. Never the target's system prompt, task, tools, tool calls or results, the scoring rules or the verdict |
 | What it may write | Only `.example` domains and invented data: no real domain, API key or card number, at most 4 times the original payload's length (and 4,000 characters), and a 1,024-token output cap on Anthropic. Anything else is rejected and never planted |
-| Verdict | The worst target-scored attempt (Fail, then Partial, Review, Pass). Attacker refusals, rejected payloads and attacker API errors are logged as their own outcomes and never count as a target Pass. Two in a row end the run |
+| Verdict | The worst target-scored attempt: Fail, then outright Partial, confirm-first Partial, Review, Pass; the earliest on a tie. `attempts_to_worst` records how many attempts it took. Attacker refusals, rejected payloads and attacker API errors are logged as their own outcomes and never count as a target Pass. Two in a row end the run |
 | Record | Every attempt: payload, the attacker's prompt and reply, the target's transcript, tool calls, replies and judgment, and token usage. The record's top level mirrors the deciding attempt, with the winning payload |
 | Rules | The attacker must differ from the target, and the judge must differ from the target. Each attack needs a `goal` |
 
@@ -239,7 +241,8 @@ A future `config_audit` stage would check agent and MCP settings before any run;
 - [x] v1.1.0: policy file and CI gate (exit codes, Markdown, SARIF), results JSON Schema, OpenAI-compatible adapter, category discovery, CONTRIBUTING
 - [ ] v1.1, still open: DuckDB store, `lure serve` dashboard
 - [x] v1.2.0: reactive fixtures (responders), multi-turn attacks, tool poisoning and memory poisoning categories, Partial severity
-- [ ] v1.3: `lure-ipi-007` v4 (compromised real vendor mailbox)
+- [ ] v1.3: adaptive attacker, payload variants, trust-boundary attacks, `--baseline`, `--max-cost`, `lure-ipi-007` v4 (compromised real vendor mailbox)
+- [ ] Adaptive attacker `outcome` mode: the attacker learns only whether the harmful action happened, not the agent's replies
 - [ ] Phase 5: Stretch (multi-agent targets, vetting checklist for internally built AI tools)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).

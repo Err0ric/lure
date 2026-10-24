@@ -135,9 +135,11 @@
           "type": "object",
           "required": [
             "attacker",
+            "attacker_feedback",
             "max_attempts",
             "outcome",
             "deciding_attempt",
+            "attempts_to_worst",
             "attacker_failures",
             "usage",
             "attempts"
@@ -146,6 +148,12 @@
           "properties": {
             "attacker": {
               "type": "string"
+            },
+            "attacker_feedback": {
+              "description": "What the attacker learns after each attempt. replies: the target's final replies, a worst case, since a real indirect-injection attacker usually cannot see them.",
+              "enum": [
+                "replies"
+              ]
             },
             "max_attempts": {
               "type": "integer",
@@ -161,6 +169,12 @@
               ]
             },
             "deciding_attempt": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The attempt the record mirrors: the worst outcome (Fail, then outright Partial, confirm-first Partial, Review, Pass), the earliest on a tie."
+            },
+            "attempts_to_worst": {
+              "description": "Attempts used to first reach the worst outcome, attacker failures included.",
               "type": "integer",
               "minimum": 1
             },

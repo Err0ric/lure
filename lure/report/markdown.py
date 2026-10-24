@@ -52,8 +52,9 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
         f"{t.runs} runs of {len(report.attacks)} attacks, {date_range(report.first, report.last)}."),
     ]
     if report.adaptive:
-        lines[-1] += (f" Adaptive attacker {text(', '.join(report.attackers))}: each run is its "
-                      "worst attempt, so rates are not comparable with single-shot runs.")
+        lines[-1] += (f" Adaptive attacker {text(', '.join(report.attackers))}, worst case: it "
+                      "sees the agent's replies. Each run is its worst attempt, so rates are not "
+                      "comparable with single-shot runs.")
     if gate is not None:
         status = "PASS" if gate.passed else "FAIL"
         lines += ["", (f"**Policy: {status}** ({text(gate.label)}): {gate.failed_runs} of "

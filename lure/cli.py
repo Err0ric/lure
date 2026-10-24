@@ -794,7 +794,7 @@ def print_result(result: RunResult, out: TextIO) -> None:
 def _adaptive_note(adaptive: dict) -> str:
     tried = len(adaptive["attempts"])
     failures = adaptive["attacker_failures"]
-    note = (f"attempt {adaptive['deciding_attempt']} of {tried} decided, "
+    note = (f"worst at attempt {adaptive['attempts_to_worst']} of {tried}, "
             f"{adaptive['outcome'].replace('_', ' ')}")
     return note + (f", {failures} attacker failure{'' if failures == 1 else 's'}" if failures else "")
 
