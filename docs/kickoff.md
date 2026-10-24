@@ -223,7 +223,9 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
 
 ### v1.4
 
-- [ ] Map every attack and variant to the Arcanum Prompt Injection Taxonomy (https://github.com/Arcanum-Sec/arc_pi_taxonomy, site https://arcanum-sec.github.io/arc_pi_taxonomy/, v1.6.1, CC BY 4.0) alongside ATLAS: intent, technique, evasion and input codes, taken from its `docs/data/taxonomy.json`, never from memory. Produce a coverage report showing which techniques and evasions Lure does not test yet. Credit per CC BY 4.0: a README mention, a THIRD_PARTY.md with the formal attribution and license link, and a "not affiliated with or endorsed by Arcanum" line. Use the attribution name the taxonomy's own README asks for.
+- [ ] Map every attack and variant to the Arcanum Prompt Injection Taxonomy (https://github.com/Arcanum-Sec/arc_pi_taxonomy, site https://arcanum-sec.github.io/arc_pi_taxonomy/, v1.6.1, CC BY 4.0) alongside ATLAS: intent, technique, evasion and input codes, taken from its `docs/data/taxonomy.json`, never from memory. Produce a coverage report showing which techniques and evasions Lure does not test yet. Credit per CC BY 4.0: a README mention, a THIRD_PARTY.md with the formal attribution and license link, and a "not affiliated with or endorsed by Arcanum" line.
+  - Required attribution, verbatim, as the taxonomy's site specifies (README, THIRD_PARTY.md and the coverage report): "Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com)."
+  - Citation for THIRD_PARTY.md: Haddix, J. (2026). Arcanum Prompt Injection Taxonomy (v1.6.1). Arcanum Information Security. https://www.arcanum-sec.com/pitax
 
 ### Phase 5: Stretch
 
