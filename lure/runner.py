@@ -35,7 +35,7 @@ STOP_COMPLETED = "completed"
 STOP_MAX_TURNS = "max_turns"
 STOP_ERROR = "error"
 # The schema/results.v<N>.json each saved record follows.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def _utc_now() -> datetime:

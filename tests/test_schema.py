@@ -1,4 +1,5 @@
-"""Saved results against schema/results.v1.json."""
+"""Saved results against schema/results.v<SCHEMA_VERSION>.json, and the
+older schemas kept for records written before it."""
 
 import json
 from pathlib import Path
@@ -37,6 +38,15 @@ def errors(data):
 def test_schema_is_valid_draft_2020_12():
     jsonschema.Draft202012Validator.check_schema(SCHEMA)
     assert SCHEMA["properties"]["schema_version"]["const"] == SCHEMA_VERSION
+
+
+@pytest.mark.parametrize("version", range(1, SCHEMA_VERSION + 1))
+def test_every_schema_version_is_kept_and_valid(version):
+    """Older schemas stay in the repo so older records can still be checked."""
+    schema = json.loads((REPO / "schema" / f"results.v{version}.json").read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator.check_schema(schema)
+    assert schema["properties"]["schema_version"]["const"] == version
+    assert schema["$id"].endswith(f"/schema/results.v{version}.json")
 
 
 def test_record_carries_versions_and_attack_file():
@@ -95,7 +105,7 @@ def test_lure_1_0_record_validates():
 
 
 @pytest.mark.parametrize("change", [
-    lambda d: d.update(schema_version=2),
+    lambda d: d.update(schema_version=99),
     lambda d: d.update(surprise=True),
     lambda d: d["judgment"].update(verdict="Maybe"),
     lambda d: d["attack"].update(severity="severe"),

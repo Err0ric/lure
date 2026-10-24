@@ -95,7 +95,7 @@ Other useful commands:
 | `lure compare ... --prices prices.yaml` | Add a cost estimate from recorded tokens; copy `prices.example.yaml` and check current pricing first (Lure ships no price table) |
 | `pytest` and `ruff check .` | Tests (no network) and lint |
 
-`results/` and `reports/` are gitignored. Each result file records the attack id, version and file, the target, the judge, token usage, the full transcript, every tool call and the verdict with its evidence. The format is [`schema/results.v1.json`](schema/results.v1.json) (JSON Schema); each file names its `schema_version` and `lure_version`.
+`results/` and `reports/` are gitignored. Each result file records the attack id, version and file, the target, the judge, token usage, the full transcript, every tool call and the verdict with its evidence. The format is [`schema/results.v2.json`](schema/results.v2.json) (JSON Schema; Lure 1.1 records follow [`results.v1.json`](schema/results.v1.json) and are still read); each file names its `schema_version` and `lure_version`.
 
 ## Attack library
 
