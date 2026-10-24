@@ -20,7 +20,7 @@ from dotenv import find_dotenv, load_dotenv
 
 from lure import policy as policy_file
 from lure.adapters.base import AdapterError, ModelAdapter
-from lure.attacks import AttackError, load_attack
+from lure.attacks import AttackError, attacks_root, discover_categories, load_attack
 from lure.batch import SummaryRow, collect_attack_paths, summarize
 from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError
 from lure.judge.llm_judge import LLMJudge
@@ -188,6 +188,7 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         # Load every attack first so a bad file fails before any model call.
         policy = _policy(args)
         paths = collect_attack_paths(args.attack)
+        _check_categories(policy, args.attack)
         attacks = _enabled_attacks([load_attack(p) for p in paths], policy, args.attack, out)
         for a in attacks:
             build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
@@ -244,6 +245,13 @@ def print_policy(policy: Policy, violations: list[Violation], runs: int, out: Te
         parts = [f"{kind} in {len(where)} run{'' if len(where) == 1 else 's'}"
                  for kind, where in by_kind.items()]
         print(f"  {attack_id} v{version}: {', '.join(parts)}", file=out)
+
+
+def _check_categories(policy: Policy, target: str) -> None:
+    """Catch a misspelled category in the policy before anything runs."""
+    root = attacks_root(target) or (Path(target) if Path(target).is_dir() else None)
+    if root is not None and policy.categories:
+        policy.check_categories(discover_categories(root), root)
 
 
 def _enabled_attacks(attacks: list, policy: Policy, target: str, out: TextIO) -> list:

@@ -165,7 +165,7 @@ def test_invalid_yaml(repo):
     [
         ({"name": None}, "missing keys"),
         ({"extra": 1}, "unknown keys"),
-        ({"category": "phishing"}, "category"),
+        ({"category": "Phishing Lures"}, "must be a snake_case folder name"),
         ({"category": "jailbreak"}, "does not match folder"),
         ({"severity": "extreme"}, "severity"),
         ({"target_task": "  "}, "target_task"),

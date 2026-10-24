@@ -124,6 +124,12 @@ class Policy:
                                        f"{', '.join(c['outside'])}"))
         return found
 
+    def check_categories(self, known: Iterable[str], where: str | Path) -> None:
+        """Every category the policy names must be a folder under attacks/."""
+        unknown = sorted(set(self.categories or ()) - set(known))
+        if unknown:
+            raise PolicyError(f"{self.source}: categories {unknown} have no folder under {where}")
+
     def evaluate(self, runs: Iterable[PolicyRun]) -> list[Violation]:
         return [v for run in runs for v in self.check(run)]
 

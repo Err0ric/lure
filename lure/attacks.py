@@ -27,15 +27,8 @@ import yaml
 from lure.tools import KNOWN_TOOLS
 from lure.tools.sources import item_source
 
-CATEGORIES = frozenset(
-    {
-        "indirect_prompt_injection",
-        "direct_prompt_injection",
-        "jailbreak",
-        "data_leakage",
-        "tool_abuse",
-    }
-)
+# Categories are the folders under attacks/: a new category is a new folder.
+CATEGORY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 SEVERITIES = ("low", "medium", "high", "critical")
 REQUIRED_KEYS = (
     "id", "name", "category", "atlas", "attack", "severity",
@@ -240,10 +233,13 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         raise fail("system_prompt must be a non-empty string")
 
     category = data["category"]
-    if category not in CATEGORIES:
-        raise fail(f"category {category!r} must be one of {sorted(CATEGORIES)}")
-    if path.parent.name in CATEGORIES and path.parent.name != category:
-        raise fail(f"category {category!r} does not match folder {path.parent.name!r}")
+    if not isinstance(category, str) or not CATEGORY_RE.match(category):
+        raise fail(f"category {category!r} must be a snake_case folder name like tool_abuse")
+    if path.parent.name == "attacks":
+        raise fail("attack files go in a category folder: attacks/<category>/")
+    folder = category_folder(path)
+    if folder is not None and folder != category:
+        raise fail(f"category {category!r} does not match folder {folder!r}")
 
     if data["severity"] not in SEVERITIES:
         raise fail(f"severity must be one of {list(SEVERITIES)}")
@@ -536,6 +532,31 @@ def _domain_lists(value: Any):
     elif isinstance(value, list):
         for v in value:
             yield from _domain_lists(v)
+
+
+def category_folder(path: Path) -> str | None:
+    """The folder directly under attacks/ that holds `path`, or None when the
+    file is not inside an attacks/<category>/ folder."""
+    parts = path.resolve().parts
+    for i in range(len(parts) - 2, -1, -1):
+        if parts[i] == "attacks":
+            return parts[i + 1] if i + 2 < len(parts) else None
+    return None
+
+
+def attacks_root(path: str | Path) -> Path | None:
+    """The attacks/ folder at or above `path`, if there is one."""
+    path = Path(path).resolve()
+    for folder in (path, *path.parents):
+        if folder.name == "attacks":
+            return folder
+    return None
+
+
+def discover_categories(attacks_dir: str | Path) -> list[str]:
+    """Category folders under attacks_dir: each subfolder holding a *.yaml."""
+    return sorted(d.name for d in Path(attacks_dir).iterdir()
+                  if d.is_dir() and any(d.rglob("*.yaml")))
 
 
 def _find_root(path: Path) -> Path:
