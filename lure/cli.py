@@ -178,6 +178,13 @@ def build_parser() -> argparse.ArgumentParser:
     compare_cmd.add_argument("--prices", help="prices file (USD per million tokens) to turn "
                                               "recorded tokens into a cost estimate; see "
                                               "prices.example.yaml")
+
+    coverage_cmd = sub.add_parser("coverage", help="write the Arcanum taxonomy coverage of the "
+                                                   "attack library as Markdown")
+    coverage_cmd.add_argument("--attacks-dir", default="attacks",
+                              help="attack files (default attacks); pinned versions are skipped")
+    coverage_cmd.add_argument("--out", default="docs/arcanum-coverage.md",
+                              help="output file (default docs/arcanum-coverage.md)")
     return parser
 
 
@@ -260,6 +267,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         return report_main(args, out)
     if args.command == "compare":
         return compare_main(args, out)
+    if args.command == "coverage":
+        return coverage_main(args, out)
     try:
         # Load every attack first so a bad file fails before any model call.
         policy = _policy(args)
@@ -611,6 +620,30 @@ def _attack_files(attacks_dir: str) -> dict[tuple[str, int], str]:
     except AttackError as e:
         print(f"lure: SARIF: cannot read {attacks_dir}: {e}", file=sys.stderr)
         return {}
+
+
+def coverage_main(args, out: TextIO) -> int:
+    from lure import arcanum
+    from lure.report.arcanum_coverage import build_coverage, write_coverage
+
+    try:
+        attacks = [load_attack(p) for p in sorted(Path(args.attacks_dir).rglob("*.yaml"))]
+    except AttackError as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    cov = build_coverage(attacks)
+    path = write_coverage(cov, args.out)
+    tested = {p: 0 for p in arcanum.PILLARS}
+    total = dict(tested)
+    for code, node in arcanum.nodes().items():
+        total[node["pillar"]] += 1
+        tested[node["pillar"]] += cov.tested(code)
+    print(f"Arcanum taxonomy v{arcanum.VERSION} coverage of {len(cov.attacks)} current attacks:",
+          file=out)
+    for p in arcanum.PILLARS:
+        print(f"  {p + 's':<11} {tested[p]} of {total[p]} tested", file=out)
+    print(f"Wrote {path}", file=out)
+    return EXIT_OK
 
 
 def compare_main(args, out: TextIO) -> int:

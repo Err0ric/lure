@@ -19,6 +19,8 @@ from typing import Any
 
 DATA = Path(__file__).with_name("taxonomy.json")
 VERSION = "1.6.1"
+# The upstream commit the vendored files come from (SOURCE.md).
+COMMIT = "e02cf5b6e202f195c6b6c01484e99519f797acc6"
 ATTRIBUTION = ("Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, "
                "Arcanum Information Security (arcanum-sec.com).")
 DISCLAIMER = "Lure is not affiliated with or endorsed by Arcanum Information Security."

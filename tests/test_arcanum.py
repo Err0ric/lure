@@ -38,7 +38,7 @@ def test_vendored_files_match_source_md():
         digest = hashlib.sha256((DIR / name).read_bytes()).hexdigest()
         assert re.search(rf"`{re.escape(name)}` \| .* \| `{digest}` \|", source), name
     assert arcanum.ATTRIBUTION in source and arcanum.DISCLAIMER in source
-    assert f"v{arcanum.VERSION}" in source
+    assert f"v{arcanum.VERSION}" in source and f"`{arcanum.COMMIT}`" in source
 
 
 def test_pillars_counts_and_prefixes():
@@ -173,3 +173,41 @@ def test_atlas_ids_agree_with_taxonomy_aliases():
             if wanted and not mine & wanted:
                 gaps[(attack.id, atlas_id)] = ", ".join(sorted(wanted))
     assert gaps == EXPECTED_ALIAS_GAPS
+
+
+# Coverage report
+
+
+def test_committed_coverage_doc_is_current():
+    from lure.report.arcanum_coverage import build_coverage, render_markdown
+
+    doc = ATTACKS.parent / "docs" / "arcanum-coverage.md"
+    assert doc.read_text(encoding="utf-8") == render_markdown(build_coverage(shipped())), (
+        "docs/arcanum-coverage.md is stale: run `lure coverage`")
+
+
+def test_coverage_counts_current_attacks_and_variants():
+    from lure.report.arcanum_coverage import build_coverage, render_markdown
+
+    cov = build_coverage(shipped())
+    assert len(cov.attacks) == len({a.id for a in shipped()})
+    assert all(not a.endswith("-v1") for a in cov.attacks)
+    assert "lure-ipi-009 (split-1)" in cov.variants["PIT-T-24"]
+    assert cov.base["PIT-E-07"] == ["lure-jbk-003"]
+    assert set(cov.generated["PIT-E-14"]) == {"encoded-rot13"}
+    text = render_markdown(cov)
+    assert text.startswith("# Arcanum taxonomy coverage\n\n" + arcanum.ATTRIBUTION)
+    assert arcanum.DISCLAIMER in text and "Pinned older versions are not mapped" in text
+    assert "| PIT-T-59 | Abliteration / Weight Ablation | not tested (`LOCAL`" in text
+    assert "\u2014" not in text
+
+
+def test_cli_coverage(tmp_path):
+    import io
+
+    from lure import cli
+
+    out = io.StringIO()
+    path = tmp_path / "cov.md"
+    assert cli.main(["coverage", "--attacks-dir", str(ATTACKS), "--out", str(path)], out=out) == 0
+    assert "techniques  " in out.getvalue() and path.read_text().startswith("# Arcanum")
