@@ -109,6 +109,11 @@ def build_parser() -> argparse.ArgumentParser:
     report_cmd.add_argument("--target", help="only runs against this target, e.g. "
                                              "anthropic:claude-haiku-5-5 (needed if results mix targets)")
     report_cmd.add_argument("--md", metavar="PATH", help="also write a Markdown report")
+    report_cmd.add_argument("--sarif", metavar="PATH",
+                            help="also write SARIF 2.1.0 for CI code scanning")
+    report_cmd.add_argument("--attacks-dir", default="attacks",
+                            help="where to find attack files for results saved before they "
+                                 "recorded attack.file (SARIF only; default attacks)")
     _policy_args(report_cmd)
 
     compare_cmd = sub.add_parser("compare", help="compare targets side by side in one HTML page")
@@ -297,6 +302,11 @@ def report_main(args, out: TextIO) -> int:
         from lure.report.markdown import write_markdown
 
         print(f"Wrote {write_markdown(report, args.md, gate)}", file=out)
+    if args.sarif:
+        from lure.report.sarif import write_sarif
+
+        files = _legacy_attack_files(runs, args.attacks_dir)
+        print(f"Wrote {write_sarif(report, args.sarif, gate, files)}", file=out)
     print(f"ASR:       {_rate(t.asr, t.counts[Verdict.FAIL], t.scored)}", file=out)
     if not report.exposure_checked:
         print("Exposure:  not checked (no org policy in these results)", file=out)
@@ -310,6 +320,18 @@ def report_main(args, out: TextIO) -> int:
     print_policy(gate, out)
     gated = [r for r in runs if policy.enabled(r.attack["id"], r.attack["category"])]
     return exit_code(gate, [r.verdict for r in gated])
+
+
+def _legacy_attack_files(runs: list, attacks_dir: str) -> dict[tuple[str, int], str]:
+    """Attack files for records without attack.file, looked up by id and
+    version. Empty when every record has one or the folder is missing."""
+    if all("file" in r.attack for r in runs) or not Path(attacks_dir).is_dir():
+        return {}
+    try:
+        return {key: attack.file for key, attack in attack_index(attacks_dir).items()}
+    except AttackError as e:
+        print(f"lure: SARIF: cannot read {attacks_dir}: {e}", file=sys.stderr)
+        return {}
 
 
 def compare_main(args, out: TextIO) -> int:
