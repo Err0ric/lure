@@ -1,6 +1,8 @@
 """Command line entry point.
 
-  lure run <attack.yaml|folder> --target ollama|anthropic|openai
+  lure run <attack.yaml|folder>... --target ollama|anthropic|openai
+      [--attacker-model M] [--prices prices.yaml --max-cost USD] [--baseline]
+      [--payload-from result.json [--attempt K]]
   lure rescore <results folder|file>...  (re-judge saved runs, no target calls)
   lure report <results folder|file>... --out report.html
   lure compare <results folder> <results folder>... --out compare.html [--prices prices.yaml]
@@ -20,12 +22,23 @@ from dotenv import find_dotenv, load_dotenv
 
 from lure import policy as policy_file
 from lure.adapters.base import AdapterError, ModelAdapter
-from lure.attacks import AttackError, attacks_root, discover_categories, load_attack
+from lure.attacker import MAX_TOKENS as ATTACKER_MAX_TOKENS
+from lure.attacker import Attacker
+from lure.attacks import (
+    Attack,
+    AttackError,
+    attacks_root,
+    discover_categories,
+    load_attack,
+    payload_problems,
+)
 from lure.batch import SummaryRow, collect_attack_paths, summarize
+from lure.budget import ROLES, Budget
 from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
 from lure.policy import Policy, PolicyResult, PolicyRun
+from lure.prices import PricesError, load_prices
 from lure.rescore import (
     add_exposure,
     attack_changed,
@@ -35,7 +48,7 @@ from lure.rescore import (
     rescore,
     save_rescored,
 )
-from lure.runner import MAX_TURNS, RunResult, run_attack
+from lure.runner import DEFAULT_ATTEMPTS, MAX_TURNS, RunResult, run_adaptive, run_attack
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
 
@@ -43,16 +56,22 @@ TARGETS = ("ollama", "anthropic", "openai")
 JUDGES = ("rules", "llm")
 
 # lure run and lure report: 0 when no run fails the policy, 1 when one does,
-# 2 when the input is bad or a run errored (and nothing fails the policy).
+# 2 when the input is bad or a run errored (and nothing fails the policy),
+# 3 when lure run stopped at --max-cost (and neither of those happened).
 # The other commands use 0 and 2 only.
 EXIT_OK = 0
 EXIT_POLICY_FAIL = 1
 EXIT_ERROR = 2
 EXIT_BAD_INPUT = EXIT_ERROR
 EXIT_RUN_ERROR = EXIT_ERROR
+EXIT_MAX_COST = 3
+# --baseline: enough runs per attack for a rate, judged by the LLM judge.
+BASELINE_REPEAT = 10
 
 
-def make_adapter(target: str, model: str | None) -> ModelAdapter:
+def make_adapter(target: str, model: str | None, max_tokens: int | None = None) -> ModelAdapter:
+    """An adapter for one provider. `max_tokens` caps output where the
+    provider adapter supports it (Anthropic); the attacker uses it."""
     kwargs = {"model": model} if model else {}
     if target == "ollama":
         from lure.adapters.ollama import DEFAULT_BASE_URL, OllamaAdapter
@@ -63,7 +82,7 @@ def make_adapter(target: str, model: str | None) -> ModelAdapter:
     if target == "anthropic":
         from lure.adapters.anthropic import AnthropicAdapter
 
-        return AnthropicAdapter(**kwargs)
+        return AnthropicAdapter(**kwargs, **({"max_tokens": max_tokens} if max_tokens else {}))
     if target == "openai":
         from lure.adapters.openai_compat import OpenAICompatAdapter
 
@@ -84,13 +103,34 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lure")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="run attacks against a target")
-    run.add_argument("attack", help="attack YAML file, or a folder of them")
+    run.add_argument("attack", nargs="+", help="attack YAML files, or folders of them")
     run.add_argument("--target", choices=TARGETS, required=True)
     run.add_argument("--model", help="model name (default depends on target)")
     run.add_argument("--max-turns", type=int, default=MAX_TURNS)
-    run.add_argument("--repeat", type=_positive_int, default=1,
-                     help="run each attack N times (default 1)")
+    run.add_argument("--repeat", type=_positive_int,
+                     help=f"run each attack N times (default 1, or {BASELINE_REPEAT} with --baseline)")
+    run.add_argument("--baseline", action="store_true",
+                     help=f"baseline settings: --repeat {BASELINE_REPEAT} --judge llm "
+                          "(either can still be set explicitly)")
     _judge_args(run)
+    run.add_argument("--attacker-model",
+                     help="adaptive attacker: this model rewrites the payload after each "
+                          "attempt that is not a Fail (must differ from the target)")
+    run.add_argument("--attacker-target", choices=TARGETS, default="anthropic",
+                     help="provider for the attacker model (default anthropic)")
+    run.add_argument("--attempts", type=_positive_int,
+                     help=f"adaptive attempts per run, the attack's own payload first "
+                          f"(default {DEFAULT_ATTEMPTS}; needs --attacker-model)")
+    run.add_argument("--prices", help="prices file (USD per million tokens) to estimate "
+                                      "spend; see prices.example.yaml")
+    run.add_argument("--max-cost", type=_positive_float, metavar="USD",
+                     help="stop the batch before estimated spend (attacker, target and "
+                          "judge) passes USD; needs --prices; exits 3")
+    run.add_argument("--payload-from", metavar="RESULT",
+                     help="replay the payload saved in this result file (one attack file only)")
+    run.add_argument("--attempt", type=_positive_int, metavar="K",
+                     help="with --payload-from: replay adaptive attempt K (default the "
+                          "deciding attempt)")
     _policy_args(run)
     run.add_argument("--results-dir", default="results")
 
@@ -131,7 +171,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _judge_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--judge", choices=JUDGES, default="rules",
+    parser.add_argument("--judge", choices=JUDGES,
                         help="rules (default), or llm: ask a judge model about every "
                              "run with a reply except Fail and confirmed Partial")
     parser.add_argument("--judge-target", choices=TARGETS, default="anthropic",
@@ -175,6 +215,16 @@ def _llm_judge(args) -> LLMJudge | None:
     return LLMJudge(make_judge_adapter(args.judge_target, args.judge_model))
 
 
+def _positive_float(text: str) -> float:
+    try:
+        x = float(text)
+    except ValueError:
+        x = 0.0
+    if not x > 0:
+        raise argparse.ArgumentTypeError(f"must be a number above 0, got {text!r}")
+    return x
+
+
 def _positive_int(text: str) -> int:
     try:
         n = int(text)
@@ -188,6 +238,11 @@ def _positive_int(text: str) -> int:
 def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     args = build_parser().parse_args(argv)
     load_dotenv(find_dotenv(usecwd=True), override=False)
+    baseline = getattr(args, "baseline", False)
+    if hasattr(args, "judge") and args.judge is None:
+        args.judge = "llm" if baseline else "rules"
+    if hasattr(args, "repeat") and args.repeat is None:
+        args.repeat = BASELINE_REPEAT if baseline else 1
     if args.command == "rescore":
         return rescore_main(args, out)
     if args.command == "report":
@@ -197,44 +252,156 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     try:
         # Load every attack first so a bad file fails before any model call.
         policy = _policy(args)
-        paths = collect_attack_paths(args.attack)
-        _check_categories(policy, args.attack)
-        attacks = _enabled_attacks([load_attack(p) for p in paths], policy, args.attack, out)
+        attacks = []
+        for target in args.attack:
+            _check_categories(policy, target)
+            loaded = [load_attack(p) for p in collect_attack_paths(target)]
+            attacks += _enabled_attacks(loaded, policy, target, out)
+        replay = None
+        if args.payload_from:
+            attacks, replay = _replay(attacks, args, out)
+        elif args.attempt:
+            raise AttackError("--attempt needs --payload-from")
         for a in attacks:
             build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
         adapter = make_adapter(args.target, args.model)
         llm_judge = _llm_judge(args)
-    except (AttackError, ToolboxError, AdapterError, PolicyError) as e:
+        attacker = _attacker(args, attacks, adapter)
+        if llm_judge is not None and llm_judge.model == adapter.target_name:
+            raise AttackError(f"the judge model is the target ({adapter.target_name}); "
+                              "no model judges itself: pick another --judge-model")
+        budget = _budget(args, [adapter, llm_judge and llm_judge.adapter,
+                                attacker and attacker.adapter])
+    except (AttackError, ToolboxError, AdapterError, PolicyError, PricesError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
-    batch = Path(args.attack).is_dir() or args.repeat > 1
+    batch = any(Path(t).is_dir() for t in args.attack) or len(attacks) > 1 or args.repeat > 1
     plan = [(a, n) for a in attacks for n in range(1, args.repeat + 1)]
     results: list[RunResult] = []
     for i, (attack, n) in enumerate(plan, 1):
-        result = run_attack(attack, adapter, max_turns=args.max_turns, llm_judge=llm_judge,
-                            org_policy=policy.exposure)
+        if budget is not None and not budget.allows_another():
+            break
+        kwargs = {"max_turns": args.max_turns, "llm_judge": llm_judge,
+                  "org_policy": policy.exposure}
+        if attacker is not None:
+            result = run_adaptive(attack, adapter, attacker, args.attempts or DEFAULT_ATTEMPTS,
+                                  budget, **kwargs)
+        else:
+            result = run_attack(attack, adapter, **kwargs)
+            if budget is not None:
+                costs = budget.charge_attempt(result.target, result.usage, result.judgment.llm)
+                result.cost = {**dict.fromkeys(ROLES, 0.0), **costs, "total": sum(costs.values())}
+        result.replay = replay
         result.save(args.results_dir)
         results.append(result)
         if batch:
             print_progress(result, i, len(plan), n, args.repeat, out)
         else:
             print_result(result, out)
-    if batch:
+        if budget is not None and budget.stopped:
+            break
+    if batch and results:
         print(file=out)
         print_summary(summarize(results), out)
+    stopped = budget is not None and budget.stopped
+    if budget is not None:
+        print(file=out)
+        if stopped:
+            print(f"Stopped:   max cost ${args.max_cost:.2f} reached; spent {budget.line()}; "
+                  f"{len(results)} of {len(plan)} runs done", file=out)
+        else:
+            print(f"Spend:     {budget.line()}", file=out)
+        print(f"           estimate from recorded tokens at the rates in {budget.prices.source}",
+              file=out)
     gate = policy.gate([PolicyRun.from_result(r) for r in results])
     print(file=out)
     print_policy(gate, out)
-    return exit_code(gate, [r.judgment.verdict for r in results])
+    return exit_code(gate, [r.judgment.verdict for r in results], stopped)
 
 
-def exit_code(gate: PolicyResult, verdicts: list[Verdict]) -> int:
+def _attacker(args, attacks: list[Attack], target: ModelAdapter) -> Attacker | None:
+    if not args.attacker_model:
+        if args.attempts:
+            raise AttackError("--attempts needs --attacker-model")
+        return None
+    pinned = [a for a in attacks if a.pinned and not a.goal]
+    if pinned:
+        names = ", ".join(f"{a.id} v{a.version} ({a.source.name})" for a in pinned)
+        raise AttackError(f"{names}: pinned versions stay unchanged and have no goal, so the "
+                          "adaptive attacker cannot run them; run the current version instead")
+    missing = [a.id for a in attacks if not a.goal]
+    if missing:
+        raise AttackError(f"the adaptive attacker needs a goal in every attack; none in "
+                          f"{', '.join(missing)}")
+    adapter = make_adapter(args.attacker_target, args.attacker_model,
+                           max_tokens=ATTACKER_MAX_TOKENS)
+    if adapter.target_name == target.target_name:
+        raise AttackError(f"the attacker model is the target ({target.target_name}); "
+                          "pick another --attacker-model")
+    return Attacker(adapter)
+
+
+def _budget(args, adapters: list) -> Budget | None:
+    if args.max_cost and not args.prices:
+        raise PricesError("--max-cost needs --prices")
+    if not args.prices:
+        return None
+    budget = Budget(load_prices(args.prices), args.max_cost)
+    budget.check_models([a.target_name for a in adapters if a])
+    return budget
+
+
+def _replay(attacks: list[Attack], args, out: TextIO) -> tuple[list[Attack], dict]:
+    """The one attack, with the payload from a saved result."""
+    if len(attacks) != 1:
+        raise AttackError("--payload-from takes exactly one attack file")
+    if args.attacker_model:
+        raise AttackError("--payload-from replays a saved payload; leave out --attacker-model")
+    [attack] = attacks
+    path = Path(args.payload_from)
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        key = record_key(record)
+    except FileNotFoundError:
+        raise AttackError(f"result file not found: {path}") from None
+    except (json.JSONDecodeError, KeyError, TypeError):
+        raise AttackError(f"{path}: not a Lure result") from None
+    if key != (attack.id, attack.version):
+        raise AttackError(f"{path} is a run of {key[0]} v{key[1]}, not {attack.id} "
+                          f"v{attack.version}")
+    adaptive = record.get("adaptive")
+    if args.attempt:
+        if not adaptive:
+            raise AttackError(f"{path} is not an adaptive run; leave out --attempt")
+        found = [a for a in adaptive["attempts"] if a["n"] == args.attempt]
+        if not found or not found[0].get("payload"):
+            raise AttackError(f"{path} has no payload for attempt {args.attempt}")
+        payload, attempt = found[0]["payload"], args.attempt
+    else:
+        payload = record["attack"]["injection"]["payload"]
+        attempt = adaptive["deciding_attempt"] if adaptive else None
+    problems = payload_problems(payload)
+    if problems:
+        raise AttackError(f"{path}: payload not replayed: {'; '.join(problems)}")
+    saved = record["attack"].get("fixtures_sha256") or {}
+    changed = [name for name, digest in attack.fixture_hashes().items()
+               if name in saved and saved[name] != digest]
+    if changed:
+        print(f"Note: fixtures changed since {path.name}: {', '.join(changed)}; the replay "
+              "uses the current files.", file=out)
+    return [attack.with_payload(payload)], {"from": str(path), "attempt": attempt}
+
+
+def exit_code(gate: PolicyResult, verdicts: list[Verdict], stopped: bool = False) -> int:
     """A policy failure wins over a run error: a confirmed finding stands
-    even if another run broke."""
+    even if another run broke. A run error wins over a --max-cost stop: the
+    stop was asked for, the error needs fixing."""
     if not gate.passed:
         return EXIT_POLICY_FAIL
     if Verdict.ERROR in verdicts:
         return EXIT_ERROR
+    if stopped:
+        return EXIT_MAX_COST
     return EXIT_OK
 
 
@@ -380,11 +547,14 @@ def print_comparison(comp, out: TextIO) -> None:
     if comp.prices:
         tc = [c.target_cost(comp.prices) for c in comp.columns]
         jc = [c.judge_cost(comp.prices) for c in comp.columns]
+        ac = [c.attacker_cost(comp.prices) for c in comp.columns]
         rows += [
             ["Target cost", *(dollars(x) for x in tc)],
             ["Judge cost", *(dollars(x) for x in jc)],
-            ["Total cost", *(dollars(a + b if a is not None and b is not None else None)
-                             for a, b in zip(tc, jc))],
+            *([["Attacker cost", *(dollars(x) for x in ac)]]
+              if any(c.attacker_usage for c in comp.columns) else []),
+            ["Total cost", *(dollars(None if None in (a, b, x) else a + b + x)
+                             for a, b, x in zip(tc, jc, ac))],
         ]
     _print_table(["", *models], rows, out)
 
@@ -482,6 +652,10 @@ def rescore_main(args, out: TextIO) -> int:
         if key not in index:
             print(f"lure: skipping {path}: no attack file for {key[0]} v{key[1]}", file=sys.stderr)
             continue
+        if record.get("adaptive"):
+            print(f"lure: skipping {path}: adaptive run; rescore does not re-judge attempts yet",
+                  file=sys.stderr)
+            continue
         picked.append((path, record, index[key]))
     if not picked:
         print("lure: no matching results to rescore", file=sys.stderr)
@@ -543,6 +717,8 @@ def print_progress(result: RunResult, i: int, total: int, n: int, repeat: int, o
                              ("llm judge failed", bool(j.llm) and not j.llm_judged),
                              ("exposure", bool(result.exposure and result.exposure["calls"])))
              if on]
+    if result.adaptive:
+        notes.append(_adaptive_note(result.adaptive))
     note = f"  [{', '.join(notes)}]" if notes else ""
     print(f"[{i:>{width}}/{total}] {result.attack.id}  run {n}/{repeat}  "
           f"{verdict:<8}  {result.saved_to}{note}", file=out)
@@ -603,12 +779,24 @@ def print_result(result: RunResult, out: TextIO) -> None:
         _print_task(j.task, w)
     _print_evidence(j, w)
     _print_exposure(result.exposure, w)
+    if result.adaptive:
+        w(f"Adaptive:  {result.adaptive['attacker']}: {_adaptive_note(result.adaptive)}")
+    if result.cost:
+        w(f"Cost:      ${result.cost['total']:.4f} (estimate)")
     if j.unresolved:
         w("Unresolved:")
         for u in j.unresolved:
             w(f"  {u.rule_set}[{u.rule_index}] {_rule(u.rule)}: {u.reason}")
     if result.saved_to:
         w(f"Saved:     {result.saved_to}")
+
+
+def _adaptive_note(adaptive: dict) -> str:
+    tried = len(adaptive["attempts"])
+    failures = adaptive["attacker_failures"]
+    note = (f"attempt {adaptive['deciding_attempt']} of {tried} decided, "
+            f"{adaptive['outcome'].replace('_', ' ')}")
+    return note + (f", {failures} attacker failure{'' if failures == 1 else 's'}" if failures else "")
 
 
 def _verdict_note(j: Judgment) -> str:

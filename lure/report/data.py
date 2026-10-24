@@ -51,9 +51,14 @@ class Run:
 
     @property
     def label(self) -> str:
-        """Always names the version, v1 included, so versions never blur."""
+        """Always names the version, v1 included, so versions never blur.
+        Adaptive runs say so: worst of several attempts is a different rate."""
         attack_id, version = self.key
-        return f"{attack_id} v{version}"
+        return f"{attack_id} v{version}" + (" adaptive" if self.adaptive else "")
+
+    @property
+    def adaptive(self) -> bool:
+        return bool(self.record.get("adaptive"))
 
     @property
     def verdict(self) -> Verdict:
@@ -262,6 +267,15 @@ class Report:
     exposure_checked: int = 0
     exposed_runs: list[Run] = field(default_factory=list)
 
+    @property
+    def adaptive(self) -> bool:
+        """True when the runs are adaptive (build_report never mixes the two)."""
+        return any(r.adaptive for r in self.runs)
+
+    @property
+    def attackers(self) -> list[str]:
+        return sorted({r.record["adaptive"]["attacker"] for r in self.runs if r.adaptive})
+
 
 def load_runs(paths: list[str | Path]) -> list[Run]:
     """Lure result files: each file given, plus *.json directly in each
@@ -290,6 +304,9 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
                           + ", ".join(targets))
     if not runs:
         raise ReportError("no Lure results found")
+    if len({r.adaptive for r in runs}) > 1:
+        raise ReportError("results mix adaptive and single-shot runs; report them separately "
+                          "(worst of several attempts is not comparable with one attempt)")
 
     total = Tally()
     attacks: dict[tuple[str, int], AttackRow] = {}

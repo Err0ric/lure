@@ -53,6 +53,7 @@
     <div><dt>Judge</dt><dd>
       {% if report.judges|length == 1 %}{{ judge_names[0][0] }}{% else %}Mixed<small>{% for name, n in judge_names %}{{ name }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</small>{% endif %}
     </dd></div>
+    {% if report.adaptive %}<div><dt>Attacker</dt><dd>Adaptive<small>{{ report.attackers|join(", ") }}; each run is its worst attempt, so rates are not comparable with single-shot runs</small></dd></div>{% endif %}
     <div><dt>Date</dt><dd>{{ dates }}</dd></div>
     <div><dt>Runs</dt><dd>{{ report.total.runs }}<small>{{ report.total.scored }} scored, {{ report.attacks|length }} attacks</small></dd></div>
     <div><dt>Pass rate</dt><dd>{{ report.total.pass_rate|pct }}<small>{{ report.total.counts[Verdict.PASS] }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>

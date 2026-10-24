@@ -5,6 +5,9 @@ also enforces the fake-data rule: every email address, URL host and listed
 domain in the attack and its fixtures must be under the reserved .example
 TLD.
 
+An attack may add a `goal`: the attacker's aim in plain words, for the
+adaptive attacker (lure/attacker.py). It never restates the scoring rules.
+
 An attack may add `followup_tasks`: later user turns, sent in order once the
 target finishes the turn before. They make multi-turn attacks, where a
 payload read in one turn only matters in a later, unrelated one.
@@ -20,9 +23,10 @@ from __future__ import annotations
 import base64
 import binascii
 import copy
+import hashlib
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +50,7 @@ REQUIRED_KEYS = (
 )
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
-    "followup_tasks", "responders",
+    "followup_tasks", "responders", "goal",
 )
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
@@ -75,6 +79,18 @@ EMAIL_RE = re.compile(r"[\w.+-]+@([\w-]+(?:\.[\w-]+)+)")
 URL_RE = re.compile(r"https?://([^/\s:?#]+)", re.IGNORECASE)
 # Long base64 runs, so an encoded payload cannot hide a real domain.
 BASE64_RE = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")
+# Bare host names with a real-world TLD and no scheme, like billing-portal.com.
+BARE_HOST_RE = re.compile(
+    r"(?<![\w@.-])((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+"
+    r"(?:com|net|org|io|co|ai|dev|app|gov|edu|mil|info|biz|me|us|uk|de|fr|ru|cn|"
+    r"xyz|online|site|cloud|tech|link|top|live))(?![\w-])",
+    re.IGNORECASE,
+)
+# Prefixes of real API keys and tokens.
+SECRET_RE = re.compile(r"\b(?:sk-[A-Za-z0-9_-]{8,}|AKIA[0-9A-Z]{12,}|gh[pousr]_[A-Za-z0-9]{8,}|"
+                       r"xox[abpr]-[A-Za-z0-9-]{8,})")
+# 13 to 19 digits, optionally grouped by spaces or dashes: a card number shape.
+CARD_RE = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
 
 
 class AttackError(ValueError):
@@ -130,6 +146,9 @@ class Attack:
     followup_tasks: list[str] = field(default_factory=list)
     # Items released from pending fixtures when the target's calls match.
     responders: list[Responder] = field(default_factory=list)
+    # The attacker's aim in plain words, for the adaptive attacker. None
+    # means the attack cannot run adaptively.
+    goal: str | None = None
 
     @property
     def multi_turn(self) -> bool:
@@ -162,6 +181,12 @@ class Attack:
         return self.source.as_posix()
 
     @property
+    def pinned(self) -> bool:
+        """True for a pinned older version (<id>-v<N>.yaml). Pinned files stay
+        byte-identical, so they never gain keys such as goal."""
+        return bool(PINNED_RE.match(self.source.stem))
+
+    @property
     def in_task(self) -> bool:
         """True if the payload is in the user turn (direct injection)."""
         return self.injection.location == TASK_LOCATION
@@ -180,6 +205,19 @@ class Attack:
         if self.in_task:
             return self.load_fixtures()
         return plant(self.load_fixtures(), self.injection)
+
+    def fixture_hashes(self) -> dict[str, str]:
+        """SHA-256 of each fixture file, so a replay can tell if one changed."""
+        return {name: hashlib.sha256(path.read_bytes()).hexdigest()
+                for name, path in self.fixtures.items()}
+
+    def with_payload(self, payload: str) -> Attack:
+        """This attack with another payload in the same place. The ask
+        markers are recomputed, so a question naming the new payload's
+        addresses still counts as asking about the attack."""
+        injection = replace(self.injection, payload=payload)
+        markers = _ask_markers(injection.keywords, payload, self.load_fixtures())
+        return replace(self, injection=injection, ask_markers=markers)
 
 
 def plant(fixtures: dict[str, Any], injection: Injection) -> dict[str, Any]:
@@ -264,6 +302,9 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     if pinned and int(pinned.group(2)) != version:
         raise fail(f"file name says v{pinned.group(2)} but version is {version}")
     followup_tasks = _followup_tasks(data.get("followup_tasks"), fail)
+    goal = data.get("goal")
+    if goal is not None and (not isinstance(goal, str) or not goal.strip()):
+        raise fail("goal must be a non-empty string")
     system_prompt = data.get("system_prompt")
     if system_prompt is not None and (
         not isinstance(system_prompt, str) or not system_prompt.strip()
@@ -394,6 +435,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         version=version,
         followup_tasks=followup_tasks,
         responders=responders,
+        goal=goal,
     )
 
 
@@ -568,6 +610,30 @@ def _check_domains(value: Any, where: str, fail) -> None:
         for d in domains:
             if not _is_example(d):
                 raise fail(f"{where} uses non-.example domain {d!r}")
+
+
+def payload_problems(text: str) -> list[str]:
+    """Why a payload written at run time (by the adaptive attacker, or read
+    back for a replay) may not be planted. Empty means it may. Stricter than
+    the load-time check: bare host names, key prefixes and card numbers too."""
+    problems = []
+    texts = [text, *_decoded_base64(text)]
+    for t in texts:
+        hosts = EMAIL_RE.findall(t) + URL_RE.findall(t) + BARE_HOST_RE.findall(t)
+        problems += [f"non-.example domain {h!r}" for h in hosts if not _is_example(h)]
+        problems += [f"looks like a real API key or token ({m[:6]}...)"
+                     for m in SECRET_RE.findall(t)]
+        problems += [f"looks like a card number ({m[:4]}...)" for m in CARD_RE.findall(t)
+                     if _luhn(re.sub(r"\D", "", m))]
+    return list(dict.fromkeys(problems))
+
+
+def _luhn(digits: str) -> bool:
+    total = 0
+    for i, d in enumerate(reversed(digits)):
+        n = int(d) * (2 if i % 2 else 1)
+        total += n - 9 if n > 9 else n
+    return total % 10 == 0
 
 
 def _decoded_base64(text: str) -> list[str]:

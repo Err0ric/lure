@@ -14,9 +14,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-import yaml
-
 from lure.judge.rules import Verdict
+from lure.prices import (  # noqa: F401 (re-exported)
+    INPUT_KEYS,
+    PRICE_FIELDS,
+    Prices,
+    PricesError,
+    load_prices,
+)
 from lure.report.data import (
     AttackRow,
     Report,
@@ -27,80 +32,6 @@ from lure.report.data import (
     load_runs,
 )
 from lure.report.exec_summary import model_name, pct, plural
-
-# Usage keys as the adapters record them, and the price field for each.
-PRICE_FIELDS = {
-    "input_tokens": "input",
-    "output_tokens": "output",
-    "cache_creation_input_tokens": "cache_write",
-    "cache_read_input_tokens": "cache_read",
-}
-INPUT_KEYS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
-
-
-class PricesError(ValueError):
-    """The prices file is missing, malformed or has a bad rate."""
-
-
-@dataclass(frozen=True)
-class Prices:
-    """USD per million tokens, by model name, from a prices file."""
-
-    source: str
-    models: dict[str, dict[str, float]]
-    as_of: str | None = None
-
-    def rates(self, model: str) -> dict[str, float] | None:
-        """Rates for 'anthropic:claude-x' or 'claude-x', whichever way the
-        prices file names it; an exact match wins."""
-        if model in self.models:
-            return self.models[model]
-        bare = model_name(model)
-        return next((r for name, r in self.models.items() if model_name(name) == bare), None)
-
-    def cost(self, model: str, usage: dict[str, int]) -> float | None:
-        """Dollars for this usage, or None if a needed rate is missing."""
-        rates = self.rates(model)
-        if rates is None:
-            return None
-        total = 0.0
-        for key, n in usage.items():
-            if not n:
-                continue
-            rate = rates.get(PRICE_FIELDS.get(key, ""))
-            if rate is None:
-                return None
-            total += n * rate / 1_000_000
-        return total
-
-
-def load_prices(path: str | Path) -> Prices:
-    path = Path(path)
-    try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        raise PricesError(f"prices file not found: {path}") from None
-    except yaml.YAMLError as e:
-        raise PricesError(f"{path}: not valid YAML: {e}") from None
-    if not isinstance(data, dict) or not isinstance(data.get("models"), dict) or not data["models"]:
-        raise PricesError(f"{path}: needs a 'models' mapping of model name to rates")
-    models: dict[str, dict[str, float]] = {}
-    for name, rates in data["models"].items():
-        if not isinstance(rates, dict):
-            raise PricesError(f"{path}: {name}: rates must be a mapping")
-        unknown = set(rates) - set(PRICE_FIELDS.values())
-        if unknown:
-            raise PricesError(f"{path}: {name}: unknown rate {', '.join(sorted(unknown))}; "
-                              f"use {', '.join(PRICE_FIELDS.values())}")
-        for need in ("input", "output"):
-            if need not in rates:
-                raise PricesError(f"{path}: {name}: missing {need}")
-        for k, v in rates.items():
-            if isinstance(v, bool) or not isinstance(v, (int, float)) or v < 0:
-                raise PricesError(f"{path}: {name}: {k} must be a number of at least 0")
-        models[str(name)] = {k: float(v) for k, v in rates.items()}
-    as_of = data.get("as_of")
-    return Prices(str(path), models, str(as_of) if as_of is not None else None)
 
 
 @dataclass
@@ -137,6 +68,8 @@ class Column:
     report: Report
     target_usage: Usage
     judge_usage: list[Usage]
+    # The adaptive attacker's usage, one per attacker model. Empty if none.
+    attacker_usage: list[Usage] = field(default_factory=list)
 
     @property
     def model(self) -> str:
@@ -154,6 +87,13 @@ class Column:
         if not prices:
             return None
         costs = [prices.cost(u.model, u.tokens) for u in self.judge_usage]
+        return None if None in costs else sum(costs)
+
+    def attacker_cost(self, prices: Prices | None) -> float | None:
+        """0 with no attacker; None if an attacker model has no price."""
+        if not prices:
+            return None
+        costs = [prices.cost(u.model, u.tokens) for u in self.attacker_usage]
         return None if None in costs else sum(costs)
 
 
@@ -231,6 +171,10 @@ def build_comparison(sources: list[str | Path], prices: Prices | None = None) ->
         except ReportError as e:
             raise ReportError(f"{source}: {e}; compare takes one folder per target") from None
         columns.append(_column(str(source), report))
+    modes = {c.report.adaptive for c in columns}
+    if len(modes) > 1:
+        raise ReportError("compare adaptive runs only with adaptive runs: worst of several "
+                          "attempts is not comparable with a single attempt")
     seen: dict[str, str] = {}
     for c in columns:
         if c.report.target in seen:
@@ -252,13 +196,22 @@ def build_comparison(sources: list[str | Path], prices: Prices | None = None) ->
 def _column(source: str, report: Report) -> Column:
     target = Usage(report.target)
     judges: dict[str, Usage] = {}
+    attackers: dict[str, Usage] = {}
     for run in report.runs:
-        target.add(run.record.get("usage") or {})
-        llm = run.record["judgment"].get("llm_judge") or {}
-        if llm.get("usage"):
-            model = llm.get("model") or run.judge
-            judges.setdefault(model, Usage(model)).add(llm["usage"])
-    return Column(source, report, target, sorted(judges.values(), key=lambda u: u.model))
+        adaptive = run.record.get("adaptive")
+        # An adaptive run spent tokens on every attempt, not only the one it mirrors.
+        scored = [a for a in adaptive["attempts"] if "judgment" in a] if adaptive else [run.record]
+        for attempt in scored:
+            target.add(attempt.get("usage") or {})
+            llm = attempt["judgment"].get("llm_judge") or {}
+            if llm.get("usage"):
+                model = llm.get("model") or run.judge
+                judges.setdefault(model, Usage(model)).add(llm["usage"])
+        if adaptive and adaptive["usage"]["attacker"]:
+            model = adaptive["attacker"]
+            attackers.setdefault(model, Usage(model)).add(adaptive["usage"]["attacker"])
+    return Column(source, report, target, sorted(judges.values(), key=lambda u: u.model),
+                  sorted(attackers.values(), key=lambda u: u.model))
 
 
 def _categories(columns: list[Column]) -> list[CategoryCompare]:

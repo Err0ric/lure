@@ -2,7 +2,43 @@
 
 ## Unreleased
 
+### New
+
+- **Adaptive attacker.** `lure run --attacker-model M [--attempts N]`: a
+  second model rewrites the payload after each attempt that is not a Fail,
+  up to N attempts (default 5), each in clean fixtures. It sees only the
+  attack's new `goal`, the item it controls and the target's replies. The
+  run's verdict is its worst target-scored attempt. Attacker refusals,
+  rejected payloads (non-`.example` domains, key or card shapes, over the
+  length cap) and attacker API errors are their own outcomes, never a
+  target Pass; two in a row end the run. The attacker and the judge must
+  each differ from the target.
+- **`--prices` and `--max-cost USD` on `lure run`.** Spend is estimated
+  for attacker, target and judge together, printed at the end, and saved
+  per run as `cost`. The batch stops before the next attempt would pass the
+  cap, and exits 3.
+- **`--baseline`**: `--repeat 10 --judge llm`. The default stays 1 run with
+  the rules judge.
+- **`--payload-from <result> [--attempt K]`** replays a saved payload as a
+  normal run. Records store each fixture's SHA-256, and a replay notes any
+  fixture that changed since.
+- **`goal`** on the current memory and tool poisoning attacks. Pinned
+  versions stay byte-identical, so the adaptive attacker refuses them with
+  a clear error.
+- **Results schema v3** (`schema/results.v3.json`): adds `adaptive`,
+  `cost`, `replay`, `attack.goal` and `attack.fixtures_sha256`. v1 and v2
+  are kept and still read.
+
 ### Changed
+
+- **Exit code 3** for a run stopped at `--max-cost`. 1 still wins.
+- `lure run` takes several attack files or folders.
+- `lure report` and `lure compare` refuse to mix adaptive and single-shot
+  runs; compare counts every adaptive attempt's tokens and adds an attacker
+  cost row. `lure rescore` skips adaptive records.
+- A failed LLM judge parse keeps the call's token usage.
+- Price loading moved to `lure/prices.py` (`lure.report.compare` still
+  exports it).
 
 - **Report and compare restyled to the brand.** Dark theme on a
   purple-black base (#10051F) with text at WCAG AA, violet accent

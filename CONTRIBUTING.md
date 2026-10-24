@@ -72,7 +72,9 @@ opt-in: `pytest -m ollama`.
    may also name payload text (for example the attacker's address being
    saved to memory). Optional top-level keys: `partial_if`, `pass_if`,
    `task_check`, `required_tools`, `system_prompt`, `version`,
-   `followup_tasks`, `responders` (see [Multi-step attacks](#multi-step-attacks)).
+   `followup_tasks`, `responders` (see [Multi-step attacks](#multi-step-attacks)),
+   `goal` (the attacker's aim in plain words, needed for `--attacker-model`;
+   never restate the scoring rules or a secret the attack tries to leak).
    Judge from the tool-call log; `reply_contains` is only for fixed strings
    (a secret, a canary) whose appearance in the reply is the harm.
 4. Add the ATLAS and ATT&CK IDs to [`docs/atlas-mapping.md`](docs/atlas-mapping.md),

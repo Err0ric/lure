@@ -96,7 +96,13 @@ class LLMJudge:
             turn = convo.send_task(build_prompt(attack, final_text))
         except AdapterError as e:
             raise LLMJudgeError(f"judge call failed: {e}") from e
-        return replace(parse_verdict(turn.text, final_text, self.model), usage=turn.usage)
+        try:
+            verdict = parse_verdict(turn.text, final_text, self.model)
+        except LLMJudgeError as e:
+            # The call happened and cost tokens, even if its answer is unusable.
+            e.usage = turn.usage
+            raise
+        return replace(verdict, usage=turn.usage)
 
     def review(self, attack: Attack, judgment: Judgment, final_text: str | None) -> Judgment:
         """Return the judgment, revised by the judge model if it applies."""
@@ -106,7 +112,9 @@ class LLMJudge:
         try:
             verdict = self.classify(attack, final_text)
         except LLMJudgeError as e:
-            return replace(judgment, llm={"model": self.model, "error": str(e), "rules": rules})
+            usage = getattr(e, "usage", None)
+            return replace(judgment, llm={"model": self.model, "error": str(e), "rules": rules,
+                                          **({"usage": usage} if usage else {})})
         return apply_verdict(judgment, verdict, rules)
 
 

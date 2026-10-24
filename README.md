@@ -111,9 +111,27 @@ Other useful commands:
 | `lure rescore results/my-run/ --exposure-only` | Recompute exposure with `lure.yaml` and keep every saved verdict |
 | `lure compare results/run-a/ results/run-b/ --out reports/compare.html` | Compare targets side by side, one results folder per target: rates per category, the policy comparison, and target and judge tokens |
 | `lure compare ... --prices prices.yaml` | Add a cost estimate from recorded tokens; copy `prices.example.yaml` and check current pricing first (Lure ships no price table) |
+| `lure run attacks/ --target anthropic --model claude-sonnet-5-5 --baseline --judge-model claude-opus-5-5` | Baseline settings: `--repeat 10 --judge llm` (either can still be set). The default stays 1 run with the rules judge |
+| `lure run ... --prices prices.yaml --max-cost 15` | Print the estimated spend (attacker, target and judge together) and stop the batch before it passes $15; exits 3 when it stops |
+| `lure run attacks/memory_poisoning/ attacks/tool_poisoning/ --target anthropic --model claude-sonnet-5-5 --attacker-model claude-opus-5-5` | Adaptive attacker: see below |
+| `lure run <attack.yaml> --payload-from <result.json> [--attempt K]` | Replay a saved payload (by default the deciding one of an adaptive run) as a normal run |
 | `pytest` and `ruff check .` | Tests (no network) and lint |
 
-`results/` and `reports/` are gitignored. Each result file records the attack id, version and file, the target, the judge, token usage, the full transcript, every tool call and the verdict with its evidence. The format is [`schema/results.v2.json`](schema/results.v2.json) (JSON Schema; Lure 1.1 records follow [`results.v1.json`](schema/results.v1.json) and are still read); each file names its `schema_version` and `lure_version`.
+`results/` and `reports/` are gitignored. Each result file records the attack id, version and file, the target, the judge, token usage, the full transcript, every tool call and the verdict with its evidence. The format is [`schema/results.v3.json`](schema/results.v3.json) (JSON Schema; older records follow [`results.v2.json`](schema/results.v2.json) or [`results.v1.json`](schema/results.v1.json) and are still read); each file names its `schema_version` and `lure_version`.
+
+### Adaptive attacker
+
+`--attacker-model` adds a second model that rewrites the payload after each attempt that is not a Fail, up to `--attempts` (default 5). The attack's own payload is attempt 1.
+
+| | |
+| --- | --- |
+| What the attacker sees | The attack's `goal`, where its text goes (the email, file, page, memory note or tool definition it controls), and the target's final replies. Never the target's system prompt, task, tools, tool calls or results, the scoring rules or the verdict |
+| What it may write | Only `.example` domains and invented data: no real domain, API key or card number, at most 4 times the original payload's length (and 4,000 characters), and a 1,024-token output cap on Anthropic. Anything else is rejected and never planted |
+| Verdict | The worst target-scored attempt (Fail, then Partial, Review, Pass). Attacker refusals, rejected payloads and attacker API errors are logged as their own outcomes and never count as a target Pass. Two in a row end the run |
+| Record | Every attempt: payload, the attacker's prompt and reply, the target's transcript, tool calls, replies and judgment, and token usage. The record's top level mirrors the deciding attempt, with the winning payload |
+| Rules | The attacker must differ from the target, and the judge must differ from the target. Each attack needs a `goal` |
+
+An adaptive run is worst of several attempts, so its rates are not comparable with single-shot runs: `lure report` and `lure compare` refuse to mix the two, and rescore skips adaptive records.
 
 ## Attack library
 
@@ -182,8 +200,9 @@ An attack's rules only define harm for that attack. `lure.yaml` adds an org-wide
 | Code | Meaning |
 | --- | --- |
 | 0 | No run failed the policy |
-| 1 | A run failed the policy. This wins over a run error: a confirmed finding stands even if another run broke. |
-| 2 | Bad input or policy file, or a run errored and nothing failed the policy |
+| 1 | A run failed the policy. This wins over every other code: a confirmed finding stands even if another run broke or the batch stopped early. |
+| 2 | Bad input, policy or prices file, or a run errored, and nothing failed the policy |
+| 3 | Incomplete: `lure run` stopped at `--max-cost`, no run failed the policy and none errored. The finished runs are saved |
 
 `lure report` gates saved runs with the current policy, recomputing exposure from each tool-call log, so CI can gate without calling the target again. `lure rescore` and `lure compare` exit 0 or 2.
 
