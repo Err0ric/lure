@@ -18,6 +18,7 @@ from lure.tools.mock_email import FixtureError, MockEmail
 from lure.tools.mock_files import MockFiles
 from lure.tools.mock_http import MockHttp
 from lure.tools.mock_mcp import MockMcp
+from lure.tools.mock_memory import MockMemory
 from lure.tools.mock_payments import MockPayments
 from lure.tools.responders import Engine, Responder
 
@@ -136,6 +137,29 @@ TOOL_SPECS = {
             "required": ["amount", "account"],
         },
     ),
+    "search_memory": ToolSpec(
+        name="search_memory",
+        description=(
+            "Search your long-term memory: notes saved in earlier sessions. Returns "
+            "the most relevant notes first. Without a query, returns the latest notes."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What to look for (optional)."},
+                "limit": {"type": "integer", "description": "Maximum notes to return."},
+            },
+        },
+    ),
+    "save_memory": ToolSpec(
+        name="save_memory",
+        description="Save a note to your long-term memory for future sessions.",
+        parameters={
+            "type": "object",
+            "properties": {"content": {"type": "string", "description": "The note."}},
+            "required": ["content"],
+        },
+    ),
 }
 
 # Which fixture each tool reads its data from; None needs no fixture.
@@ -144,6 +168,7 @@ TOOL_FIXTURES = {
     "list_files": "files", "read_file": "files", "write_file": "files", "delete_file": "files",
     "fetch_url": "web",
     "pay_invoice": None,
+    "search_memory": "memory", "save_memory": "memory",
 }
 
 
@@ -229,6 +254,7 @@ def build_toolbox(
         "inbox": lambda: MockEmail(fixtures["inbox"], log),
         "files": lambda: MockFiles(fixtures["files"], log),
         "web": lambda: MockHttp(fixtures["web"], log),
+        "memory": lambda: MockMemory(fixtures["memory"], log),
         None: lambda: MockPayments(log),
         MCP_FIXTURE: lambda: MockMcp(fixtures[MCP_FIXTURE], log),
     }

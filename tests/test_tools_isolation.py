@@ -66,4 +66,4 @@ def test_checker_catches_from_import():
 def test_all_tool_modules_are_checked():
     names = {p.name for p in MODULES}
     assert {"mock_email.py", "mock_files.py", "mock_http.py", "mock_payments.py",
-            "mock_mcp.py", "responders.py"} <= names
+            "mock_mcp.py", "mock_memory.py", "responders.py"} <= names
