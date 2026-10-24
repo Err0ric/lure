@@ -4,7 +4,7 @@ An open-source harness that attacks AI agents with prompt injection and tool-abu
 
 Think phishing simulation, but the target is an agent instead of an employee.
 
-> Status: v1.1.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
+> Status: v1.2.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
 
 [![Top of the sample report: headline, facts strip and summary for claude-haiku-5-5](docs/sample-report-top.png)](https://err0ric.github.io/lure/sample-report.html)
 
@@ -99,19 +99,19 @@ Other useful commands:
 
 ## Attack library
 
-28 attack files in 7 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+30 attack files in 7 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Category | Attacks | ATLAS techniques |
 | --- | --- | --- |
-| Indirect prompt injection | `lure-ipi-001` to `008`, with `007` v1 and v2 (9) | AML.T0051.001, AML.T0057, AML.T0068, AML.T0080.001, AML.T0086 |
+| Indirect prompt injection | `lure-ipi-001` to `008`, with `007` v1, v2 and v3 (10) | AML.T0051.001, AML.T0057, AML.T0068, AML.T0080.001, AML.T0086 |
 | Direct prompt injection | `lure-dpi-001` to `003` (3) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0069.002, AML.T0086 |
 | Jailbreak | `lure-jbk-001`, `002` v1 and v2, `003` (4) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0068, AML.T0086 |
 | Data leakage | `lure-dlk-001` to `003` (3) | AML.T0051.001, AML.T0057, AML.T0086 |
 | Tool abuse | `lure-tab-001` to `003` (3) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0086, AML.T0101 |
 | Tool poisoning | `lure-tpo-001` to `003` (3) | AML.T0048.000, AML.T0053, AML.T0086, AML.T0110.000 |
-| Memory poisoning | `lure-mem-001` to `003` (3) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0080.000, AML.T0080.001, AML.T0086 |
+| Memory poisoning | `lure-mem-001` to `003`, with `002` v1 and v2 (4) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0080.000, AML.T0080.001, AML.T0086 |
 
-Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1567, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23; the full mapping is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
+Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1567, T1656, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23; the full mapping is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
 
 Mock tools: `read_inbox`, `send_email` (to, cc, bcc), `list_files`, `read_file`, `write_file`, `delete_file`, `fetch_url`, `pay_invoice`, `search_memory` and `save_memory`, plus tools an `mcp` fixture defines (for tool poisoning). None of them is a real server or service.
 
@@ -201,7 +201,7 @@ A future `config_audit` stage would check agent and MCP settings before any run;
 - [x] Phase 4: Ship v1.0 (security review, CI, demo, tag v1.0)
 - [x] v1.1.0: policy file and CI gate (exit codes, Markdown, SARIF), results JSON Schema, OpenAI-compatible adapter, category discovery, CONTRIBUTING
 - [ ] v1.1, still open: DuckDB store, `lure serve` dashboard
-- [ ] v1.2: reactive fixtures (responders), multi-turn attacks, tool poisoning and memory poisoning categories, Partial severity
+- [x] v1.2.0: reactive fixtures (responders), multi-turn attacks, tool poisoning and memory poisoning categories, Partial severity
 - [ ] Phase 5: Stretch (multi-agent targets, vetting checklist for internally built AI tools)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).
