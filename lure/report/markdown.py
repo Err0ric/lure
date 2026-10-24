@@ -136,7 +136,7 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
                   "likely reason. The attack was not tested, so these runs are left out of every "
                   "rate."), ""]
         lines += [f"- **{text(r.label)}** {text(r.attack['name'])}: "
-                  f"{text(r.record['judgment']['reason'])}" for r in report.setup_blocked]
+                  f"{text(r.setup_blocked)}" for r in report.setup_blocked]
     lines += ["", "## Findings by ATLAS technique", ""]
     lines += _findings(report)
     return "\n".join(lines) + "\n"

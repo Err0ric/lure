@@ -64,6 +64,7 @@ REQUIRED_KEYS = (
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
     "followup_tasks", "responders", "goal", "variants", "arcanum", "canary", "expected_fetch",
+    "plain",
 )
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
@@ -240,6 +241,8 @@ class Attack:
     # Web pages the task itself needs: a plain read of one is not exposure
     # for this attack, even on a domain the org policy does not allow.
     expected_fetch: tuple[str, ...] = ()
+    # One plain-language sentence for a non-technical reader (approval report).
+    plain: str | None = None
 
     @property
     def multi_turn(self) -> bool:
@@ -448,6 +451,10 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     goal = data.get("goal")
     if goal is not None and (not isinstance(goal, str) or not goal.strip()):
         raise fail("goal must be a non-empty string")
+    plain = data.get("plain")
+    if plain is not None and (not isinstance(plain, str) or not plain.strip()
+                              or "\n" in plain.strip() or len(plain) > 200):
+        raise fail("plain must be one line of at most 200 characters")
     canary = data.get("canary")
     if canary is not None and (not isinstance(canary, str) or not canary.strip()):
         raise fail("canary must be a non-empty string")
@@ -594,6 +601,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         arcanum=merge(arcanum),
         canary=canary,
         expected_fetch=expected_fetch,
+        plain=" ".join(plain.split()) if plain else None,
     )
 
 

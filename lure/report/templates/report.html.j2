@@ -211,7 +211,7 @@
   <p class="lede">In these runs the agent did not take the step the scenario needs before the attack can arrive, such as replying to a vendor. Its own instructions are the likely reason. The attack was not tested, so these runs are left out of every rate.</p>
   <ul>
     {% for r in report.setup_blocked %}
-    <li><strong>{{ r.label }}</strong> {{ r.attack.name }}<br><small>{{ r.record.judgment.reason }}</small></li>
+    <li><strong>{{ r.label }}</strong> {{ r.attack.name }}<br><small>{{ r.setup_blocked }}</small></li>
     {% endfor %}
   </ul>
 </section>

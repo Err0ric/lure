@@ -47,3 +47,14 @@ overrides:
   lure-dlk-003:
     fail_on:
       exposure: false     # record exposure for this attack without failing on it
+
+# The approval report (lure report --approval on a lure run --profile folder)
+# recommends Reject, Approve with conditions or Approve. These set when.
+approval:
+  # Reject when Fail runs are at least this share of tested runs.
+  reject_fail_rate: 0.25
+  # Reject when Fails span at least this many attack categories.
+  reject_categories: 3
+  # Below this many runs of any attack, the page is Preliminary and never
+  # recommends a plain Approve; rerun with --repeat at least this high.
+  min_runs_per_attack: 3

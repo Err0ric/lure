@@ -180,6 +180,11 @@ def build_parser() -> argparse.ArgumentParser:
     report_cmd.add_argument("--md", metavar="PATH", help="also write a Markdown report")
     report_cmd.add_argument("--sarif", metavar="PATH",
                             help="also write SARIF 2.1.0 for CI code scanning")
+    report_cmd.add_argument("--approval", metavar="PATH",
+                            help="also write the one-page approval report (HTML) for a profile "
+                                 "run (lure run --profile)")
+    report_cmd.add_argument("--approval-md", metavar="PATH",
+                            help="also write the approval report as Markdown")
     report_cmd.add_argument("--attacks-dir", default="attacks",
                             help="attack files, looked up by id and version so SARIF points "
                                  "at the version each run tested (SARIF only; default attacks)")
@@ -425,7 +430,9 @@ def write_manifest(profile: Profile, args, policy: Policy, results: list, skippe
         "lure_version": __version__,
         "profile": {"name": profile.name, "path": str(profile.path), "sha256": profile.sha256,
                     "owner": profile.owner, "role": profile.role,
-                    "tools": [{"name": t.name, "maps_to": t.maps_to} for t in profile.tools],
+                    "tools": [{"name": t.name, "description": t.description,
+                               "maps_to": t.maps_to, "essential": t.essential}
+                              for t in profile.tools],
                     "third_party_tools": profile.third_party_tools},
         "target": results[0].target if results else f"{args.target}:{args.model or 'default'}",
         "judge": results[0].judge if results else args.judge,
@@ -672,6 +679,7 @@ def report_main(args, out: TextIO) -> int:
         policy = _policy(args)
         runs = load_runs(args.results)
         _note_legacy([r.record for r in runs])
+        _fill_expected_fetch(runs, args.attacks_dir)
         report = build_report(runs, target=args.target)
     except (ReportError, FileNotFoundError, PolicyError) as e:
         print(f"lure: {e}", file=sys.stderr)
@@ -691,6 +699,29 @@ def report_main(args, out: TextIO) -> int:
 
         files = _attack_files(args.attacks_dir)
         print(f"Wrote {write_sarif(report, args.sarif, gate, files)}", file=out)
+    if args.approval or args.approval_md:
+        from lure.report.approval import (
+            build_approval,
+            load_manifest,
+            write_approval,
+            write_approval_md,
+        )
+
+        try:
+            manifest = load_manifest(args.results)
+        except ValueError as e:
+            print(f"lure: {e}", file=sys.stderr)
+            return EXIT_BAD_INPUT
+        try:
+            attacks = attack_index(args.attacks_dir) if Path(args.attacks_dir).is_dir() else {}
+        except AttackError as e:
+            print(f"lure: approval: cannot read {args.attacks_dir}: {e}", file=sys.stderr)
+            attacks = {}
+        page = build_approval(report, manifest, policy, gate, attacks)
+        if args.approval:
+            print(f"Wrote {write_approval(page, args.approval)}: {page.headline}", file=out)
+        if args.approval_md:
+            print(f"Wrote {write_approval_md(page, args.approval_md)}", file=out)
     print(f"ASR:       {_rate(t.asr, t.counts[Verdict.FAIL], t.scored)}", file=out)
     if not report.exposure_checked:
         print("Exposure:  not checked (no org policy in these results)", file=out)
@@ -704,6 +735,22 @@ def report_main(args, out: TextIO) -> int:
     print_policy(gate, out)
     gated = [r for r in runs if policy.enabled(r.attack["id"], r.attack["category"])]
     return exit_code(gate, [r.verdict for r in gated])
+
+
+def _fill_expected_fetch(runs: list, attacks_dir: str) -> None:
+    """Records saved before an attack listed expected_fetch get it from the
+    attack file now (in memory only), so the report and the policy gate
+    treat a plain read of the task's own page the same way for every run."""
+    if all("expected_fetch" in r.attack for r in runs) or not Path(attacks_dir).is_dir():
+        return
+    try:
+        index = attack_index(attacks_dir)
+    except AttackError:
+        return
+    for run in runs:
+        attack = index.get(run.key)
+        if attack is not None and attack.expected_fetch and "expected_fetch" not in run.attack:
+            run.record["attack"]["expected_fetch"] = list(attack.expected_fetch)
 
 
 def _attack_files(attacks_dir: str) -> dict[tuple[str, int], str]:

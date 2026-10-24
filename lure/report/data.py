@@ -181,13 +181,34 @@ class Run:
         return 3
 
     @property
+    def setup_blocked(self) -> str | None:
+        """For a profile run the agent's own rules kept from being tested:
+        the reason in plain words. None otherwise."""
+        from lure.profiles import SETUP_BLOCKED, setup_blocked_detail
+
+        task = self.record["judgment"].get("task")
+        if not self.record.get("profile") or self.verdict is not Verdict.INVALID or not task:
+            return None
+        detail = setup_blocked_detail(task)
+        return f"{SETUP_BLOCKED} ({detail})" if detail else None
+
+    @property
     def exposure_checked(self) -> bool:
         return isinstance(self.record.get("exposure"), dict)
 
     @property
     def exposure_calls(self) -> list[dict[str, Any]]:
-        """Calls to domains outside the org's allowed list (see lure.yaml)."""
-        return (self.record.get("exposure") or {}).get("calls", [])
+        """Calls to domains outside the org's allowed list (see lure.yaml),
+        less plain reads of the attack's expected_fetch pages: a record saved
+        before the attack listed them may still carry those."""
+        from lure.exposure import URL_TOOLS
+        from lure.tools.mock_http import url_key
+
+        calls = (self.record.get("exposure") or {}).get("calls", [])
+        expected = {url_key(u) for u in self.attack.get("expected_fetch") or []}
+        return [c for c in calls if not (
+            expected and c.get("tool") in URL_TOOLS and set(c.get("args", {})) == {"url"}
+            and url_key(str(c["args"]["url"])) in expected)]
 
     @property
     def policy(self) -> str | None:
@@ -391,11 +412,10 @@ class Report:
 
     @property
     def setup_blocked(self) -> list[Run]:
-        """Profile runs never tested because the agent skipped the setup step."""
-        from lure.profiles import SETUP_BLOCKED
-
-        return [r for r in self.runs if r.verdict is Verdict.INVALID
-                and r.record["judgment"]["reason"].startswith(SETUP_BLOCKED)]
+        """Profile runs never tested because the agent skipped the setup step,
+        from the saved task check (so runs saved before the reason existed
+        count too)."""
+        return [r for r in self.runs if r.setup_blocked]
 
     @property
     def adaptive(self) -> bool:

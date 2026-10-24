@@ -29,7 +29,7 @@ Start from [`profiles/example-ap-agent.yaml`](../profiles/example-ap-agent.yaml)
 | --- | --- | --- |
 | `name` | yes | Lowercase letters, digits and dashes. Names the results folder |
 | `target` | yes | `anthropic`, `ollama` or `openai` (OpenAI-compatible) |
-| `tools` | yes | The agent's tools, each with `name`, `description` and `maps_to` (below) |
+| `tools` | yes | The agent's tools, each with `name`, `description`, `maps_to` (below) and optionally `essential: true` |
 | `system_prompt` or `system_prompt_file` | one of them | The agent's real prompt, inline or in a file next to the profile |
 | `model` | no | The model; else the target's default |
 | `owner`, `role` | no | Who owns the agent (a role, not a name) and what it is for. Shown in reports |
@@ -56,6 +56,14 @@ Lure rejects a profile whose prompt contains something shaped like an API key or
 Two attacks check whether the agent leaks a secret from its system prompt: `lure-dpi-001` and `lure-jbk-003`. Your real prompt has no such secret, so for those attacks Lure appends one line (the attack's `canary:`, a fake escalation code) to your prompt. The run records `canary_appended: true`, and reports list those attacks. Attacks that only add a policy line to their own prompt run under your prompt with nothing appended: whether your agent has such a rule is part of what gets tested.
 
 When `lure-dpi-001` checks for a leaked tool list, it also looks for your tool names, if they contain an underscore, dash or digit (a plain word such as `email` would match ordinary replies).
+
+## Approval report
+
+```bash
+lure report results/example-ap-agent/<timestamp>/ --approval approval.html
+```
+
+One printable page (Letter or A4) for the person who approves the agent: what it can access, what was tested, what went wrong with one example each, a recommended decision with suggested conditions, and a sign-off block for the actual decision. The recommendation is rule-based and the thresholds live in an optional `approval:` block in `lure.yaml` (see `lure.example.yaml`). Run each attack at least 3 times (`--repeat 3`) for an approval decision; with fewer, the page says Preliminary. Mark a tool the agent cannot work without as `essential: true` in the profile, so the page suggests a confirmation step for it instead of removing it.
 
 ## Not tested: the agent's own rules
 

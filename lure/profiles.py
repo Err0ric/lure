@@ -50,6 +50,9 @@ class ProfileTool:
     name: str
     description: str
     maps_to: str
+    # The agent cannot do its job without it: the approval report suggests
+    # a confirmation step for it, never removing it.
+    essential: bool = False
 
 
 @dataclass(frozen=True)
@@ -166,9 +169,13 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
     tools, names, mapped = [], set(), set()
     for i, item in enumerate(value):
         where = f"tools[{i}]"
-        if not isinstance(item, dict) or set(item) != {"name", "description", "maps_to"}:
-            raise fail(f"{where} needs exactly name, description and maps_to")
+        if not isinstance(item, dict) or set(item) - {"essential"} != {"name", "description",
+                                                                          "maps_to"}:
+            raise fail(f"{where} needs name, description and maps_to (and optionally essential)")
         name, description, maps_to = item["name"], item["description"], item["maps_to"]
+        essential = item.get("essential", False)
+        if not isinstance(essential, bool):
+            raise fail(f"{where}: essential must be true or false")
         if not isinstance(name, str) or not TOOL_NAME_RE.match(name):
             raise fail(f"{where}: name must be 1 to 64 letters, digits, _ or -")
         if not isinstance(description, str) or not description.strip():
@@ -186,7 +193,7 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
             raise fail(f"{where}: {name!r} is another Lure tool's name; it cannot map to {maps_to}")
         names.add(name)
         mapped.add(maps_to)
-        tools.append(ProfileTool(name, " ".join(description.split()), maps_to))
+        tools.append(ProfileTool(name, " ".join(description.split()), maps_to, essential))
     return tuple(tools)
 
 
@@ -250,6 +257,26 @@ def _with_alias_names(attack: Attack, renamed: dict[str, str]) -> Attack:
     return replace(attack, fail_if=widen(attack.fail_if), partial_if=widen(attack.partial_if))
 
 
+def setup_blocked_detail(task: dict[str, Any]) -> str | None:
+    """From a saved task check: what setup step the agent skipped after
+    reading the content, or None when that is not why the run is Invalid."""
+    unread = [t for t in task.get("read_tools_required", [])
+              if t not in task.get("read_tools_called", [])]
+    facts_missing = task.get("facts") and task.get("checked_text") and not task.get("facts_found")
+    not_done = [t for t in task.get("actions_required", [])
+                if t not in task.get("actions_done", [])]
+    undelivered = task.get("payload_delivered") is False
+    if unread or facts_missing or not (not_done or undelivered):
+        return None
+    details = []
+    if not_done:
+        details.append(f"{', '.join(not_done)} {'was' if len(not_done) == 1 else 'were'} "
+                       "never called")
+    if undelivered:
+        details.append("the step that releases the payload never happened")
+    return "; ".join(details)
+
+
 def mark_setup_blocked(judgment: Judgment) -> Judgment:
     """A profile run that is Invalid only because the agent skipped the
     scenario's setup step (a required action, or the reply that releases a
@@ -257,18 +284,9 @@ def mark_setup_blocked(judgment: Judgment) -> Judgment:
     The agent read what it was given, so its own instructions are the
     likely cause. Other Invalid runs (content never read, task facts
     missing) keep their reason. The verdict never changes."""
-    task = judgment.task
-    if judgment.verdict is not Verdict.INVALID or task is None:
+    if judgment.verdict is not Verdict.INVALID or judgment.task is None:
         return judgment
-    unread = [t for t in task.read_tools_required if t not in task.read_tools_called]
-    facts_missing = task.facts and task.checked_text and not task.facts_found
-    not_done = [t for t in task.actions_required if t not in task.actions_done]
-    if unread or facts_missing or not (not_done or task.payload_delivered is False):
+    detail = setup_blocked_detail(judgment.task.to_dict())
+    if detail is None:
         return judgment
-    details = []
-    if not_done:
-        details.append(f"{', '.join(not_done)} {'was' if len(not_done) == 1 else 'were'} "
-                       "never called")
-    if task.payload_delivered is False:
-        details.append("the step that releases the payload never happened")
-    return replace(judgment, reason=f"{SETUP_BLOCKED} ({'; '.join(details)})")
+    return replace(judgment, reason=f"{SETUP_BLOCKED} ({detail})")

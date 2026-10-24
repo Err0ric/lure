@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approval report: {{ page.agent }}</title>
+{% from "_brand.html.j2" import brand %}
+{% include "_favicon.html.j2" %}
+{% include "_styles.html.j2" %}
+<style>
+/* One printable page: tighter rhythm than the full report. */
+.approval h1 { margin: 0.25rem 0 0.25rem; max-width: none; }
+.approval h2 { font-size: 1.2rem; margin: 1.6rem 0 0.4rem; }
+.approval .who { color: var(--ink-2); margin: 0 0 1rem; }
+.verdict-line { border-left: 5px solid var(--accent); padding: 0.6rem 0 0.6rem 1rem; margin: 0 0 0.5rem; }
+.verdict-line.reject { border-left-color: var(--fail); }
+.verdict-line strong { display: block; font-size: 1.5rem; line-height: 1.2; }
+.verdict-line.reject strong { color: var(--fail-ink); }
+.verdict-line p { margin: 0.3rem 0 0; color: var(--ink-2); }
+.prelim { color: var(--ink); font-weight: 600; }
+.access { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0; }
+.access dt { font-weight: 600; }
+.access dd { margin: 0; }
+.access .tool, .plainlist .tool { color: var(--muted); font-size: 0.875em; }
+.plainlist { margin: 0.25rem 0 0; padding-left: 1.2rem; }
+.plainlist li { margin: 0.2rem 0; }
+.problems { list-style: none; padding: 0; margin: 0; }
+.problems li { border-top: 1px solid var(--rule); padding: 0.55rem 0; }
+.problems .tag { font-weight: 600; }
+.problems .tag.fail { color: var(--fail-ink); }
+.problems .what { display: block; color: var(--ink-2); }
+.cond { list-style: none; padding: 0; margin: 0; }
+.cond li { padding: 0.45rem 0; border-top: 1px solid var(--rule); }
+.cond .status { display: block; color: var(--muted); font-size: 0.8125rem; }
+.signoff { margin-top: 1.8rem; border: 1.5px solid var(--rule-strong); border-radius: 6px; padding: 0.9rem 1rem; break-inside: avoid; }
+.signoff h2 { margin-top: 0; }
+.signoff .boxes { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin: 0.2rem 0 0.9rem; }
+.signoff .box::before { content: ""; display: inline-block; width: 0.9em; height: 0.9em; border: 1.5px solid var(--ink); margin-right: 0.4em; vertical-align: -0.1em; }
+.signoff .line { display: grid; grid-template-columns: 7.5rem 1fr; align-items: end; gap: 0.5rem; margin: 0.9rem 0 0; }
+.signoff .line span:last-child { border-bottom: 1px solid var(--ink-2); min-height: 1.4rem; }
+.signoff .notes span:last-child { min-height: 4.2rem; }
+.foot { margin-top: 1rem; color: var(--muted); font-size: 0.8125rem; }
+@media print {
+  @page { margin: 11mm 13mm; }
+  html { font-size: 8.4pt; }
+  body { font-size: 1rem; line-height: 1.32; }
+  .approval h1 { font-size: 17pt; }
+  .approval h2 { font-size: 11pt; margin: 0.65rem 0 0.2rem; }
+  .approval .who { margin-bottom: 0.4rem; }
+  .verdict-line { padding: 0.3rem 0 0.3rem 0.7rem; }
+  .verdict-line strong { font-size: 13pt; }
+  .verdict-line p { margin-top: 0.1rem; }
+  /* Access and tested side by side, so the page fits one sheet. */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.6rem; }
+  .access { grid-template-columns: max-content 1fr; gap: 0.1rem 0.6rem; }
+  .approval section, .approval p, .approval ul, .approval li { max-width: none; }
+  .signoff .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.2rem; }
+  .signoff .line { grid-template-columns: 6rem 1fr; }
+  .plainlist li { padding: 0.05rem 0; }
+  .plainlist li, .problems li, .cond li { margin: 0; padding: 0.2rem 0; }
+  .lede { margin-bottom: 0.3rem; }
+  .signoff { margin-top: 0.7rem; padding: 0.5rem 0.8rem; }
+  .signoff .line { margin-top: 0.5rem; }
+  .signoff .notes span:last-child { min-height: 2.6rem; }
+  .foot { margin-top: 0.4rem; font-size: 7pt; }
+  .verdict-line, .signoff { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<main class="sheet approval">
+<header>
+  {{ brand("Agent approval report") }}
+  <h1>{{ page.agent }}</h1>
+  <p class="who">{% if page.role %}{{ page.role }}{% endif %}{% if page.owner %}{% if page.role %}. {% endif %}Owner: {{ page.owner }}{% endif %}. Model {{ page.model }}, tested {{ page.dates }}.</p>
+  <div class="verdict-line{% if page.decision == 'reject' %} reject{% endif %}">
+    <strong>Recommendation: {{ page.headline }}</strong>
+    <p>{{ page.reason }}{% if page.rerun %} <span class="prelim">{{ page.rerun }}</span>{% endif %}</p>
+    <p>Lure recommends; a person decides, in the sign-off below.</p>
+  </div>
+</header>
+
+<div class="pair">
+<section aria-labelledby="access">
+  <h2 id="access">What the agent can access</h2>
+  <dl class="access">
+    {% for group, tools in page.tools.items() %}
+    <dt>{{ group }}</dt>
+    <dd>{% for t in tools %}{{ t.capability }} <span class="tool">({{ t.name }}{% if t.essential %}, essential{% endif %})</span>{% if not loop.last %}; {% endif %}{% endfor %}</dd>
+    {% endfor %}
+    {% if page.third_party_tools %}<dt>Third-party tools</dt><dd>It loads tools from other providers (MCP or plugins)</dd>{% endif %}
+  </dl>
+</section>
+
+<section aria-labelledby="tested">
+  <h2 id="tested">What was tested</h2>
+  <p class="lede">{{ page.tested_total }}, all accounts payable work: vendor email, invoices and payments.</p>
+  <ul class="plainlist">
+    {% for line in page.tested %}<li>{{ line }}</li>{% endfor %}
+  </ul>
+  {% if page.skipped %}<p class="lede">Not applicable, because the agent lacks the tool: {% for a, r in page.skipped %}{{ a }} ({{ r }}){% if not loop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
+  {% if page.not_tested %}
+  <p class="lede">Not tested, because the agent's own rules stopped the scenario before the attack arrived:</p>
+  <ul class="plainlist">{% for a, p in page.not_tested %}<li>{{ p }} <span class="tool">({{ a }})</span></li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+</div>
+
+<section aria-labelledby="wrong">
+  <h2 id="wrong">What went wrong</h2>
+  {% if not page.failures %}
+  <p class="lede">Nothing: no run broke the policy or offered an attacker's action.</p>
+  {% else %}
+  <ul class="problems">
+    {% for f in page.failures %}
+    <li><span class="tag{% if f.kind == 'Fail' %} fail{% endif %}">{{ f.kind }}, {{ f.bad }} of {{ f.runs }} run{% if f.runs != 1 %}s{% endif %}</span> {{ f.plain }}
+      <span class="what">{{ f.example }} <span class="tool">({{ f.label }})</span></span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if page.notes %}
+  <p class="lede">Asked first, which is the safe behaviour:</p>
+  <ul class="plainlist">{% for n in page.notes %}<li>{{ n }}</li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+{% if page.conditions %}
+<section aria-labelledby="conditions">
+  <h2 id="conditions">Suggested conditions</h2>
+  <ul class="cond">
+    {% for c in page.conditions %}
+    <li>{{ c.text }}<span class="status">Covers {{ c.addresses|join(", ") }}. {% if c.verified %}Verified by a retest.{% else %}Not yet verified: a retest after the change will check it.{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="signoff" aria-labelledby="signoff">
+  <h2 id="signoff">Sign-off</h2>
+  <div class="boxes" role="group" aria-label="Decision">
+    <span class="box">Approve</span>
+    <span class="box">Approve with conditions</span>
+    <span class="box">Reject</span>
+  </div>
+  <div class="two">
+    <div class="line"><span>Reviewed by</span><span></span></div>
+    <div class="line"><span>Date</span><span></span></div>
+  </div>
+  <div class="line notes"><span>Notes</span><span></span></div>
+</section>
+
+<p class="foot">{{ page.runs }} runs ({{ page.scored }} tested{% if page.unscored_other %}, {{ page.unscored_other }} not tested for other reasons{% endif %}), at least {{ page.min_runs }} per attack. Policy {{ page.policy }}. Profile sha256 {{ page.profile_sha256[:12] }}. Built by lure report --approval, Lure {{ page.lure_version }}, {{ page.generated }}. The full technical report, with every tool call, is built from the same results by lure report.</p>
+</main>
+</body>
+</html>

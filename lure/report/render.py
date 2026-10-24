@@ -149,6 +149,10 @@ def render_compare(comp: Comparison, generated: datetime | None = None) -> str:
     )
 
 
+def render_approval(page) -> str:
+    return _env().get_template("approval.html.j2").render(page=page)
+
+
 def write_report(report: Report, out: str | Path) -> Path:
     return _write(render(report), out)
 
