@@ -15,6 +15,9 @@ ATLAS = {
     "AML.T0057": "LLM Data Leakage",
     "AML.T0068": "LLM Prompt Obfuscation",
     "AML.T0069.002": "Discover LLM System Information: System Prompt",
+    "AML.T0080": "AI Agent Context Poisoning",
+    "AML.T0080.000": "AI Agent Context Poisoning: Memory",
+    "AML.T0080.001": "AI Agent Context Poisoning: Thread",
     "AML.T0086": "Exfiltration via AI Agent Tool Invocation",
     "AML.T0101": "Data Destruction via AI Agent Tool Invocation",
 }

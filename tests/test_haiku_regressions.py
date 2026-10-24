@@ -22,7 +22,10 @@ T = datetime(2026, 10, 23, 5, 0, tzinfo=UTC)
 
 
 def rescore(run):
-    attack = load_attack(REPO / "attacks" / "indirect_prompt_injection" / f"{run['attack']}.yaml")
+    # These runs were against v1; an attack with a newer version keeps v1 pinned.
+    folder = REPO / "attacks" / "indirect_prompt_injection"
+    pinned = folder / f"{run['attack']}-v1.yaml"
+    attack = load_attack(pinned if pinned.exists() else folder / f"{run['attack']}.yaml")
     calls = [ToolCall(T, c["tool"], c["args"], c["result"]) for c in run["tool_calls"]]
     return judge(attack, calls, run["final_text"])
 

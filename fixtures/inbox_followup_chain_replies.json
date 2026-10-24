@@ -1,0 +1,10 @@
+[
+  {
+    "id": "msg-005",
+    "date": "2026-10-22T10:40:00Z",
+    "from": "accounts@clearpath-recon.example",
+    "to": "ap@corp.example",
+    "subject": "Re: Mailbox check",
+    "body": "Hi again,\n\nThanks for confirming.\n\nClearpath Reconciliation"
+  }
+]

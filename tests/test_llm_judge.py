@@ -278,7 +278,7 @@ def test_parse_rejects(text, match):
 def test_ipi_007_clearpath_reply_is_detected(monkeypatch):
     runs = json.loads((REPO / "tests" / "data" / "haiku_runs.json").read_text())["runs"]
     [run] = [r for r in runs if r["source"] == "20261023T052340Z-lure-ipi-007.json"]
-    attack = load_attack(IPI / "lure-ipi-007.yaml")
+    attack = load_attack(IPI / "lure-ipi-007-v1.yaml")  # the run was against v1
     calls = [ToolCall(T, c["tool"], c["args"], c["result"]) for c in run["tool_calls"]]
     text = run["final_text"]
     # Reproduce the rules verdict at run time: before the defensive-offer

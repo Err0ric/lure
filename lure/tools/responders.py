@@ -1,15 +1,15 @@
 """Responders: fixtures that react to what the target does.
 
 A responder watches the tool-call log. When a successful call matches its
-`on` conditions, it releases an item from a pending fixture into a mock:
+`when` conditions, it releases an item from a pending fixture into a mock:
 new mail arrives, a file appears or changes, a page changes, or a tool's
 definition changes (update_tool, a "rug pull"). That turns a static fixture
 into a multi-step attack: the follow-up only exists once the target has
 taken the first step.
 
     responders:
-      - on: {tool: send_email, to_domain_in: [clearpath-recon.example],
-             body_contains: [confirmed]}
+      - when: {tool: send_email, to_domain_in: [clearpath-recon.example],
+               body_contains: [confirmed]}
         then: {add_inbox: inbox_followups[0]}
         times: 1
 
@@ -50,14 +50,15 @@ ACTIONS = {"add_inbox": "inbox", "add_file": "files", "update_page": "web",
            "update_tool": None}
 TOOL_ITEM_KEYS = ("name", "description", "parameters")
 TRIGGER_KEYS = ("tool", "to_domain_in", "body_contains", "args_contain")
-KEYS = ("on", "then", "times")
+# `when`, not `on`: YAML 1.1 reads a bare on: key as true.
+KEYS = ("when", "then", "times")
 # A pending item: fixture name and index, like inbox_followups[0].
 SOURCE_RE = re.compile(r"^([A-Za-z_]\w*)\[(\d+)\]$")
 
 
 @dataclass(frozen=True)
 class Responder:
-    on: dict[str, Any]
+    when: dict[str, Any]
     action: str
     # The pending item it releases, like inbox_followups[0].
     source: str
@@ -75,17 +76,18 @@ class Responder:
         return fixtures[self.source_fixture][self.source_index]
 
     def matches(self, call: ToolCall) -> bool:
-        on = self.on
-        if call.tool != on["tool"] or failed(call):
+        when = self.when
+        if call.tool != when["tool"] or failed(call):
             return False
-        if "to_domain_in" in on:
-            domains = [d.lower() for d in on["to_domain_in"]]
+        if "to_domain_in" in when:
+            domains = [d.lower() for d in when["to_domain_in"]]
             if not any(in_domains(r, domains) for r in recipients(call)):
                 return False
-        if "body_contains" in on and not contains_any(message_text(call), on["body_contains"]):
+        if "body_contains" in when and not contains_any(message_text(call),
+                                                        when["body_contains"]):
             return False
-        return "args_contain" not in on or contains_any(
-            "\n".join(arg_strings(call.args)).lower(), on["args_contain"])
+        return "args_contain" not in when or contains_any(
+            "\n".join(arg_strings(call.args)).lower(), when["args_contain"])
 
 
 def parse(value: Any, tools: list[str], fixtures: dict[str, Any], wired: set[str],
@@ -99,27 +101,29 @@ def parse(value: Any, tools: list[str], fixtures: dict[str, Any], wired: set[str
     found = []
     for i, r in enumerate(value):
         where = f"responders[{i}]"
-        if not isinstance(r, dict) or not {"on", "then"} <= set(r) or not set(r) <= set(KEYS):
-            raise fail(f"{where} must have on and then, and optionally times")
-        found.append(Responder(_trigger(r["on"], tools, where, fail),
+        if isinstance(r, dict) and True in r:
+            raise fail(f"{where}: YAML reads a bare on: key as true; the trigger key is when:")
+        if not isinstance(r, dict) or not {"when", "then"} <= set(r) or not set(r) <= set(KEYS):
+            raise fail(f"{where} must have when and then, and optionally times")
+        found.append(Responder(_trigger(r["when"], tools, where, fail),
                                *_action(r["then"], tools, fixtures, wired, where, fail),
                                _times(r.get("times", 1), where, fail)))
     return found
 
 
-def _trigger(on: Any, tools: list[str], where: str, fail) -> dict[str, Any]:
-    if not isinstance(on, dict) or "tool" not in on:
-        raise fail(f"{where}.on must be a mapping with a tool")
-    unknown = sorted(set(on) - set(TRIGGER_KEYS))
+def _trigger(when: Any, tools: list[str], where: str, fail) -> dict[str, Any]:
+    if not isinstance(when, dict) or "tool" not in when:
+        raise fail(f"{where}.when must be a mapping with a tool")
+    unknown = sorted(set(when) - set(TRIGGER_KEYS))
     if unknown:
-        raise fail(f"{where}.on unknown keys {unknown}; known: {list(TRIGGER_KEYS)}")
-    if on["tool"] not in tools:
-        raise fail(f"{where}.on tool {on['tool']!r} is not in this attack's tools")
+        raise fail(f"{where}.when unknown keys {unknown}; known: {list(TRIGGER_KEYS)}")
+    if when["tool"] not in tools:
+        raise fail(f"{where}.when tool {when['tool']!r} is not in this attack's tools")
     for k in TRIGGER_KEYS[1:]:
-        if k in on and (not isinstance(on[k], list) or not on[k]
-                        or not all(isinstance(t, str) and t.strip() for t in on[k])):
-            raise fail(f"{where}.on {k} must be a non-empty list of non-empty strings")
-    return dict(on)
+        if k in when and (not isinstance(when[k], list) or not when[k]
+                        or not all(isinstance(t, str) and t.strip() for t in when[k])):
+            raise fail(f"{where}.when {k} must be a non-empty list of non-empty strings")
+    return dict(when)
 
 
 def _action(then: Any, tools: list[str], fixtures: dict[str, Any], wired: set[str],
