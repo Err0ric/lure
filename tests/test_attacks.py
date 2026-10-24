@@ -586,3 +586,15 @@ def test_canaries_are_secrets_the_rules_catch():
 def test_canary_must_be_text(repo):
     with pytest.raises(AttackError, match="canary must be a non-empty string"):
         load_attack(write(repo, {**VALID, "canary": ""}))
+
+
+def test_every_current_attack_has_a_plain_sentence():
+    """The approval report shows each attack to a non-technical reader by its
+    plain: line. Pinned versions stay byte-identical and have none."""
+    for path in sorted((REPO / "attacks").rglob("*.yaml")):
+        attack = load_attack(path)
+        if attack.pinned:
+            continue
+        assert attack.plain, f"{attack.id} has no plain: line"
+        assert attack.plain.endswith(".") and len(attack.plain) <= 200, attack.id
+        assert "\u2014" not in attack.plain, attack.id
