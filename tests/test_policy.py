@@ -1,5 +1,6 @@
 """The policy file: loading, defaults, evaluation, and the CLI around it."""
 
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -311,3 +312,33 @@ def test_no_note_for_current_records(tmp_path, capsys):
     run_attack(IPI_001, ScriptedAdapter(call("read_inbox"), say(SUMMARY))).save(folder)
     cli.main(["report", str(folder), "--out", str(tmp_path / "r.html")], out=io.StringIO())
     assert "note:" not in capsys.readouterr().err
+
+
+# Which policy was used
+
+
+def test_loaded_policy_is_labelled_with_path_and_short_hash(tmp_path):
+    path = write_policy(tmp_path, "fail_on: {verdicts: [Fail]}\n")
+    policy = load(path)
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert (policy.path, policy.sha256) == (str(path), digest)
+    assert policy.label == f"{path}, sha256 {digest[:12]}"
+    assert policy.gate([]).label == policy.label
+
+
+def test_built_in_default_is_labelled_as_such():
+    assert Policy().label == BUILT_IN == "built-in default"
+    assert parse({}).label == "built-in default"
+
+
+def test_run_and_report_print_which_policy(tmp_path, idle_target):
+    path = write_policy(tmp_path, "fail_on: {verdicts: [Fail]}\n")
+    label = load(path).label
+    _, out = run_cli(tmp_path, IPI_001.source, "--policy", str(path))
+    assert f"Policy:    PASS ({label}): 0 of 1 run failed" in out
+    _, out = run_cli(tmp_path, IPI_001.source, "--no-policy")
+    assert "Policy:    PASS (built-in default): 0 of 1 run failed" in out
+    report = io.StringIO()
+    cli.main(["report", str(tmp_path / "results"), "--out", str(tmp_path / "r.html"),
+              "--policy", str(path)], out=report)
+    assert f"Policy:    PASS ({label}): 0 of 2 runs failed" in report.getvalue()

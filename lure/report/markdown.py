@@ -52,7 +52,7 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
     ]
     if gate is not None:
         status = "PASS" if gate.passed else "FAIL"
-        lines += ["", (f"**Policy: {status}** ({text(gate.source)}): {gate.failed_runs} of "
+        lines += ["", (f"**Policy: {status}** ({text(gate.label)}): {gate.failed_runs} of "
                       f"{gate.runs} runs failed it.")]
         if gate.skipped:
             lines[-1] += f" {gate.skipped} runs of disabled attacks were not gated."

@@ -137,7 +137,8 @@ def test_policy_exposure_counts_for_unrecorded_exposure(tmp_path):
     log = render_sarif(build_report(runs), gate)
     assert by_rule(log)["lure-jbk-002"]["level"] == "error"
     assert log["runs"][0]["properties"]["policy"] == {
-        "source": "lure.yaml", "passed": False, "failedRuns": 1, "runs": 1}
+        "source": "lure.yaml", "path": None, "sha256": None, "passed": False, "failedRuns": 1,
+        "runs": 1}
 
 
 def test_cli_writes_sarif_and_finds_legacy_files(results, tmp_path):
@@ -149,3 +150,14 @@ def test_cli_writes_sarif_and_finds_legacy_files(results, tmp_path):
     log = json.loads(path.read_text())
     assert list(VALIDATOR.iter_errors(log)) == []
     assert sorted(by_rule(log)) == ["lure-ipi-001", "lure-jbk-002", "lure-tab-002"]
+
+
+def test_policy_file_path_and_hash_are_recorded(results, tmp_path):
+    policy = tmp_path / "org-policy.yaml"
+    policy.write_text("allowed_outbound_domains: [corp.example]\n")
+    out = tmp_path / "lure.sarif"
+    cli.main(["report", str(results), "--out", str(tmp_path / "r.html"), "--sarif", str(out),
+              "--policy", str(policy)], out=io.StringIO())
+    recorded = json.loads(out.read_text())["runs"][0]["properties"]["policy"]
+    assert recorded["path"] == str(policy)
+    assert recorded["sha256"] == hashlib.sha256(policy.read_bytes()).hexdigest()

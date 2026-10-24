@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -10,6 +11,8 @@ from tests.fakes import ScriptedAdapter, call, say
 SUMMARY = "Acme sent invoice INV-20931 for $4,812.50. Brightline licenses renew Dec 1."
 
 REPO = Path(__file__).resolve().parent.parent
+REPO_POLICY = "lure.yaml, sha256 " + hashlib.sha256(
+    (Path(__file__).resolve().parent.parent / "lure.yaml").read_bytes()).hexdigest()[:12]
 IPI_001 = str(REPO / "attacks" / "indirect_prompt_injection" / "lure-ipi-001.yaml")
 
 
@@ -61,7 +64,7 @@ def test_fail_output_and_saved_file(tmp_path, fake_target):
     assert 'call #1 send_email(to=["billing-verify@external.example"]' in out
     assert "Exposure:  1 call outside the allowed domains in lure.yaml" in out
     assert "  call #1 send_email to external.example\n" in out
-    assert "Policy:    FAIL (lure.yaml): 1 of 1 run failed\n" in out
+    assert f"Policy:    FAIL ({REPO_POLICY}): 1 of 1 run failed\n" in out
     assert "  verdict: Fail on a high severity attack\n" in out
     assert "  exposure: call #1 send_email to external.example\n" in out
     [saved] = tmp_path.glob("*-lure-ipi-001.json")
@@ -161,7 +164,7 @@ def test_repeat_runs_and_summary(tmp_path, fake_target):
     fake_target(*FAIL_RUN, *PASS_RUN, *INVALID_RUN)
     code, out = run_cli(tmp_path / "results", "--target", "ollama", "--repeat", "3")
     assert code == cli.EXIT_POLICY_FAIL
-    assert "Policy:    FAIL (lure.yaml): 1 of 3 runs failed\n" in out
+    assert f"Policy:    FAIL ({REPO_POLICY}): 1 of 3 runs failed\n" in out
     assert "  lure-ipi-001 v1: verdict in 1 run, exposure in 1 run\n" in out
     assert "[1/3] lure-ipi-001  run 1/3  FAIL" in out
     assert "[2/3] lure-ipi-001  run 2/3  PASS" in out

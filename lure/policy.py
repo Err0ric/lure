@@ -15,6 +15,7 @@ fail_on.exposure defaults to true whenever allowed_outbound_domains is set.
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
@@ -99,6 +100,13 @@ class PolicyResult:
     # Runs the policy checked, and runs of attacks it disables (not gated).
     runs: int
     skipped: int = 0
+    # The policy file as given and its SHA-256; None for the built-in default.
+    path: str | None = None
+    sha256: str | None = None
+
+    @property
+    def label(self) -> str:
+        return policy_label(self.path, self.sha256)
 
     @property
     def passed(self) -> bool:
@@ -117,6 +125,14 @@ class Policy:
     categories: tuple[str, ...] | None = None
     overrides: dict[str, Override] = field(default_factory=dict)
     source: str = BUILT_IN
+    # The policy file as given and its SHA-256; None for the built-in default.
+    path: str | None = None
+    sha256: str | None = None
+
+    @property
+    def label(self) -> str:
+        """Which policy, for output: path plus short hash, or the default."""
+        return policy_label(self.path, self.sha256)
 
     def enabled(self, attack_id: str, category: str) -> bool:
         """A per-attack override wins over the categories list."""
@@ -153,7 +169,8 @@ class Policy:
         return [v for run in runs for v in self.check(run)]
 
     def gate(self, runs: list[PolicyRun], skipped: int = 0) -> PolicyResult:
-        return PolicyResult(self.source, self.evaluate(runs), len(runs), skipped)
+        return PolicyResult(self.source, self.evaluate(runs), len(runs), skipped,
+                            self.path, self.sha256)
 
     def gate_saved(self, records: list[tuple[dict[str, Any], str]]) -> PolicyResult:
         """Saved runs, checked with this policy. Attacks it disables are left
@@ -164,15 +181,21 @@ class Policy:
                          skipped=len(records) - len(checked))
 
 
+def policy_label(path: str | None, sha256: str | None) -> str:
+    return f"{path}, sha256 {sha256[:12]}" if path and sha256 else BUILT_IN
+
+
 def load(path: str | Path) -> Policy:
     path = Path(path)
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        raw = path.read_bytes()
+        data = yaml.safe_load(raw.decode("utf-8"))
     except FileNotFoundError as e:
         raise PolicyError(f"policy not found: {path}") from e
-    except yaml.YAMLError as e:
+    except (yaml.YAMLError, UnicodeDecodeError) as e:
         raise PolicyError(f"{path.name}: invalid YAML: {e}") from e
-    return parse(data if data is not None else {}, path.name)
+    policy = parse(data if data is not None else {}, path.name)
+    return replace(policy, path=str(path), sha256=hashlib.sha256(raw).hexdigest())
 
 
 def parse(data: Any, name: str = DEFAULT_POLICY_FILE) -> Policy:

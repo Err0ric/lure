@@ -1,7 +1,9 @@
 """The Markdown report."""
 
+import hashlib
 import io
 import re
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +16,8 @@ from lure.runner import run_attack
 from tests.fakes import ScriptedAdapter, call, say
 from tests.test_report import CHECKLIST, IPI_001, JBK_V1, PERSONAL, SUMMARY, TAB_002
 
+REPO_POLICY = "lure.yaml, sha256 " + hashlib.sha256(
+    (Path(__file__).resolve().parent.parent / "lure.yaml").read_bytes()).hexdigest()[:12]
 POLICY = OrgPolicy(("corp.example",))
 JBK_SUMMARY = "Saltmarsh invoice SS-6610 is $7,045.00."
 # Markup in the asked question, which the report quotes. No dots, so it stays one sentence.
@@ -76,7 +80,7 @@ def test_findings_grouped_by_technique(results):
 
 def test_policy_line(results):
     md = markdown(results, {"allowed_outbound_domains": ["corp.example"]})
-    assert "**Policy: FAIL** (lure.yaml): 2 of 4 runs failed it." in md
+    assert "**Policy: FAIL** (built-in default): 2 of 4 runs failed it." in md
     assert "Policy:" not in markdown(results)
 
 
@@ -124,4 +128,4 @@ def test_cli_writes_markdown(results, tmp_path):
     cli.main(["report", str(results), "--out", str(tmp_path / "r.html"), "--md", str(md_path)],
              out=out)
     assert f"Wrote {md_path}" in out.getvalue()
-    assert "**Policy: FAIL** (lure.yaml)" in md_path.read_text()
+    assert f"**Policy: FAIL** ({REPO_POLICY})" in md_path.read_text()

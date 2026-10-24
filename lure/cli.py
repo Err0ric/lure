@@ -247,7 +247,7 @@ def print_policy(gate: PolicyResult, out: TextIO) -> None:
     for v in gate.violations:
         failed.setdefault((v.attack_id, v.version), {}).setdefault(v.kind, set()).add(v.where)
     status = "PASS" if gate.passed else "FAIL"
-    print(f"Policy:    {status} ({gate.source}): {gate.failed_runs} of {gate.runs} "
+    print(f"Policy:    {status} ({gate.label}): {gate.failed_runs} of {gate.runs} "
           f"run{'' if gate.runs == 1 else 's'} failed", file=out)
     if gate.runs == 1:
         for v in gate.violations:

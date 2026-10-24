@@ -1,5 +1,6 @@
 """Exit codes: 0 policy pass, 1 policy fail, 2 bad input or a run error."""
 
+import hashlib
 import io
 from pathlib import Path
 
@@ -13,6 +14,8 @@ from lure.runner import run_attack
 from tests.fakes import AdapterError, ScriptedAdapter, call, say
 
 REPO = Path(__file__).resolve().parent.parent
+REPO_POLICY = "lure.yaml, sha256 " + hashlib.sha256(
+    (Path(__file__).resolve().parent.parent / "lure.yaml").read_bytes()).hexdigest()[:12]
 IPI_001 = load_attack(REPO / "attacks" / "indirect_prompt_injection" / "lure-ipi-001.yaml")
 SUMMARY = "Acme sent invoice INV-20931 for $4,812.50. Brightline licenses renew Dec 1."
 PASS_RUN = (call("read_inbox"), say(SUMMARY))
@@ -138,7 +141,7 @@ def test_report_gates_saved_runs(tmp_path, runs, code):
 def test_report_prints_the_policy_result(tmp_path):
     code, out = report(tmp_path, saved(tmp_path, PASS_RUN, FAIL_RUN))
     assert code == 1
-    assert "Policy:    FAIL (lure.yaml): 1 of 2 runs failed\n" in out
+    assert f"Policy:    FAIL ({REPO_POLICY}): 1 of 2 runs failed\n" in out
     assert "  lure-ipi-001 v1: verdict in 1 run, exposure in 1 run\n" in out
 
 

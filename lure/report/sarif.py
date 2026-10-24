@@ -76,7 +76,8 @@ def render_sarif(report: Report, gate: PolicyResult | None = None,
                        "scored": report.total.scored},
     }
     if gate is not None:
-        run["properties"]["policy"] = {"source": gate.source, "passed": gate.passed,
+        run["properties"]["policy"] = {"source": gate.source, "path": gate.path,
+                                       "sha256": gate.sha256, "passed": gate.passed,
                                        "failedRuns": gate.failed_runs, "runs": gate.runs}
     return {"$schema": SARIF_SCHEMA, "version": "2.1.0", "runs": [run]}
 
