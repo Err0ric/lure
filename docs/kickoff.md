@@ -228,7 +228,7 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
   - Citation for THIRD_PARTY.md: Haddix, J. (2026). Arcanum Prompt Injection Taxonomy (v1.6.1). Arcanum Information Security. https://www.arcanum-sec.com/pitax
   - Shipped in v1.4: taxonomy vendored at commit `e02cf5b6e202`, all 31 current attacks mapped (pinned versions unmapped), `lure coverage` writes `docs/arcanum-coverage.md`, codes in records and SARIF, credit in README and THIRD_PARTY.md.
 - [x] Structured LLM judge output and pinned `attack.file` links (v1.3 carry-overs, above)
-- [ ] Tag v1.4.0
+- [x] Tag v1.4.0
 
 ### v1.5
 
