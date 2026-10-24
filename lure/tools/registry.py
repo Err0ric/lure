@@ -172,6 +172,9 @@ TOOL_FIXTURES = {
 }
 
 
+# Tools that work without their fixture: sending needs no inbox to read.
+FIXTURE_OPTIONAL = frozenset({"send_email"})
+
 # The fixture that defines tools of its own (lure/tools/mock_mcp.py).
 MCP_FIXTURE = "mcp"
 
@@ -251,7 +254,7 @@ def build_toolbox(
     # One mock per fixture, shared by its tools (a delete shows in a later list).
     mocks: dict[str, Any] = {}
     factories = {
-        "inbox": lambda: MockEmail(fixtures["inbox"], log),
+        "inbox": lambda: MockEmail(fixtures.get("inbox", []), log),
         "files": lambda: MockFiles(fixtures["files"], log),
         "web": lambda: MockHttp(fixtures["web"], log),
         "memory": lambda: MockMemory(fixtures["memory"], log),
@@ -261,7 +264,7 @@ def build_toolbox(
     specs: dict[str, ToolSpec] = {}
     for name in tools:
         fixture = fixture_for(name)
-        if fixture is not None and fixture not in fixtures:
+        if fixture is not None and fixture not in fixtures and name not in FIXTURE_OPTIONAL:
             raise ToolboxError(f"tool {name!r} needs a {fixture!r} fixture")
         if fixture not in mocks:
             try:

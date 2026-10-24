@@ -38,6 +38,7 @@ CATEGORIES = {
     "indirect_prompt_injection": "Indirect prompt injection",
     "direct_prompt_injection": "Direct prompt injection",
     "jailbreak": "Jailbreak",
+    "memory_poisoning": "Memory poisoning",
     "data_leakage": "Data leakage",
     "tool_abuse": "Tool abuse",
     "tool_poisoning": "Tool poisoning",

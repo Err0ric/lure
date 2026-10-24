@@ -25,7 +25,7 @@ from tests.test_policy import Idle
 
 REPO = Path(__file__).resolve().parent.parent
 SHIPPED = ["data_leakage", "direct_prompt_injection", "indirect_prompt_injection",
-           "jailbreak", "tool_abuse", "tool_poisoning"]
+           "jailbreak", "memory_poisoning", "tool_abuse", "tool_poisoning"]
 
 
 @pytest.fixture

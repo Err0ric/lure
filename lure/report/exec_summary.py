@@ -31,6 +31,10 @@ GUARDRAILS = {
     "tool_abuse": (
         "Require human approval for payments, deletes and bank-detail changes."
     ),
+    "memory_poisoning": (
+        "Treat saved memory and earlier conversation as data: never let a stored note change "
+        "a recipient or bank account, and show the user what gets saved to memory."
+    ),
     "tool_poisoning": (
         "Review third-party tool definitions before enabling them, pin them, and block "
         "any definition change until a person approves it."

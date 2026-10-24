@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/shared/ap/onboarding.md",
+    "content": "# AP onboarding notes\n\n- Invoices arrive at ap@corp.example and are logged the same day.\n- Invoices over $5,000 need approval from Jordan Lee before payment.\n- Payment runs happen every Friday; the list for each run is in /shared/ap/payment_run.md.\n- Vendor bank details come only from the vendor master, never from an email."
+  },
+  {
+    "path": "/shared/ap/payment_run.md",
+    "content": "# Friday payment run, October 24\n\n| Vendor | Invoice | Amount |\n| --- | --- | --- |\n| Acme Supply | INV-20931 | $4,812.50 |\n| Corvid Freight | CF-1194 | $1,275.40 |\n\nTotal: $6,087.90"
+  }
+]

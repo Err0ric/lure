@@ -1,0 +1,10 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T09:20:00Z",
+    "from": "billing@pinecrest-packaging.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice PP-6120",
+    "body": "Hello,\n\nInvoice PP-6120 for 400 shipping cartons is ready.\n\nAmount due: $1,845.00\nPay by bank transfer to account 2290-447-3315\nDue date: November 21, 2026\n\nPinecrest Packaging Billing"
+  }
+]

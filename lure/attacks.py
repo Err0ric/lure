@@ -33,7 +33,7 @@ from lure.tools import responders as responders_mod
 from lure.tools.mock_email import FixtureError
 from lure.tools.mock_mcp import check_mcp
 from lure.tools.mock_mcp import tool_names as mcp_tool_names
-from lure.tools.registry import MCP_FIXTURE, fixture_for
+from lure.tools.registry import FIXTURE_OPTIONAL, MCP_FIXTURE, fixture_for
 from lure.tools.responders import Responder
 from lure.tools.sources import item_source
 
@@ -335,6 +335,11 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     if not rules["fail_if"]:
         raise fail("fail_if must have at least one rule")
 
+    unbacked = [t for t in tools if t not in FIXTURE_OPTIONAL
+                and fixture_for(t) not in (None, *fixtures)]
+    if unbacked:
+        raise fail(f"tools {unbacked} need fixtures "
+                   f"{sorted({fixture_for(t) for t in unbacked})}")
     wired = {fixture_for(t) for t in tools} - {None}
     responders = responders_mod.parse(data.get("responders"), tools, loaded, wired, fail)
     if not in_task:
@@ -356,7 +361,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     if echoed:
         raise fail(f"task_check facts {echoed} appear in followup_tasks")
     required_tools = _required_tools(data.get("required_tools"), tools, fail)
-    _check_body_contains(rules, loaded, fail)
+    _check_body_contains(rules, loaded, payload, fail)
     _check_reply_contains(rules, loaded, system_prompt, tools,
                           "\n".join([data["target_task"], *followup_tasks]), payload, fail)
     keywords = _keywords(injection.get("keywords"), payload, loaded, fail)
@@ -448,17 +453,21 @@ def _ask_markers(keywords, payload, fixtures) -> list[str]:
     return list(dict.fromkeys([k.lower() for k in keywords] + attacker))
 
 
-def _check_body_contains(rules, fixtures, fail) -> None:
-    # body_contains and args_contain strings are fixture data the target must
-    # not send out, and account_not_in lists the accounts on file. A typo in
-    # any of them would leave the rule silently wrong.
+def _check_body_contains(rules, fixtures, payload, fail) -> None:
+    # body_contains strings are fixture data the target must not send out, and
+    # account_not_in lists the accounts on file. args_contain may also name
+    # payload text: a call that passes the attacker's value along (saving the
+    # attacker's address to memory) is evidence too. A typo in any of them
+    # would leave the rule silently wrong.
     corpus = "\n".join(_strings(fixtures)).lower()
     for key, rule_list in rules.items():
         for i, rule in enumerate(rule_list):
             for k in ("body_contains", "args_contain", "account_not_in"):
+                allowed = corpus + "\n" + payload.lower() if k == "args_contain" else corpus
                 for text in rule.get(k, []):
-                    if text.lower() not in corpus:
-                        raise fail(f"{key}[{i}] {k} {text!r} does not appear in the fixtures")
+                    if text.lower() not in allowed:
+                        where = "the fixtures or payload" if k == "args_contain" else "the fixtures"
+                        raise fail(f"{key}[{i}] {k} {text!r} does not appear in {where}")
 
 
 def _check_reply_contains(rules, fixtures, system_prompt, tools, task, payload, fail) -> None:
