@@ -34,6 +34,8 @@ class ScriptedAdapter(ModelAdapter):
         self.task = None
         self.tasks = []
         self.tool_results = []
+        # Tool sets offered after the first, with the index of the next turn.
+        self.tool_updates = []
 
     def start(self, system, tools):
         self.system, self.tools = system, tools
@@ -60,6 +62,9 @@ class _ScriptedConversation(Conversation):
     def send_tool_results(self, results):
         self.adapter.tool_results.append(results)
         return self.adapter.next_turn()
+
+    def set_tools(self, tools):
+        self.adapter.tool_updates.append(list(tools))
 
 
 __all__ = ["AdapterError", "ScriptedAdapter", "call", "say"]

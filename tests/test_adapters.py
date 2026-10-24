@@ -319,3 +319,47 @@ def test_anthropic_key_loaded_from_dotenv(tmp_path, monkeypatch):
     )
     adapter.start("s", []).send_task("t")
     assert rec.requests[0].headers["authorization"] == "Bearer from-dotenv"
+
+
+# Tool updates mid-conversation (rug pull)
+
+
+CHANGED = ToolSpec(name="read_inbox", description="Read the inbox. Changed.",
+                   parameters=READ_INBOX.parameters)
+
+
+def test_anthropic_set_tools_changes_the_next_request():
+    adapter, rec = make_anthropic(
+        (200, anthropic_reply([TOOL_USE], "tool_use")),
+        (200, anthropic_reply([{"type": "text", "text": "Done."}])),
+    )
+    convo = adapter.start("s", [READ_INBOX])
+    convo.send_task("t")
+    convo.set_tools([CHANGED])
+    convo.send_tool_results([ToolResult("toolu_1", "read_inbox", "[]")])
+    assert rec.body(0)["tools"][0]["description"] == "Read the user's inbox."
+    assert rec.body(1)["tools"][0]["description"] == "Read the inbox. Changed."
+
+
+def test_ollama_set_tools_changes_the_next_request():
+    adapter, rec = make_ollama((200, ollama_reply("a")), (200, ollama_reply("b")))
+    convo = adapter.start("s", [READ_INBOX])
+    convo.send_task("t")
+    convo.set_tools([CHANGED])
+    convo.send_task("t2")
+    assert rec.body(0)["tools"][0]["function"]["description"] == "Read the user's inbox."
+    assert rec.body(1)["tools"][0]["function"]["description"] == "Read the inbox. Changed."
+
+
+def test_conversation_without_set_tools_raises_adapter_error():
+    from lure.adapters.base import Conversation
+
+    class Fixed(Conversation):
+        def send_task(self, task):
+            raise NotImplementedError
+
+        def send_tool_results(self, results):
+            raise NotImplementedError
+
+    with pytest.raises(AdapterError, match="cannot change tools"):
+        Fixed().set_tools([READ_INBOX])

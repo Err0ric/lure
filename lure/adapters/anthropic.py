@@ -90,11 +90,14 @@ class AnthropicConversation(Conversation):
     ) -> None:
         self._adapter = adapter
         self._system = system
+        self.set_tools(tools)
+        self.messages: list[dict[str, Any]] = []
+
+    def set_tools(self, tools: list[ToolSpec]) -> None:
         self._tools = [
             {"name": t.name, "description": t.description, "input_schema": t.parameters}
             for t in tools
         ]
-        self.messages: list[dict[str, Any]] = []
 
     def send_task(self, task: str) -> ModelTurn:
         self.messages.append({"role": "user", "content": task})

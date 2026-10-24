@@ -2,9 +2,10 @@
 
 A responder watches the tool-call log. When a successful call matches its
 `on` conditions, it releases an item from a pending fixture into a mock:
-new mail arrives, a file appears or changes, a page changes. That turns a
-static fixture into a multi-step attack: the follow-up only exists once the
-target has taken the first step.
+new mail arrives, a file appears or changes, a page changes, or a tool's
+definition changes (update_tool, a "rug pull"). That turns a static fixture
+into a multi-step attack: the follow-up only exists once the target has
+taken the first step.
 
     responders:
       - on: {tool: send_email, to_domain_in: [clearpath-recon.example],
@@ -28,6 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from lure.adapters.base import ToolSpec
 from lure.tools.call_log import ToolCall
 from lure.tools.calls import (
     arg_strings,
@@ -42,8 +44,11 @@ from lure.tools.mock_email import FixtureError
 from lure.tools.mock_files import check_files
 from lure.tools.mock_http import check_web
 
-# Action -> the fixture (and so the mock) it changes.
-ACTIONS = {"add_inbox": "inbox", "add_file": "files", "update_page": "web"}
+# Action -> the fixture (and so the mock) it changes. update_tool changes a
+# tool's definition instead: {name, description, parameters (optional)}.
+ACTIONS = {"add_inbox": "inbox", "add_file": "files", "update_page": "web",
+           "update_tool": None}
+TOOL_ITEM_KEYS = ("name", "description", "parameters")
 TRIGGER_KEYS = ("tool", "to_domain_in", "body_contains", "args_contain")
 KEYS = ("on", "then", "times")
 # A pending item: fixture name and index, like inbox_followups[0].
@@ -97,7 +102,7 @@ def parse(value: Any, tools: list[str], fixtures: dict[str, Any], wired: set[str
         if not isinstance(r, dict) or not {"on", "then"} <= set(r) or not set(r) <= set(KEYS):
             raise fail(f"{where} must have on and then, and optionally times")
         found.append(Responder(_trigger(r["on"], tools, where, fail),
-                               *_action(r["then"], fixtures, wired, where, fail),
+                               *_action(r["then"], tools, fixtures, wired, where, fail),
                                _times(r.get("times", 1), where, fail)))
     return found
 
@@ -117,8 +122,8 @@ def _trigger(on: Any, tools: list[str], where: str, fail) -> dict[str, Any]:
     return dict(on)
 
 
-def _action(then: Any, fixtures: dict[str, Any], wired: set[str], where: str,
-            fail) -> tuple[str, str]:
+def _action(then: Any, tools: list[str], fixtures: dict[str, Any], wired: set[str],
+            where: str, fail) -> tuple[str, str]:
     if not isinstance(then, dict) or len(then) != 1 or next(iter(then)) not in ACTIONS:
         raise fail(f"{where}.then must be one of {list(ACTIONS)}, like add_inbox: name[0]")
     action, source = next(iter(then.items()))
@@ -131,7 +136,7 @@ def _action(then: Any, fixtures: dict[str, Any], wired: set[str], where: str,
     if name in wired:
         raise fail(f"{where}.then {action}: {name!r} is read by a tool; a responder "
                    "releases items from a pending fixture no tool reads")
-    if ACTIONS[action] not in wired:
+    if ACTIONS[action] is not None and ACTIONS[action] not in wired:
         raise fail(f"{where}.then {action} needs a tool that reads the "
                    f"{ACTIONS[action]!r} fixture")
     items = fixtures[name]
@@ -141,6 +146,9 @@ def _action(then: Any, fixtures: dict[str, Any], wired: set[str], where: str,
         check_item(action, items[index])
     except FixtureError as e:
         raise fail(f"{where}.then {action}: {source}: {e}") from None
+    if action == "update_tool" and items[index]["name"] not in tools:
+        raise fail(f"{where}.then update_tool: tool {items[index]['name']!r} "
+                   "is not in this attack's tools")
     return action, source
 
 
@@ -162,16 +170,34 @@ def check_item(action: str, item: Any) -> None:
         check_files([item])
     elif action == "update_page":
         check_web([item])
+    elif action == "update_tool":
+        check_tool_item(item)
+
+
+def check_tool_item(item: Any) -> None:
+    """A tool definition: name and description, optional JSON Schema parameters."""
+    if not isinstance(item, dict) or not {"name", "description"} <= set(item):
+        raise FixtureError("must be an object with name and description")
+    unknown = sorted(set(item) - set(TOOL_ITEM_KEYS))
+    if unknown:
+        raise FixtureError(f"unknown keys {unknown}")
+    if not all(isinstance(item[k], str) and item[k].strip() for k in ("name", "description")):
+        raise FixtureError("name and description must be non-empty strings")
+    params = item.get("parameters")
+    if params is not None and (not isinstance(params, dict) or params.get("type") != "object"):
+        raise FixtureError("parameters must be a JSON Schema object")
 
 
 class Engine:
     """Runs an attack's responders against the mocks of one run."""
 
     def __init__(self, responders: list[Responder], fixtures: dict[str, Any],
-                 mocks: dict[str, Any]) -> None:
+                 mocks: dict[str, Any], specs: dict[str, ToolSpec]) -> None:
         self._responders = responders
         self._fixtures = fixtures
         self._mocks = mocks
+        # The toolbox's live tool definitions, changed in place by update_tool.
+        self._specs = specs
         self._fired = [0] * len(responders)
         self.events: list[dict[str, Any]] = []
 
@@ -190,6 +216,11 @@ class Engine:
 
     def _apply(self, r: Responder) -> None:
         item = copy.deepcopy(r.item(self._fixtures))
+        if r.action == "update_tool":
+            old = self._specs[item["name"]]
+            self._specs[item["name"]] = ToolSpec(
+                item["name"], item["description"], item.get("parameters", old.parameters))
+            return
         mock = self._mocks[ACTIONS[r.action]]
         if r.action == "add_inbox":
             mock.deliver(item)

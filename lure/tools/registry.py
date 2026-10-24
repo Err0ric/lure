@@ -153,11 +153,13 @@ class ToolboxError(ValueError):
 class Toolbox:
     def __init__(
         self, handlers: dict[str, Callable[..., Any]], log: ToolCallLog,
-        engine: Engine | None = None,
+        engine: Engine | None = None, specs: dict[str, ToolSpec] | None = None,
     ) -> None:
         self._handlers = handlers
         self.log = log
         self._engine = engine
+        # Live definitions: a responder may change one mid-run (update_tool).
+        self._specs = specs if specs is not None else {n: TOOL_SPECS[n] for n in handlers}
 
     @property
     def events(self) -> list[dict[str, Any]]:
@@ -166,13 +168,13 @@ class Toolbox:
 
     @property
     def specs(self) -> list[ToolSpec]:
-        return [TOOL_SPECS[name] for name in self._handlers]
+        return [self._specs[name] for name in self._handlers]
 
     def run(self, call: ToolCallRequest) -> ToolResult:
         handler = self._handlers.get(call.name)
         if handler is None:
             return self._error(call, f"unknown tool {call.name!r}")
-        problem = _check_names(TOOL_SPECS[call.name], call.arguments)
+        problem = _check_names(self._specs[call.name], call.arguments)
         if problem:
             return self._error(call, problem)
         try:
@@ -230,5 +232,6 @@ def build_toolbox(
             except FixtureError as e:
                 raise ToolboxError(f"tool {name!r}: {e}") from e
         handlers[name] = getattr(mocks[fixture], name)
-    engine = Engine(list(responders), fixtures, mocks) if responders else None
-    return Toolbox(handlers, log, engine)
+    specs = {name: TOOL_SPECS[name] for name in handlers}
+    engine = Engine(list(responders), fixtures, mocks, specs) if responders else None
+    return Toolbox(handlers, log, engine, specs)

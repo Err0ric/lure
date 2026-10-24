@@ -160,7 +160,7 @@ def run_attack(
             transcript.append(_assistant_entry(turn))
             while turn.wants_tools:
                 # Run this turn's calls even at the limit: the attempt is evidence.
-                fired = len(toolbox.events)
+                fired, specs = len(toolbox.events), toolbox.specs
                 results = [toolbox.run(call) for call in turn.tool_calls]
                 transcript.extend(
                     {
@@ -173,6 +173,9 @@ def run_attack(
                     for r in results
                 )
                 transcript.extend({"role": "event", **e} for e in toolbox.events[fired:])
+                if toolbox.specs != specs:
+                    # A tool definition changed: offer the new one from now on.
+                    convo.set_tools(toolbox.specs)
                 if user_turns >= max_turns:
                     stop = STOP_MAX_TURNS
                     break

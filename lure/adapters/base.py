@@ -83,6 +83,12 @@ class Conversation(ABC):
     def send_tool_results(self, results: list[ToolResult]) -> ModelTurn:
         """Return results for the previous turn's tool calls."""
 
+    def set_tools(self, tools: list[ToolSpec]) -> None:
+        """Offer a changed tool set from the next request on (a tool server
+        updating its definitions mid-session). An adapter that cannot raises
+        AdapterError, so the run is Error rather than silently untested."""
+        raise AdapterError(f"{type(self).__name__} cannot change tools mid-conversation")
+
 
 class ModelAdapter(ABC):
     provider: str

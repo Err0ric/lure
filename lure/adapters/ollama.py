@@ -66,23 +66,16 @@ class OllamaConversation(Conversation):
         self, adapter: OllamaAdapter, system: str, tools: list[ToolSpec]
     ) -> None:
         self._adapter = adapter
-        self._tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": t.name,
-                    "description": t.description,
-                    "parameters": t.parameters,
-                },
-            }
-            for t in tools
-        ]
+        self._tools = _function_tools(tools)
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
         self._call_count = 0
 
     def send_task(self, task: str) -> ModelTurn:
         self.messages.append({"role": "user", "content": task})
         return self._complete()
+
+    def set_tools(self, tools: list[ToolSpec]) -> None:
+        self._tools = _function_tools(tools)
 
     def send_tool_results(self, results: list[ToolResult]) -> ModelTurn:
         for r in results:
@@ -121,3 +114,17 @@ class OllamaConversation(Conversation):
             name=fn.get("name", ""),
             arguments=args,
         )
+
+
+def _function_tools(tools: list[ToolSpec]) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t.name,
+                "description": t.description,
+                "parameters": t.parameters,
+            },
+        }
+        for t in tools
+    ]

@@ -6,7 +6,7 @@ import httpx2
 import pytest
 
 from lure import cli
-from lure.adapters import AdapterError, ToolResult
+from lure.adapters import AdapterError, ToolResult, ToolSpec
 from lure.adapters.openai_compat import DEFAULT_BASE_URL, OpenAICompatAdapter
 from lure.attacks import load_attack
 from lure.judge.rules import Verdict
@@ -225,3 +225,12 @@ def test_cli_offers_the_openai_target(monkeypatch):
     assert isinstance(adapter, OpenAICompatAdapter) and adapter.target_name == "openai:local-model"
     assert cli.make_adapter("openai", "other").model == "other"
     assert "openai" in cli.TARGETS
+
+
+def test_set_tools_changes_the_next_request():
+    adapter, rec = make((200, reply("a")), (200, reply("b")))
+    convo = adapter.start("s", [READ_INBOX])
+    convo.send_task("t")
+    convo.set_tools([ToolSpec("read_inbox", "Changed.", READ_INBOX.parameters)])
+    convo.send_task("t2")
+    assert rec.body(1)["tools"][0]["function"]["description"] == "Changed."

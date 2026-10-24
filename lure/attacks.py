@@ -138,6 +138,12 @@ class Attack:
         return None if self.in_task else LOCATION_PART_RE.match(self.injection.location).group(2)
 
     @property
+    def payload_item(self) -> str | None:
+        """The fixture item holding the payload, like inbox_followups[0]."""
+        m = re.match(r"^[A-Za-z_]\w*\[\d+\]", self.injection.location)
+        return None if self.in_task or not m else m.group(0)
+
+    @property
     def payload_pending(self) -> bool:
         """True if the payload is in a pending fixture: only a responder can
         release it, so it may never reach the target."""
