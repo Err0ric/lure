@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased (v1.4)
+
+### Changed
+
+- **Structured LLM judge output.** The judge's answer is constrained to a
+  JSON schema by the provider: Anthropic structured outputs
+  (`output_config.format`, sent with the effort setting), Ollama `format`,
+  and `response_format` on OpenAI-compatible servers. A server that rejects
+  `response_format` with HTTP 400 gets one retry without it. The record's
+  new `llm_judge.structured` says whether the answer was constrained
+  (optional, so results stay schema v3). The answer is validated the same
+  way either way. Before this, 1 of 612 judge answers through 2026-10-24
+  failed to parse and fell back to the rules verdict.
+- A judge answer stopped by a refusal (`refusal`, `content_filter`) or cut
+  off (`max_tokens`, `length`) is now reported as such ("judge refused",
+  "judge answer cut off") instead of "no JSON object". The rules verdict
+  stands and the call's token usage is kept, as before.
+- `confirmation_required: null` in a judge answer means not answered, the
+  same as leaving it out.
+
 ## v1.3.0 (2026-10-24)
 
 ### Findings

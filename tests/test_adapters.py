@@ -377,3 +377,47 @@ def test_conversation_without_set_tools_raises_adapter_error():
 
     with pytest.raises(AdapterError, match="cannot change tools"):
         Fixed().set_tools([READ_INBOX])
+
+
+# Output schema (the LLM judge)
+
+SCHEMA = {"type": "object", "properties": {"label": {"type": "string"}},
+          "required": ["label"], "additionalProperties": False}
+
+
+def test_anthropic_output_schema_merges_with_effort():
+    adapter, rec = make_anthropic((200, anthropic_reply([{"type": "text", "text": "{}"}])))
+    convo = adapter.start("s", [])
+    assert convo.structured is False
+    convo.set_output_schema(SCHEMA)
+    convo.send_task("t")
+    assert rec.body(0)["output_config"] == {
+        "effort": "medium", "format": {"type": "json_schema", "schema": SCHEMA}}
+    assert convo.structured is True
+
+
+def test_anthropic_output_schema_without_effort():
+    adapter, rec = make_anthropic((200, anthropic_reply([{"type": "text", "text": "{}"}])),
+                                  effort=None)
+    convo = adapter.start("s", [])
+    convo.set_output_schema(SCHEMA)
+    convo.send_task("t")
+    assert rec.body(0)["output_config"] == {"format": {"type": "json_schema", "schema": SCHEMA}}
+
+
+def test_anthropic_target_requests_carry_no_format():
+    adapter, rec = make_anthropic((200, anthropic_reply([{"type": "text", "text": "Hi"}])))
+    convo = adapter.start("s", [READ_INBOX])
+    convo.send_task("t")
+    assert rec.body(0)["output_config"] == {"effort": "medium"}
+    assert convo.structured is False
+
+
+def test_ollama_output_schema_is_sent_as_format():
+    adapter, rec = make_ollama((200, ollama_reply("{}")), (200, ollama_reply("Hi")))
+    convo = adapter.start("s", [])
+    convo.set_output_schema(SCHEMA)
+    convo.send_task("t")
+    assert rec.body(0)["format"] == SCHEMA and convo.structured is True
+    adapter.start("s", [READ_INBOX]).send_task("t")
+    assert "format" not in rec.body(1)

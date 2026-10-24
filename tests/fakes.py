@@ -26,9 +26,12 @@ class ScriptedAdapter(ModelAdapter):
 
     provider = "fake"
 
-    def __init__(self, *turns, model="scripted"):
+    def __init__(self, *turns, model="scripted", structured=False):
         super().__init__(model)
         self.turns = list(turns)
+        # Whether the fake "provider" honours set_output_schema.
+        self.supports_schema = structured
+        self.output_schema = None
         self.system = None
         self.tools = None
         self.task = None
@@ -65,6 +68,10 @@ class _ScriptedConversation(Conversation):
 
     def set_tools(self, tools):
         self.adapter.tool_updates.append(list(tools))
+
+    def set_output_schema(self, schema):
+        self.adapter.output_schema = schema
+        self.structured = self.adapter.supports_schema
 
 
 __all__ = ["AdapterError", "ScriptedAdapter", "call", "say"]

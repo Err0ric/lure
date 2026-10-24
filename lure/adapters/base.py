@@ -16,6 +16,11 @@ from typing import Any
 class AdapterError(RuntimeError):
     """The model call failed (network, auth, bad response). Scored as Error."""
 
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        # The HTTP status, when the server answered with an error.
+        self.status = status
+
 
 @dataclass(frozen=True)
 class ToolSpec:
@@ -75,6 +80,10 @@ def add_usage(total: dict[str, int], usage: dict[str, int]) -> dict[str, int]:
 
 
 class Conversation(ABC):
+    # True once a reply came back constrained to the schema given to
+    # set_output_schema by the provider itself.
+    structured: bool = False
+
     @abstractmethod
     def send_task(self, task: str) -> ModelTurn:
         """Send the user task and return the model's first turn."""
@@ -88,6 +97,11 @@ class Conversation(ABC):
         updating its definitions mid-session). An adapter that cannot raises
         AdapterError, so the run is Error rather than silently untested."""
         raise AdapterError(f"{type(self).__name__} cannot change tools mid-conversation")
+
+    def set_output_schema(self, schema: dict[str, Any]) -> None:
+        """Ask the provider to constrain replies to a JSON schema (the LLM
+        judge's verdict). A conversation that cannot leaves replies free and
+        `structured` False; the caller validates the answer either way."""
 
 
 class ModelAdapter(ABC):

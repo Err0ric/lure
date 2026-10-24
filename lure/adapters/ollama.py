@@ -69,6 +69,7 @@ class OllamaConversation(Conversation):
         self._tools = _function_tools(tools)
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
         self._call_count = 0
+        self._schema: dict[str, Any] | None = None
 
     def send_task(self, task: str) -> ModelTurn:
         self.messages.append({"role": "user", "content": task})
@@ -76,6 +77,9 @@ class OllamaConversation(Conversation):
 
     def set_tools(self, tools: list[ToolSpec]) -> None:
         self._tools = _function_tools(tools)
+
+    def set_output_schema(self, schema: dict[str, Any]) -> None:
+        self._schema = schema
 
     def send_tool_results(self, results: list[ToolResult]) -> ModelTurn:
         for r in results:
@@ -89,7 +93,10 @@ class OllamaConversation(Conversation):
         request = {"model": self._adapter.model, "messages": self.messages, "stream": False}
         if self._tools:  # the LLM judge sends no tools
             request["tools"] = self._tools
+        if self._schema:
+            request["format"] = self._schema
         data = self._adapter.chat(request)
+        self.structured = self._schema is not None
         message = data["message"]
         self.messages.append(message)
         return ModelTurn(

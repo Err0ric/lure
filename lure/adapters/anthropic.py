@@ -71,7 +71,7 @@ class AnthropicAdapter(ModelAdapter):
 
     def create(self, **params: Any) -> anthropic.types.Message:
         if self.effort:
-            params["output_config"] = {"effort": self.effort}
+            params["output_config"] = {**params.get("output_config", {}), "effort": self.effort}
         try:
             return self._client.messages.create(
                 model=self.model, max_tokens=self.max_tokens, **params
@@ -92,12 +92,16 @@ class AnthropicConversation(Conversation):
         self._system = system
         self.set_tools(tools)
         self.messages: list[dict[str, Any]] = []
+        self._schema: dict[str, Any] | None = None
 
     def set_tools(self, tools: list[ToolSpec]) -> None:
         self._tools = [
             {"name": t.name, "description": t.description, "input_schema": t.parameters}
             for t in tools
         ]
+
+    def set_output_schema(self, schema: dict[str, Any]) -> None:
+        self._schema = schema
 
     def send_task(self, task: str) -> ModelTurn:
         self.messages.append({"role": "user", "content": task})
@@ -125,7 +129,11 @@ class AnthropicConversation(Conversation):
             system=self._system, messages=self.messages,
             # The LLM judge sends no tools; omit the key rather than send [].
             **({"tools": self._tools} if self._tools else {}),
+            # Structured outputs; forced tool_choice is rejected on newer models.
+            **({"output_config": {"format": {"type": "json_schema", "schema": self._schema}}}
+               if self._schema else {}),
         )
+        self.structured = self._schema is not None
         # Replay the full content (thinking blocks included) on later turns.
         self.messages.append({"role": "assistant", "content": response.content})
         return ModelTurn(

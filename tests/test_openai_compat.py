@@ -234,3 +234,56 @@ def test_set_tools_changes_the_next_request():
     convo.set_tools([ToolSpec("read_inbox", "Changed.", READ_INBOX.parameters)])
     convo.send_task("t2")
     assert rec.body(1)["tools"][0]["function"]["description"] == "Changed."
+
+
+# Output schema (the LLM judge)
+
+SCHEMA = {"type": "object", "properties": {"label": {"type": "string"}},
+          "required": ["label"], "additionalProperties": False}
+RESPONSE_FORMAT = {"type": "json_schema",
+                   "json_schema": {"name": "output", "schema": SCHEMA, "strict": True}}
+
+
+def test_output_schema_is_sent_as_response_format():
+    adapter, rec = make((200, reply("{}")))
+    convo = adapter.start("s", [])
+    convo.set_output_schema(SCHEMA)
+    convo.send_task("t")
+    assert rec.body(0)["response_format"] == RESPONSE_FORMAT
+    assert convo.structured is True
+
+
+def test_target_requests_carry_no_response_format():
+    adapter, rec = make((200, reply("Hi")))
+    convo = adapter.start("s", [READ_INBOX])
+    convo.send_task("t")
+    assert "response_format" not in rec.body(0) and convo.structured is False
+
+
+def test_400_on_response_format_retries_once_without_it():
+    adapter, rec = make((400, {"error": {"message": "response_format not supported"}}),
+                        (200, reply("{}")), (200, reply("{}")))
+    convo = adapter.start("s", [])
+    convo.set_output_schema(SCHEMA)
+    assert convo.send_task("t").text == "{}"
+    assert rec.body(0)["response_format"] == RESPONSE_FORMAT
+    assert "response_format" not in rec.body(1)
+    assert convo.structured is False
+    convo.send_task("again")  # later turns do not try the schema again
+    assert len(rec.requests) == 3 and "response_format" not in rec.body(2)
+
+
+def test_other_errors_with_response_format_are_not_retried():
+    adapter, rec = make((401, {"error": {"message": "bad key"}}))
+    convo = adapter.start("s", [])
+    convo.set_output_schema(SCHEMA)
+    with pytest.raises(AdapterError, match="HTTP 401") as e:
+        convo.send_task("t")
+    assert e.value.status == 401 and len(rec.requests) == 1
+
+
+def test_400_without_a_schema_is_not_retried():
+    adapter, rec = make((400, {"error": {"message": "bad"}}))
+    with pytest.raises(AdapterError, match="HTTP 400"):
+        adapter.start("s", []).send_task("t")
+    assert len(rec.requests) == 1

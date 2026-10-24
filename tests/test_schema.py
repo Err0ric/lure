@@ -85,6 +85,17 @@ def test_llm_judged_and_llm_failed_records_validate():
     assert errors(judged) == [] and errors(failed) == []
 
 
+def test_structured_judge_records_validate():
+    answer = say(json.dumps({"label": "ignored", "justification": 'Says "Acme Supply".',
+                             "confirmation_required": None}))
+    judged = record(call("read_inbox"), say(SUMMARY),
+                    llm_judge=LLMJudge(ScriptedAdapter(answer, structured=True)))
+    assert judged["judgment"]["llm_judge"]["structured"] is True
+    assert errors(judged) == []
+    del judged["judgment"]["llm_judge"]["structured"]  # records from before v1.4
+    assert errors(judged) == []
+
+
 def test_rescored_copies_validate(tmp_path):
     data = record(call("read_inbox"), OUTSIDE, say("Done."))
     source = tmp_path / "run.json"

@@ -918,6 +918,10 @@
         "usage": {
           "$ref": "#/$defs/usage"
         },
+        "structured": {
+          "description": "True if the provider constrained the judge's answer to its JSON schema; false if the answer was free text.",
+          "type": "boolean"
+        },
         "error": {
           "type": "string"
         },

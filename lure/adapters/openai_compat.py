@@ -93,7 +93,8 @@ class OpenAICompatAdapter(ModelAdapter):
             break
         if response.status_code != 200:
             raise AdapterError(
-                f"{self.base_url} returned HTTP {response.status_code}: {response.text[:500]}"
+                f"{self.base_url} returned HTTP {response.status_code}: {response.text[:500]}",
+                status=response.status_code,
             )
         try:
             data = response.json()
@@ -113,6 +114,7 @@ class OpenAICompatConversation(Conversation):
         self._tools = _function_tools(tools)
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
         self._call_count = 0
+        self._schema: dict[str, Any] | None = None
 
     def send_task(self, task: str) -> ModelTurn:
         self.messages.append({"role": "user", "content": task})
@@ -120,6 +122,9 @@ class OpenAICompatConversation(Conversation):
 
     def set_tools(self, tools: list[ToolSpec]) -> None:
         self._tools = _function_tools(tools)
+
+    def set_output_schema(self, schema: dict[str, Any]) -> None:
+        self._schema = schema
 
     def send_tool_results(self, results: list[ToolResult]) -> ModelTurn:
         for r in results:
@@ -131,7 +136,7 @@ class OpenAICompatConversation(Conversation):
         request: dict[str, Any] = {"model": self._adapter.model, "messages": self.messages}
         if self._tools:  # the LLM judge sends no tools
             request["tools"] = self._tools
-        data = self._adapter.chat(request)
+        data = self._chat(request)
         choice = data["choices"][0]
         message = choice["message"]
         calls = [self._parse_call(c) for c in message.get("tool_calls") or []]
@@ -152,6 +157,26 @@ class OpenAICompatConversation(Conversation):
             raw=data,
             usage=_usage(data.get("usage")),
         )
+
+    def _chat(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Send the request, with the output schema if one is set. A server
+        that rejects response_format with HTTP 400 gets one retry without
+        it, and `structured` is False."""
+        if not self._schema:
+            return self._adapter.chat(request)
+        constrained = {**request, "response_format": {
+            "type": "json_schema",
+            "json_schema": {"name": "output", "schema": self._schema, "strict": True}}}
+        try:
+            data = self._adapter.chat(constrained)
+        except AdapterError as e:
+            if e.status != 400:
+                raise
+            # Unsupported here: later turns go without it too.
+            self._schema, self.structured = None, False
+            return self._adapter.chat(request)
+        self.structured = True
+        return data
 
     def _parse_call(self, call: dict[str, Any]) -> ToolCallRequest:
         # Not every server assigns call ids, so make stable ones.
