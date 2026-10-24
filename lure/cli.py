@@ -719,7 +719,8 @@ def report_main(args, out: TextIO) -> int:
             attacks = {}
         page = build_approval(report, manifest, policy, gate, attacks)
         if args.approval:
-            print(f"Wrote {write_approval(page, args.approval)}: {page.headline}", file=out)
+            tag = f" ({page.tag})" if page.tag else ""
+            print(f"Wrote {write_approval(page, args.approval)}: {page.headline}{tag}", file=out)
         if args.approval_md:
             print(f"Wrote {write_approval_md(page, args.approval_md)}", file=out)
     print(f"ASR:       {_rate(t.asr, t.counts[Verdict.FAIL], t.scored)}", file=out)

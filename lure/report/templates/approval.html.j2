@@ -18,6 +18,11 @@
 .verdict-line.reject strong { color: var(--fail-ink); }
 .verdict-line p { margin: 0.3rem 0 0; color: var(--ink-2); }
 .prelim { color: var(--ink); font-weight: 600; }
+.nowrap { white-space: nowrap; }
+.verdict-line .tag { display: inline-block; vertical-align: 0.2em; margin-left: 0.4rem; padding: 0.1rem 0.5rem;
+  border: 1.5px solid var(--accent); border-radius: 999px; color: var(--accent-ink);
+  font-size: 0.8125rem; font-weight: 600; line-height: 1.4; white-space: nowrap; }
+.verdict-line p.bottom { color: var(--ink); }
 .access { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0; }
 .access dt { font-weight: 600; }
 .access dd { margin: 0; }
@@ -42,7 +47,7 @@
 .foot { margin-top: 1rem; color: var(--muted); font-size: 0.8125rem; }
 @media print {
   @page { margin: 11mm 13mm; }
-  html { font-size: 8.4pt; }
+  html { font-size: 8.2pt; }
   body { font-size: 1rem; line-height: 1.32; }
   .approval h1 { font-size: 17pt; }
   .approval h2 { font-size: 11pt; margin: 0.65rem 0 0.2rem; }
@@ -72,10 +77,11 @@
 <header>
   {{ brand("Agent approval report") }}
   <h1>{{ page.agent }}</h1>
-  <p class="who">{% if page.role %}{{ page.role }}{% endif %}{% if page.owner %}{% if page.role %}. {% endif %}Owner: {{ page.owner }}{% endif %}. Model {{ page.model }}, tested {{ page.dates }}.</p>
+  <p class="who">{% if page.role %}{{ page.role }}.{% endif %} {% if page.owner %}<span class="nowrap">Owner: {{ page.owner }}.</span>{% endif %} <span class="nowrap">Model {{ page.model }},</span> <span class="nowrap">tested {{ page.dates }}.</span></p>
   <div class="verdict-line{% if page.decision == 'reject' %} reject{% endif %}">
-    <strong>Recommendation: {{ page.headline }}</strong>
+    <strong>Recommendation: {{ page.headline }}{% if page.tag %} <span class="tag">{{ page.tag }}</span>{% endif %}</strong>
     <p>{{ page.reason }}{% if page.rerun %} <span class="prelim">{{ page.rerun }}</span>{% endif %}</p>
+    <p class="bottom"><b>Bottom line:</b> {{ page.bottom_line }}</p>
     <p>Lure recommends; a person decides, in the sign-off below.</p>
   </div>
 </header>
@@ -150,7 +156,7 @@
   <div class="line notes"><span>Notes</span><span></span></div>
 </section>
 
-<p class="foot">{{ page.runs }} runs ({{ page.scored }} tested{% if page.unscored_other %}, {{ page.unscored_other }} not tested for other reasons{% endif %}), at least {{ page.min_runs }} per attack. Policy {{ page.policy }}. Profile sha256 {{ page.profile_sha256[:12] }}. Built by lure report --approval, Lure {{ page.lure_version }}, {{ page.generated }}. The full technical report, with every tool call, is built from the same results by lure report.</p>
+<p class="foot">{% if page.rerun_flag %}{{ page.rerun_flag }} {% endif %}{{ page.runs }} runs ({{ page.scored }} tested{% if page.unscored_other %}, {{ page.unscored_other }} not tested for other reasons{% endif %}), at least {{ page.min_runs }} per attack. Policy {{ page.policy }}. Profile sha256 {{ page.profile_sha256[:12] }}. Built by lure report --approval, Lure {{ page.lure_version }}, {{ page.generated }}. The full technical report, with every tool call, is built from the same results by lure report.</p>
 </main>
 </body>
 </html>
