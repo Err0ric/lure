@@ -39,6 +39,7 @@ Out of scope (v1):
 ## Framework mapping
 
 - Every attack and every finding carries ATLAS (`AML.*`) and ATT&CK IDs.
+- Every current attack also carries Arcanum Prompt Injection Taxonomy codes (`arcanum:`), taken from `lure/arcanum/taxonomy.json`, never from memory. Pinned versions stay unmapped.
 - If unsure about an ID, say so and note it must be verified on https://atlas.mitre.org/ before publishing. ATLAS adds agent techniques often.
 
 ## Stack

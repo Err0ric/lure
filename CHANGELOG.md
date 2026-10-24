@@ -2,6 +2,25 @@
 
 ## Unreleased (v1.4)
 
+### New
+
+- **Arcanum Prompt Injection Taxonomy mapping.** Every current attack
+  carries an `arcanum:` block with input, intent, technique and evasion
+  codes from the taxonomy v1.6.1, vendored unmodified in `lure/arcanum/`
+  (CC BY 4.0). The loader rejects unknown codes and codes in the wrong
+  pillar. Variants add their own: `split` PIT-T-24, encoded base64, rot13
+  and hex PIT-E-07, PIT-E-14 and PIT-E-21. Records carry `attack.arcanum`
+  (optional, results stay schema v3) and SARIF rules tag the codes. A test
+  checks each attack's ATLAS IDs against the taxonomy's ATLAS aliases, with
+  reviewed exceptions. Pinned older versions are not mapped.
+  Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com). Lure is not affiliated with or endorsed
+  by Arcanum Information Security.
+- **`lure coverage`** writes `docs/arcanum-coverage.md`: every taxonomy
+  node, the attacks and variants that test it, or not tested. Today: 5 of
+  12 inputs, 6 of 27 intents, 11 of 70 techniques, 4 of 63 evasions.
+- **THIRD_PARTY.md** lists the taxonomy (attribution, citation, license,
+  source commit) and the test-only SARIF schema.
+
 ### Changed
 
 - **Structured LLM judge output.** The judge's answer is constrained to a

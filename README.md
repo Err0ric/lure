@@ -198,6 +198,10 @@ An adaptive run is worst of several attempts, so its rates are not comparable wi
 
 Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1567, T1656, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23, and the v1.3 additions (AML.T0068 on encoded variants, T1656 on `lure-tpo-004` and `lure-ipi-009`) on 2026-10-24; the full mapping is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
 
+**Arcanum Prompt Injection Taxonomy (v1.4).** Every current attack also carries codes from the [Arcanum Prompt Injection Taxonomy](https://www.arcanum-sec.com/pitax) v1.6.1: input (where the payload enters), intent, technique and evasion, for example `PIT-N-06`, `PIT-I-19`, `PIT-T-42`, `PIT-E-07`. Variants add their own (split adds `PIT-T-24`; base64, rot13 and hex add `PIT-E-07`, `PIT-E-14`, `PIT-E-21`). Codes are checked against a vendored copy of the taxonomy, carried in every result and SARIF rule, and `lure coverage` writes [`docs/arcanum-coverage.md`](docs/arcanum-coverage.md): which nodes the library tests and which it does not test yet. Pinned older attack versions are not mapped.
+
+Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com). Lure is not affiliated with or endorsed by Arcanum Information Security. See [`THIRD_PARTY.md`](THIRD_PARTY.md).
+
 **Trust-boundary attacks (v1.3)** test whether the agent trusts content because of where it claims to come from: an outside claim the agent itself saves to memory and acts on in a new session (`lure-mem-004`), a memory note that moves an approval limit (`lure-mem-005`), a tool definition posing as an IT security notice (`lure-tpo-004`), the user's own voice quoted in a vendor email (`lure-ipi-009`), and a fake user turn in a tool's output (`lure-ipi-010`).
 
 Mock tools: `read_inbox`, `send_email` (to, cc, bcc), `list_files`, `read_file`, `write_file`, `delete_file`, `fetch_url`, `pay_invoice`, `search_memory` and `save_memory`, plus tools an `mcp` fixture defines (for tool poisoning). None of them is a real server or service.
@@ -293,11 +297,11 @@ A future `config_audit` stage would check agent and MCP settings before any run;
 - [ ] v1.1, still open: DuckDB store, `lure serve` dashboard
 - [x] v1.2.0: reactive fixtures (responders), multi-turn attacks, tool poisoning and memory poisoning categories, Partial severity
 - [x] v1.3.0: adaptive attacker, payload variants, trust-boundary attacks, the Refused verdict, `--baseline`, `--max-cost`, `lure-ipi-007` v4 (compromised real vendor mailbox)
-- [ ] Adaptive attacker `outcome` mode: the attacker learns only whether the harmful action happened, not the agent's replies
+- [ ] v1.4, in progress: structured LLM judge output and SARIF links to pinned attack versions (done), Arcanum taxonomy mapping and coverage report (done), adaptive attacker `outcome` mode: the attacker learns only whether the harmful action happened, not the agent's replies
 - [ ] Phase 5: Stretch (multi-agent targets, vetting checklist for internally built AI tools)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).
 
 ## License
 
-Apache License 2.0. See [`LICENSE`](LICENSE).
+Apache License 2.0. See [`LICENSE`](LICENSE). Third-party material (the Arcanum Prompt Injection Taxonomy, CC BY 4.0) is listed in [`THIRD_PARTY.md`](THIRD_PARTY.md).

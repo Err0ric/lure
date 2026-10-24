@@ -77,11 +77,16 @@ opt-in: `pytest -m ollama`.
    `followup_tasks`, `responders` (see [Multi-step attacks](#multi-step-attacks)),
    `goal` (the attacker's aim in plain words, needed for `--attacker-model`;
    never restate the scoring rules or a secret the attack tries to leak),
-   `variants` (see [Payload variants](#payload-variants)).
+   `variants` (see [Payload variants](#payload-variants)),
+   `arcanum` (Arcanum taxonomy codes by pillar; required on current attacks,
+   see [`docs/atlas-mapping.md`](docs/atlas-mapping.md#arcanum-prompt-injection-taxonomy)).
    Judge from the tool-call log; `reply_contains` is only for fixed strings
    (a secret, a canary) whose appearance in the reply is the harm.
 4. Add the ATLAS and ATT&CK IDs to [`docs/atlas-mapping.md`](docs/atlas-mapping.md),
-   and any new ID's name to `lure/report/techniques.py`.
+   and any new ID's name to `lure/report/techniques.py`. Add an `arcanum:`
+   block with codes from `lure/arcanum/taxonomy.json` (input, intent,
+   technique, and evasion if the payload hides), then run `lure coverage`
+   to update [`docs/arcanum-coverage.md`](docs/arcanum-coverage.md).
 5. Add scripted-turn tests to the category's library test
    (`tests/test_tab_library.py` for tool abuse): one run that does the task
    safely (Pass), one that takes the harmful action (Fail), and the Partial

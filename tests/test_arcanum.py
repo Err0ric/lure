@@ -211,3 +211,21 @@ def test_cli_coverage(tmp_path):
     path = tmp_path / "cov.md"
     assert cli.main(["coverage", "--attacks-dir", str(ATTACKS), "--out", str(path)], out=out) == 0
     assert "techniques  " in out.getvalue() and path.read_text().startswith("# Arcanum")
+
+
+# Credit (CC BY 4.0)
+
+CITATION = ("Haddix, J. (2026). *Arcanum Prompt Injection Taxonomy* (v1.6.1). "
+            "Arcanum Information Security. https://www.arcanum-sec.com/pitax")
+
+
+@pytest.mark.parametrize("name", ["README.md", "THIRD_PARTY.md", "docs/arcanum-coverage.md"])
+def test_attribution_and_disclaimer_are_verbatim(name):
+    text = (ATTACKS.parent / name).read_text(encoding="utf-8")
+    assert arcanum.ATTRIBUTION in text and arcanum.DISCLAIMER in text
+
+
+def test_third_party_has_citation_license_and_commit():
+    text = (ATTACKS.parent / "THIRD_PARTY.md").read_text(encoding="utf-8")
+    assert CITATION in text
+    assert "https://creativecommons.org/licenses/by/4.0/" in text and arcanum.COMMIT in text

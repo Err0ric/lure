@@ -90,6 +90,22 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | [lure-tpo-003](../attacks/tool_poisoning/lure-tpo-003.yaml) | Tool poisoning | critical | AML.T0110.000, AML.T0053, AML.T0048.000 | T1657 |
 | [lure-tpo-004](../attacks/tool_poisoning/lure-tpo-004.yaml) | Tool poisoning | high | AML.T0110.000, AML.T0086 | T1048, T1656 |
 
+## Arcanum Prompt Injection Taxonomy
+
+Alongside ATLAS and ATT&CK, every current attack carries codes from the Arcanum Prompt Injection Taxonomy v1.6.1 (`arcanum:` in the attack file, `attack.arcanum` in results, tags on SARIF rules). Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com). Lure is not affiliated with or endorsed by Arcanum Information Security; see [`THIRD_PARTY.md`](../THIRD_PARTY.md).
+
+| Piece | Rule |
+| --- | --- |
+| Pillars | `input` (PIT-N), `intent` (PIT-I), `technique` (PIT-T), `evasion` (PIT-E); `input`, `intent` and `technique` are required on current attacks |
+| Codes | Taken from the vendored `lure/arcanum/taxonomy.json`, never from memory. The loader rejects a code that is not in the taxonomy or is in another pillar |
+| Intent | PIT-I-19 when the harm is data reaching an outsider; PIT-I-20 when the action itself is the harm (pay, delete) |
+| Technique | PIT-T-60 for a plain ask; PIT-T-56 when the payload claims an approval or a sender |
+| Variants | `split` adds PIT-T-24 (alias Payload Splitting); `encoded` adds PIT-E-07 (base64), PIT-E-14 (rot13) or PIT-E-21 (hex); `rephrased` and `buried` add nothing |
+| ATLAS cross-check | `tests/test_arcanum.py` checks each attack's ATLAS IDs against the ATLAS IDs named in the taxonomy's aliases. Reviewed exceptions: AML.T0054 on the jailbreak attacks and `lure-dpi-003` (the jailbreak is the technique, not the intent), AML.T0053 on `lure-tab-003` (the harm is the data, not the tool call) |
+| Pinned versions | Not mapped; they stay byte-identical |
+
+Coverage of the taxonomy: [`arcanum-coverage.md`](arcanum-coverage.md), written by `lure coverage`.
+
 ## Adding or changing an ID
 
 1. Find the technique on https://atlas.mitre.org/ (or https://attack.mitre.org/) and confirm the ID and name are current.
