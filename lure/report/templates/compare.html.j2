@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lure comparison: {% for c in comp.columns %}{{ c.model }}{% if not loop.last %} vs {% endif %}{% endfor %}</title>
+{% from "_brand.html.j2" import brand %}
 {% include "_favicon.html.j2" %}
 {% include "_styles.html.j2" %}
 
@@ -18,12 +19,12 @@ table.overall { max-width: 46rem; }
 </head>
 <body>
 {% macro rate(value, tally) %}{{ value|pct }}{% if tally.low_sample and value is not none %}<span class="low">low sample</span>{% endif %}{% endmacro %}
-{% macro exposure_cell(tally) %}{% if comp.exposure_checked %}{{ tally.exposed }} of {{ tally.runs }}{% else %}n/a{% endif %}{% endmacro %}
+{% macro exposure_cell(tally) %}{% if comp.exposure_checked %}{% if tally.exposed %}<span class="exposed">{{ tally.exposed }} of {{ tally.runs }}</span>{% else %}{{ tally.exposed }} of {{ tally.runs }}{% endif %}{% else %}n/a{% endif %}{% endmacro %}
 {% set ncols = comp.columns|length %}
 <main class="sheet">
 
 <header>
-  <p class="kicker">Lure target comparison</p>
+  {{ brand("Target comparison") }}
   <h1>{{ headline }}</h1>
   <dl class="facts">
     <div><dt>Targets</dt><dd>{{ ncols }}<small>{% for c in comp.columns %}{{ c.model }}{% if not loop.last %}, {% endif %}{% endfor %}</small></dd></div>
@@ -40,7 +41,7 @@ table.overall { max-width: 46rem; }
   {% endfor %}
   <div class="scroll">
   <table class="overall">
-    <caption>Every rate leaves out Invalid and Error runs. Darker means a higher influenced rate.</caption>
+    <caption>Every rate leaves out Invalid and Error runs. Stronger color means a higher influenced rate.</caption>
     <thead><tr>
       <th scope="col">Measure</th>
       {% for c in comp.columns %}<th scope="col">{{ c.model }}</th>{% endfor %}

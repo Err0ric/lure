@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lure report: {{ model }}</title>
+{% from "_brand.html.j2" import brand %}
 {% include "_favicon.html.j2" %}
 {% include "_styles.html.j2" %}
 
 </head>
 <body>
 {% macro rate(value, tally) %}{{ value|pct }}{% if tally.low_sample and value is not none %}<span class="low">low sample</span>{% endif %}{% endmacro %}
-{% macro exposure_cell(tally) %}{% if report.exposure_checked %}{{ tally.exposed }} of {{ tally.runs }}{% else %}n/a{% endif %}{% endmacro %}
+{% macro exposure_cell(tally) %}{% if report.exposure_checked %}{% if tally.exposed %}<span class="exposed">{{ tally.exposed }} of {{ tally.runs }}</span>{% else %}{{ tally.exposed }} of {{ tally.runs }}{% endif %}{% else %}n/a{% endif %}{% endmacro %}
 {% macro comparison_block() %}
 {% for c in report.comparisons %}
 <aside class="callout" aria-label="Policy comparison for {{ c.attack_id }}">
@@ -45,7 +46,7 @@
 <main class="sheet">
 
 <header>
-  <p class="kicker">Lure agent security report</p>
+  {{ brand("Agent security report") }}
   <h1>{{ headline }}</h1>
   <dl class="facts">
     <div><dt>Target</dt><dd>{{ model }}<small>{{ report.target }}</small></dd></div>
@@ -57,7 +58,7 @@
     <div><dt>Pass rate</dt><dd>{{ report.total.pass_rate|pct }}<small>{{ report.total.counts[Verdict.PASS] }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
     <div><dt>Influenced rate</dt><dd>{{ report.total.influenced_rate|pct }}<small>{{ report.total.influenced }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}{% if report.total.confirm_first %}; {{ report.total.confirm_first }} Partial confirm first{% endif %}</small></dd></div>
     <div><dt>Attack success rate</dt><dd>{{ report.total.asr|pct }}<small>{{ report.total.counts[Verdict.FAIL] }} runs broke the rules</small></dd></div>
-    <div><dt>Exposure</dt><dd>{% if report.exposure_checked %}{{ report.total.exposed }} runs<small>{{ report.total.exposure_calls }} calls outside allowed domains</small>{% else %}Not checked<small>no org policy</small>{% endif %}</dd></div>
+    <div><dt>Exposure</dt><dd>{% if report.exposure_checked %}{% if report.total.exposed %}<span class="exposed">{{ report.total.exposed }} runs</span>{% else %}0 runs{% endif %}<small>{{ report.total.exposure_calls }} calls outside allowed domains</small>{% else %}Not checked<small>no org policy</small>{% endif %}</dd></div>
   </dl>
 </header>
 
@@ -74,7 +75,7 @@
 
 <section aria-labelledby="techniques">
   <h2 id="techniques">Results by ATLAS technique</h2>
-  <p class="lede">Each run counts once under every technique its attack maps to, so a row's runs can overlap with other rows. Darker means a higher influenced rate.</p>
+  <p class="lede">Each run counts once under every technique its attack maps to, so a row's runs can overlap with other rows. Stronger color means a higher influenced rate.</p>
   <div class="scroll">
   <table>
     <caption>Verdicts per MITRE ATLAS technique, highest attack success rate first, then highest influenced rate.</caption>

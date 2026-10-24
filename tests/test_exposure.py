@@ -160,6 +160,11 @@ def test_report_shows_exposure(tmp_path):
     assert '<h2 id="exposure">Exposure</h2>' in html
     assert "send_email</span> to mailbox.example" in html
     assert "1 calls outside allowed domains" in html
+    # Exposed counts are red; the zero-exposure attack's cell is not.
+    assert '<span class="exposed">1 runs</span>' in html
+    assert '<span class="exposed">1 of 1</span>' in html
+    assert '<span class="exposed">0 of' not in html
+    assert ".exposed { color: var(--fail-ink);" in html
 
 
 def test_cli_report_prints_asr_and_exposure_per_version(tmp_path):

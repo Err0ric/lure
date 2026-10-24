@@ -149,6 +149,9 @@ def test_render_shows_every_section(results):
                  "lure-jbk-002 v2", "jordan.lee.home@mailbox.example", "Attack success rate"):
         assert text in html
     assert html.count('class="finding"') == 3
+    # Legend wording holds in both themes: the dark ramp gets lighter, not darker.
+    assert "Stronger color means a higher influenced rate." in html
+    assert "Darker means" not in html
 
 
 @pytest.mark.parametrize("rate, step", [(None, "asr-na"), (0, "asr-zero"), (0.01, "asr-1"),
