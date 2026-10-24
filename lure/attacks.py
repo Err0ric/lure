@@ -123,6 +123,15 @@ class Attack:
     version: int = 1
 
     @property
+    def file(self) -> str:
+        """The attack YAML relative to the folder holding attacks/, so a
+        result points at the file in the repo. Absolute if outside attacks/."""
+        for parent in self.source.parents:
+            if parent.name == "attacks":
+                return self.source.relative_to(parent.parent).as_posix()
+        return self.source.as_posix()
+
+    @property
     def in_task(self) -> bool:
         """True if the payload is in the user turn (direct injection)."""
         return self.injection.location == TASK_LOCATION

@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Err0ric/lure/main/schema/results.v1.json",
+  "title": "Lure run result",
+  "description": "One run of one attack against one target, as saved by lure run (results/<timestamp>-<attack id>.json) and by lure rescore. Records from Lure 1.0.0 predate lure_version, schema_version, judge, usage, exposure and attack.file, so those are optional; Lure 1.1.0 and later always write them.",
+  "type": "object",
+  "required": [
+    "attack", "target", "started_at", "finished_at", "turns", "max_turns",
+    "stop", "error", "final_text", "transcript", "tool_calls", "judgment"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "description": "Version of this schema the record follows.",
+      "const": 1
+    },
+    "lure_version": {
+      "description": "Version of Lure that wrote the record.",
+      "type": "string",
+      "minLength": 1
+    },
+    "attack": { "$ref": "#/$defs/attack" },
+    "target": {
+      "description": "provider:model, e.g. anthropic:claude-haiku-5-5.",
+      "type": "string",
+      "minLength": 1
+    },
+    "judge": {
+      "description": "rules, or the LLM judge's provider:model when --judge llm was on.",
+      "type": "string",
+      "minLength": 1
+    },
+    "usage": {
+      "description": "The target's token counts, summed over every turn. Empty when the provider does not report them.",
+      "$ref": "#/$defs/usage"
+    },
+    "exposure": {
+      "description": "Calls outside the org policy's allowed domains. null when no policy was used. Never changes the verdict.",
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/exposure" }]
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "turns": { "type": "integer", "minimum": 0 },
+    "max_turns": { "type": "integer", "minimum": 1 },
+    "stop": { "enum": ["completed", "max_turns", "error"] },
+    "error": { "type": ["string", "null"] },
+    "final_text": { "type": ["string", "null"] },
+    "transcript": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/transcript_entry" }
+    },
+    "tool_calls": {
+      "description": "The tool-call log the Judge scores from, in call order.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/tool_call" }
+    },
+    "judgment": { "$ref": "#/$defs/judgment" },
+    "rescore": { "$ref": "#/$defs/rescore" }
+  },
+  "$defs": {
+    "attack": {
+      "type": "object",
+      "required": ["id", "name", "category", "severity", "atlas", "attack", "injection"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^lure-[a-z]+-\\d{3}$" },
+        "version": {
+          "description": "Missing in Lure 1.0.0 records of v1 attacks; read as 1.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "file": {
+          "description": "The attack YAML, relative to the folder holding attacks/ (absolute if outside it).",
+          "type": "string",
+          "minLength": 1
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
+        "atlas": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^AML\\.T\\d{4}(\\.\\d{3})?$" }
+        },
+        "attack": {
+          "description": "MITRE ATT&CK technique IDs. May be empty.",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^T\\d{4}(\\.\\d{3})?$" }
+        },
+        "injection": {
+          "type": "object",
+          "required": ["location", "placement", "payload"],
+          "additionalProperties": false,
+          "properties": {
+            "location": { "type": "string", "minLength": 1 },
+            "placement": { "enum": ["append", "prepend", "replace"] },
+            "payload": { "type": "string" }
+          }
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "exposure": {
+      "type": "object",
+      "required": ["policy", "allowed_outbound_domains", "calls"],
+      "additionalProperties": false,
+      "properties": {
+        "policy": { "type": "string" },
+        "allowed_outbound_domains": { "type": "array", "items": { "type": "string" } },
+        "calls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["index", "tool", "args", "outside", "failed"],
+            "additionalProperties": false,
+            "properties": {
+              "index": { "type": "integer", "minimum": 0 },
+              "tool": { "type": "string" },
+              "args": { "type": "object" },
+              "outside": { "type": "array", "items": { "type": "string" } },
+              "failed": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "transcript_entry": {
+      "type": "object",
+      "required": ["role"],
+      "oneOf": [
+        {
+          "properties": {
+            "role": { "enum": ["system", "user"] },
+            "content": { "type": "string" }
+          },
+          "required": ["role", "content"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "role": { "const": "assistant" },
+            "content": { "type": "string" },
+            "tool_calls": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "name", "arguments"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "arguments": { "type": "object" }
+                }
+              }
+            },
+            "stop_reason": { "type": ["string", "null"] }
+          },
+          "required": ["role", "content", "tool_calls", "stop_reason"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "role": { "const": "tool" },
+            "call_id": { "type": "string" },
+            "name": { "type": "string" },
+            "content": { "type": "string" },
+            "is_error": { "type": "boolean" }
+          },
+          "required": ["role", "call_id", "name", "content", "is_error"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "tool_call": {
+      "type": "object",
+      "required": ["timestamp", "tool", "args", "result"],
+      "additionalProperties": false,
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "tool": { "type": "string" },
+        "args": { "type": "object" },
+        "result": { "description": "What the mock tool returned (fake data, or {\"error\": ...})." }
+      }
+    },
+    "judgment": {
+      "type": "object",
+      "required": ["verdict", "reason", "heuristic", "evidence", "unresolved"],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": { "enum": ["Pass", "Review", "Partial", "Invalid", "Fail", "Error"] },
+        "reason": { "type": "string" },
+        "heuristic": {
+          "description": "True if any evidence behind the verdict is only a heuristic match.",
+          "type": "boolean"
+        },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "unresolved": { "type": "array", "items": { "$ref": "#/$defs/unresolved" } },
+        "task": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/task" }] },
+        "task_incomplete": { "type": "boolean" },
+        "llm_judged": {
+          "description": "True if the verdict comes from the LLM judge's label.",
+          "type": "boolean"
+        },
+        "llm_judge": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/llm_judge" }] }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["rule_set", "rule_index", "rule", "kind", "calls", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "rule_set": { "type": "string" },
+        "rule_index": { "type": "integer", "minimum": 0 },
+        "rule": { "type": "object" },
+        "kind": { "enum": ["confirmed", "heuristic"] },
+        "calls": { "type": "array", "items": { "type": "object" } },
+        "text": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "unresolved": {
+      "type": "object",
+      "required": ["rule_set", "rule_index", "rule", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "rule_set": { "type": "string" },
+        "rule_index": { "type": "integer", "minimum": 0 },
+        "rule": { "type": "object" },
+        "reason": { "type": "string" }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["read_tools_required", "read_tools_called", "facts", "facts_found", "checked_text"],
+      "additionalProperties": false,
+      "properties": {
+        "read_tools_required": { "type": "array", "items": { "type": "string" } },
+        "read_tools_called": { "type": "array", "items": { "type": "string" } },
+        "facts": { "type": "array", "items": { "type": "string" } },
+        "facts_found": { "type": "array", "items": { "type": "string" } },
+        "checked_text": { "type": "boolean" },
+        "actions_required": { "type": "array", "items": { "type": "string" } },
+        "actions_done": { "type": "array", "items": { "type": "string" } },
+        "payload_source": { "type": ["string", "null"] },
+        "problems": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "llm_judge": {
+      "description": "The LLM judge's label and the rules verdict it replaced, or the error if the call failed.",
+      "type": "object",
+      "required": ["model", "rules"],
+      "additionalProperties": false,
+      "properties": {
+        "model": { "type": "string" },
+        "label": { "enum": ["detected", "ignored", "offered_attacker_action", "complied"] },
+        "justification": { "type": "string" },
+        "quote_found": { "type": "boolean" },
+        "usage": { "$ref": "#/$defs/usage" },
+        "error": { "type": "string" },
+        "rules": {
+          "type": "object",
+          "required": ["verdict", "reason"],
+          "additionalProperties": false,
+          "properties": {
+            "verdict": { "enum": ["Pass", "Review", "Partial", "Invalid", "Fail", "Error"] },
+            "reason": { "type": "string" }
+          }
+        }
+      },
+      "oneOf": [
+        { "required": ["label", "justification", "quote_found"] },
+        { "required": ["error"] }
+      ]
+    },
+    "rescore": {
+      "description": "Present on copies written by lure rescore.",
+      "type": "object",
+      "required": ["source", "rescored_at", "previous"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "rescored_at": { "type": "string", "format": "date-time" },
+        "exposure_only": { "const": true },
+        "previous": {
+          "type": "object",
+          "properties": {
+            "verdict": { "type": ["string", "null"] },
+            "reason": { "type": ["string", "null"] }
+          }
+        }
+      }
+    }
+  }
+}

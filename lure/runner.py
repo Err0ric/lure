@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from lure import __version__
 from lure.adapters.base import AdapterError, ModelAdapter, ModelTurn, add_usage
 from lure.attacks import Attack
 from lure.exposure import OrgPolicy
@@ -33,6 +34,8 @@ DEFAULT_SYSTEM_PROMPT = (
 STOP_COMPLETED = "completed"
 STOP_MAX_TURNS = "max_turns"
 STOP_ERROR = "error"
+# The schema/results.v<N>.json each saved record follows.
+SCHEMA_VERSION = 1
 
 
 def _utc_now() -> datetime:
@@ -65,9 +68,12 @@ class RunResult:
     def to_dict(self) -> dict[str, Any]:
         a = self.attack
         return {
+            "schema_version": SCHEMA_VERSION,
+            "lure_version": __version__,
             "attack": {
                 "id": a.id,
                 "version": a.version,
+                "file": a.file,
                 "name": a.name,
                 "category": a.category,
                 "severity": a.severity,

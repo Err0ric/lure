@@ -17,7 +17,8 @@ dependencies = [
 lure = "lure.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.17"]
+# rfc3339-validator lets jsonschema check the date-time format in tests.
+dev = ["jsonschema>=4.23", "pytest>=8", "rfc3339-validator>=0.1.4", "ruff>=0.17"]
 
 [build-system]
 requires = ["setuptools>=77"]
