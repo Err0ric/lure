@@ -43,6 +43,11 @@ def test_search_limit():
         mem.search_memory(limit=0)
 
 
+def test_source_is_returned_with_the_note():
+    mem, _ = memory([{"id": "m", "source": "email from a@vendor.example", "content": "Note."}])
+    assert mem.search_memory()[0]["source"] == "email from a@vendor.example"
+
+
 def test_results_are_copies():
     mem, _ = memory()
     mem.search_memory()[0]["content"] = "changed"
@@ -67,6 +72,7 @@ def test_save_needs_content():
     (["x"], "must be an object"),
     ([{"id": "m"}], "missing fields"),
     ([{"content": "x", "tags": "y"}], "unknown fields"),
+    ([{"content": "x", "source": 3}], "must be strings"),
     ([{"content": 3}], "must be strings"),
 ])
 def test_check_memory_rejects(notes, match):

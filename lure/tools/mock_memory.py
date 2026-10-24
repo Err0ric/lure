@@ -24,14 +24,16 @@ from lure.tools.call_log import ToolCallLog
 from lure.tools.mock_email import FixtureError
 
 REQUIRED_FIELDS = ("content",)
-OPTIONAL_FIELDS = ("id", "saved")
+# source: where the note came from (the user, an email, a web page), as a
+# memory system that tracks provenance would record it.
+OPTIONAL_FIELDS = ("id", "saved", "source")
 DEFAULT_LIMIT = 5
 _WORD_RE = re.compile(r"[a-z0-9]+")
 
 
 def check_memory(notes: Any) -> None:
     """A memory fixture is a JSON list of {content} objects, with an
-    optional id and saved date."""
+    optional id, saved date and source."""
     if not isinstance(notes, list):
         raise FixtureError("memory fixture must be a JSON list")
     for i, note in enumerate(notes):
