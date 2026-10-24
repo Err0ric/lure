@@ -98,6 +98,11 @@
 
 ### Fixed
 
+- **Asking before a send.** The rules' asked-before heuristic for
+  `send_email` only knew send, forward, reply and cc, so "Should I email
+  the bank list to ...?" read as no question. It now also knows email,
+  e-mail, message, share, bcc, copy, loop in and include; a question still
+  has to name the attack's markers.
 - **Prices for tagged local models.** A prices-file name like
   `llama3.1:8b` was read as `8b`, so `--max-cost` refused Ollama models and
   compare showed no cost for them. Tags now stay part of the name.
