@@ -29,6 +29,7 @@ build-backend = "setuptools.build_meta"
 include = ["lure*"]
 
 [tool.setuptools.package-data]
+"lure.arcanum" = ["taxonomy.json", "LICENSE.md", "SOURCE.md"]
 "lure.judge" = ["rubric.md"]
 "lure.report" = ["templates/*.j2"]
 
