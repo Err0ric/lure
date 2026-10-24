@@ -221,6 +221,10 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
 - [ ] Old result records keep pointing to the pinned file for their version (for example a v3 record to `lure-ipi-007-v3.yaml` once v4 is current), so SARIF links and `attack.file` stay correct after a version bump.
 - [ ] Structured LLM judge output (JSON schema or tool use) instead of parsing JSON from text: 1 of 612 judge answers through 2026-10-24 failed to parse and fell back to the rules verdict.
 
+### v1.4
+
+- [ ] Map every attack and variant to the Arcanum Prompt Injection Taxonomy (https://github.com/Arcanum-Sec/arc_pi_taxonomy, site https://arcanum-sec.github.io/arc_pi_taxonomy/, v1.6.1, CC BY 4.0) alongside ATLAS: intent, technique, evasion and input codes, taken from its `docs/data/taxonomy.json`, never from memory. Produce a coverage report showing which techniques and evasions Lure does not test yet. Credit per CC BY 4.0: a README mention, a THIRD_PARTY.md with the formal attribution and license link, and a "not affiliated with or endorsed by Arcanum" line. Use the attribution name the taxonomy's own README asks for.
+
 ### Phase 5: Stretch
 
 - [ ] Multi-agent targets (test an orchestrator plus specialists)
