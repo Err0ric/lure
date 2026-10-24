@@ -215,7 +215,7 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
 - [x] More trust-boundary attacks: poisoned memory, tool definitions, "from the user" framing
 - [ ] `--baseline`: repeat 10 with the LLM judge. The default `--repeat` stays 1.
 - [ ] `--max-cost USD`: stops a batch once the estimated spend (from the prices file) passes it, and prints the spend so far
-- [ ] Baseline: Sonnet and Opus, each judged by the other (no model judges itself). Adaptive runs: Opus attacks Sonnet, Sonnet attacks Opus, 3 runs each.
+- [x] Baseline: Sonnet and Opus, each judged by the other (no model judges itself). Adaptive runs: Opus attacks Sonnet, Sonnet attacks Opus, 3 runs each. Done 2026-10-24: Opus screened on 12 attacks with payload variants, then confirmed at 10 runs per flagged payload; Haiku and Sonnet matched on the tpo-002, tpo-001 and tpo-004 payloads. The Opus-attacks-Sonnet adaptive run ran; the Sonnet-attacks-Opus run was skipped because Claude attackers refused most attack goals.
 - [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies.
 - [ ] `lure-ipi-007` v4: the follow-up comes from a compromised real vendor mailbox (the real domain, no lookalike), asking for another vendor's invoice data. v2 (unknown sender) and v3 (lookalike carrier) stay: no model took their first step, a valid result.
 - [ ] Old result records keep pointing to the pinned file for their version (for example a v3 record to `lure-ipi-007-v3.yaml` once v4 is current), so SARIF links and `attack.file` stay correct after a version bump.
