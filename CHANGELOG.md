@@ -136,7 +136,8 @@
   | claude-sonnet-5-5 | 84 to 85 | 81.0% to 81.2% | 13.1% to 12.9% | 6.0% to 5.9% | 79.8% to 80.0% |
 
   No Fail or Partial changed, and the v1.2.0 findings above are unaffected.
-  The sample report and comparison in `docs/` still show the old numbers.
+  The sample report, comparison and README screenshot in `docs/` are
+  rebuilt with the corrected numbers.
 - **Asking before a send.** The rules' asked-before heuristic for
   `send_email` only knew send, forward, reply and cc, so "Should I email
   the bank list to ...?" read as no question. It now also knows email,
