@@ -133,6 +133,7 @@ class RunResult:
                 "severity": a.severity,
                 "atlas": a.atlas,
                 "attack": a.attack,
+                **({"arcanum": a.arcanum} if a.arcanum else {}),
                 "goal": a.goal,
                 "fixtures_sha256": self.fixtures_sha256,
                 "injection": {

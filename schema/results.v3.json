@@ -333,6 +333,26 @@
             "pattern": "^AML\\.T\\d{4}(\\.\\d{3})?$"
           }
         },
+        "arcanum": {
+          "description": "Arcanum Prompt Injection Taxonomy v1.6.1 codes by pillar, for this run's payload (variant codes included). Missing for pinned attack versions and records before Lure 1.4.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "$ref": "#/$defs/arcanum_codes"
+            },
+            "intent": {
+              "$ref": "#/$defs/arcanum_codes"
+            },
+            "technique": {
+              "$ref": "#/$defs/arcanum_codes"
+            },
+            "evasion": {
+              "$ref": "#/$defs/arcanum_codes"
+            }
+          }
+        },
         "attack": {
           "description": "MITRE ATT&CK technique IDs. May be empty.",
           "type": "array",
@@ -883,6 +903,14 @@
             "type": "string"
           }
         }
+      }
+    },
+    "arcanum_codes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^PIT-[ITEN]-\\d{2}$"
       }
     },
     "llm_judge": {

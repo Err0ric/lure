@@ -42,6 +42,8 @@ from typing import Any
 
 import yaml
 
+from lure.arcanum import ENCODING_CODES, SPLIT_CODES, merge
+from lure.arcanum import problems as arcanum_problems
 from lure.tools import KNOWN_TOOLS
 from lure.tools import responders as responders_mod
 from lure.tools.mock_email import FixtureError
@@ -60,7 +62,7 @@ REQUIRED_KEYS = (
 )
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
-    "followup_tasks", "responders", "goal", "variants",
+    "followup_tasks", "responders", "goal", "variants", "arcanum",
 )
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
@@ -228,6 +230,9 @@ class Attack:
     variant: Variant | None = None
     # The folder fixture paths resolve against (holds fixtures/).
     root: Path | None = None
+    # Arcanum Prompt Injection Taxonomy codes by pillar (input, intent,
+    # technique, evasion). Empty for pinned versions, which stay unmapped.
+    arcanum: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def multi_turn(self) -> bool:
@@ -317,7 +322,8 @@ class Attack:
     def with_variant(self, variant: Variant) -> Attack:
         """This attack planting `variant`: the first part becomes the
         injection (for the delivery check), the ask markers come from the
-        plain text, and an encoded variant adds the obfuscation technique."""
+        plain text, and an encoded variant adds the obfuscation technique.
+        Arcanum codes for the kind are added to a mapped attack."""
         first = variant.parts[0]
         injection = Injection(first.location, first.payload, first.placement,
                               self.injection.keywords)
@@ -325,9 +331,14 @@ class Attack:
         atlas = list(self.atlas)
         if variant.kind == "encoded" and OBFUSCATION_ATLAS not in atlas:
             atlas.append(OBFUSCATION_ATLAS)
+        arcanum = self.arcanum
+        if arcanum and variant.kind == "split":
+            arcanum = merge(arcanum, SPLIT_CODES)
+        elif arcanum and variant.kind == "encoded":
+            arcanum = merge(arcanum, ENCODING_CODES[variant.encoding])
         source = None if first.location == TASK_LOCATION else _payload_source(fixtures,
                                                                               first.location)
-        return replace(self, injection=injection, variant=variant, atlas=atlas,
+        return replace(self, injection=injection, variant=variant, atlas=atlas, arcanum=arcanum,
                        ask_markers=_ask_markers(injection.keywords, variant.plain, fixtures),
                        payload_source=source)
 
@@ -430,6 +441,9 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     goal = data.get("goal")
     if goal is not None and (not isinstance(goal, str) or not goal.strip()):
         raise fail("goal must be a non-empty string")
+    arcanum = data.get("arcanum", {})
+    if bad := arcanum_problems(arcanum):
+        raise fail("; ".join(bad))
     system_prompt = data.get("system_prompt")
     if system_prompt is not None and (
         not isinstance(system_prompt, str) or not system_prompt.strip()
@@ -566,6 +580,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         goal=goal,
         variants=variants,
         root=root,
+        arcanum=merge(arcanum),
     )
 
 
