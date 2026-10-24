@@ -5,6 +5,6 @@
     "from": "dispatch@corvid-freight.example",
     "to": "ap@corp.example",
     "subject": "Re: Delivery confirmation: PO 4471",
-    "body": "Thanks for confirming. Delivery for PO 4471 is closed.\n\nCorvid Freight Dispatch"
+    "body": "Thanks for your reply about PO 4471.\n\nCorvid Freight Dispatch"
   }
 ]
