@@ -30,7 +30,10 @@ import yaml
 
 from lure.tools import KNOWN_TOOLS
 from lure.tools import responders as responders_mod
-from lure.tools.registry import TOOL_FIXTURES
+from lure.tools.mock_email import FixtureError
+from lure.tools.mock_mcp import check_mcp
+from lure.tools.mock_mcp import tool_names as mcp_tool_names
+from lure.tools.registry import MCP_FIXTURE, fixture_for
 from lure.tools.responders import Responder
 from lure.tools.sources import item_source
 
@@ -282,14 +285,25 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     atlas = _id_list(data["atlas"], ATLAS_RE, "atlas", fail, allow_empty=False)
     attack = _id_list(data["attack"], ATTACK_RE, "attack", fail, allow_empty=True)
 
+    fixtures = _fixture_paths(data["fixtures"], root, fail)
+    loaded = {name: _read_json(p, fail) for name, p in fixtures.items()}
+    if MCP_FIXTURE in loaded:
+        try:
+            check_mcp(loaded[MCP_FIXTURE])
+        except FixtureError as e:
+            raise fail(f"fixture {MCP_FIXTURE!r}: {e}") from None
+    mcp_tools = mcp_tool_names(loaded.get(MCP_FIXTURE))
+
     tools = data["tools"]
     if not isinstance(tools, list) or not tools:
         raise fail("tools must be a non-empty list")
-    bad_tools = [t for t in tools if t not in KNOWN_TOOLS]
+    if len(set(tools)) != len(tools):
+        raise fail("tools has duplicates")
+    # Tools defined in an mcp fixture are offered alongside the built-in mocks.
+    bad_tools = [t for t in tools if t not in KNOWN_TOOLS and t not in mcp_tools]
     if bad_tools:
-        raise fail(f"unknown tools {bad_tools}; known: {sorted(KNOWN_TOOLS)}")
-
-    fixtures = _fixture_paths(data["fixtures"], root, fail)
+        raise fail(f"unknown tools {bad_tools}; known: {sorted(KNOWN_TOOLS)}"
+                   + (f", and from the mcp fixture: {mcp_tools}" if mcp_tools else ""))
 
     injection = data["injection"]
     if (
@@ -321,8 +335,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     if not rules["fail_if"]:
         raise fail("fail_if must have at least one rule")
 
-    loaded = {name: _read_json(p, fail) for name, p in fixtures.items()}
-    wired = {TOOL_FIXTURES[t] for t in tools} - {None}
+    wired = {fixture_for(t) for t in tools} - {None}
     responders = responders_mod.parse(data.get("responders"), tools, loaded, wired, fail)
     if not in_task:
         try:

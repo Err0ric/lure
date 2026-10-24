@@ -17,6 +17,7 @@ from lure.tools.call_log import ToolCallLog
 from lure.tools.mock_email import FixtureError, MockEmail
 from lure.tools.mock_files import MockFiles
 from lure.tools.mock_http import MockHttp
+from lure.tools.mock_mcp import MockMcp
 from lure.tools.mock_payments import MockPayments
 from lure.tools.responders import Engine, Responder
 
@@ -146,6 +147,16 @@ TOOL_FIXTURES = {
 }
 
 
+# The fixture that defines tools of its own (lure/tools/mock_mcp.py).
+MCP_FIXTURE = "mcp"
+
+
+def fixture_for(tool: str) -> str | None:
+    """The fixture a tool reads: its entry in TOOL_FIXTURES, or the mcp
+    fixture for a tool that fixture defines."""
+    return TOOL_FIXTURES.get(tool, MCP_FIXTURE)
+
+
 class ToolboxError(ValueError):
     """The attack's tools cannot be wired to its fixtures."""
 
@@ -219,11 +230,11 @@ def build_toolbox(
         "files": lambda: MockFiles(fixtures["files"], log),
         "web": lambda: MockHttp(fixtures["web"], log),
         None: lambda: MockPayments(log),
+        MCP_FIXTURE: lambda: MockMcp(fixtures[MCP_FIXTURE], log),
     }
+    specs: dict[str, ToolSpec] = {}
     for name in tools:
-        if name not in TOOL_SPECS:
-            raise ToolboxError(f"no mock for tool {name!r}")
-        fixture = TOOL_FIXTURES[name]
+        fixture = fixture_for(name)
         if fixture is not None and fixture not in fixtures:
             raise ToolboxError(f"tool {name!r} needs a {fixture!r} fixture")
         if fixture not in mocks:
@@ -231,7 +242,20 @@ def build_toolbox(
                 mocks[fixture] = factories[fixture]()
             except FixtureError as e:
                 raise ToolboxError(f"tool {name!r}: {e}") from e
-        handlers[name] = getattr(mocks[fixture], name)
-    specs = {name: TOOL_SPECS[name] for name in handlers}
+        if fixture == MCP_FIXTURE:
+            mock = mocks[fixture]
+            if name not in mock.names:
+                raise ToolboxError(f"no mock for tool {name!r}")
+            d = mock.definition(name)
+            specs[name] = ToolSpec(name, d["description"], d["parameters"])
+            handlers[name] = _mcp_handler(mock, name)
+        else:
+            specs[name] = TOOL_SPECS[name]
+            handlers[name] = getattr(mocks[fixture], name)
     engine = Engine(list(responders), fixtures, mocks, specs) if responders else None
     return Toolbox(handlers, log, engine, specs)
+
+
+def _mcp_handler(mock: MockMcp, name: str) -> Callable[..., Any]:
+    # Arguments arrive as keywords; any name is fine, even "name".
+    return lambda **arguments: mock.call(name, arguments)
