@@ -1,6 +1,6 @@
 """Command line entry point.
 
-  lure run <attack.yaml|folder> --target ollama|anthropic
+  lure run <attack.yaml|folder> --target ollama|anthropic|openai
   lure rescore <results folder|file>...  (re-judge saved runs, no target calls)
   lure report <results folder|file>... --out report.html
   lure compare <results folder> <results folder>... --out compare.html [--prices prices.yaml]
@@ -39,7 +39,7 @@ from lure.runner import MAX_TURNS, RunResult, run_attack
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
 
-TARGETS = ("ollama", "anthropic")
+TARGETS = ("ollama", "anthropic", "openai")
 JUDGES = ("rules", "llm")
 
 # lure run and lure report: 0 when no run fails the policy, 1 when one does,
@@ -64,6 +64,10 @@ def make_adapter(target: str, model: str | None) -> ModelAdapter:
         from lure.adapters.anthropic import AnthropicAdapter
 
         return AnthropicAdapter(**kwargs)
+    if target == "openai":
+        from lure.adapters.openai_compat import OpenAICompatAdapter
+
+        return OpenAICompatAdapter(**kwargs)
     raise ValueError(f"unknown target {target!r}")
 
 

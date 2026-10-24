@@ -138,7 +138,7 @@ def test_target_is_required(capsys):
 
 def test_unknown_target_rejected(capsys):
     with pytest.raises(SystemExit):
-        cli.main(["run", IPI_001, "--target", "openai"])
+        cli.main(["run", IPI_001, "--target", "gemini"])
 
 
 # Batch runs
