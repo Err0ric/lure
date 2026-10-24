@@ -124,3 +124,52 @@ def test_unmapped_record_has_no_field(repo):
         run_attack(attack, ScriptedAdapter(call("read_inbox"), say("Two emails."))).to_dict()))
     assert "arcanum" not in record["attack"]
     assert errors(record) == []
+
+
+# The shipped mapping
+
+ATTACKS = arcanum.DATA.parents[2] / "attacks"
+ATLAS_IN_ALIAS = re.compile(r"AML\.T\d{4}(?:\.\d{3})?")
+# Attacks whose ATLAS IDs point, through a taxonomy alias, at a code the
+# attack deliberately does not carry. Reviewed 2026-10-24.
+EXPECTED_ALIAS_GAPS = {
+    # The intent is the real goal (data out); the jailbreak is the technique.
+    ("lure-jbk-001", "AML.T0054"): "PIT-I-14",
+    ("lure-jbk-002", "AML.T0054"): "PIT-I-14",
+    ("lure-jbk-003", "AML.T0054"): "PIT-I-14",
+    ("lure-dpi-003", "AML.T0054"): "PIT-I-14",
+    # The harm is file contents reaching an outsider (PIT-I-19); reading the
+    # file is not harmful on its own, so no PIT-I-20 (or PIT-I-04, internal
+    # systems, which shares the alias).
+    ("lure-tab-003", "AML.T0053"): "PIT-I-04, PIT-I-20",
+}
+
+
+def shipped():
+    return [load_attack(p) for p in sorted(ATTACKS.rglob("*.yaml"))]
+
+
+def test_every_current_attack_is_mapped_and_pinned_ones_are_not():
+    for attack in shipped():
+        if attack.pinned:
+            assert attack.arcanum == {}, attack.source.name
+        else:
+            assert {"input", "intent", "technique"} <= set(attack.arcanum), attack.id
+
+
+def test_atlas_ids_agree_with_taxonomy_aliases():
+    by_atlas: dict[str, set[str]] = {}
+    for code, node in arcanum.nodes().items():
+        for alias in node.get("aliases") or []:
+            for atlas_id in ATLAS_IN_ALIAS.findall(alias):
+                by_atlas.setdefault(atlas_id, set()).add(code)
+    gaps = {}
+    for attack in shipped():
+        if attack.pinned:
+            continue
+        mine = {c for codes in attack.arcanum.values() for c in codes}
+        for atlas_id in attack.atlas:
+            wanted = by_atlas.get(atlas_id, set())
+            if wanted and not mine & wanted:
+                gaps[(attack.id, atlas_id)] = ", ".join(sorted(wanted))
+    assert gaps == EXPECTED_ALIAS_GAPS
