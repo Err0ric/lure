@@ -22,7 +22,7 @@ import argparse
 import base64
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 ASSETS = Path(__file__).resolve().parent.parent / "docs" / "assets"
 LOGO = ASSETS / "lure-logo-mark.png"
@@ -45,6 +45,14 @@ MENLO_BOLD = 1  # face index in Menlo.ttc
 FACE_BOX = (250, -35, 780, 495)
 # Red ember on the hair at the avatar's bottom left, painted over.
 AVATAR_EMBER = (411, 477, 429, 493)
+# The terminal panel in the logo, and its corner radius. Its dark interior
+# is close to BG, so it is kept whole rather than found by color.
+TERMINAL_BOX = (48, 498, 976, 936)
+TERMINAL_RADIUS = 28
+# The logo's background carries a faint haze that stops square at the image
+# edge. Pixels further than this from BG (sum of channel differences) are
+# the mark; the haze stays under it.
+MARK_THRESHOLD = 24
 
 
 def font(path, size):
@@ -60,6 +68,26 @@ def fade_edges(img, margin):
     mask = mask.filter(ImageFilter.GaussianBlur(margin / 2))
     out = Image.new("RGB", (w, h), BG)
     out.paste(img, (0, 0), mask)
+    return out
+
+
+def feather_mark(img, grow=40, soft=24):
+    """Fade the logo's background haze into BG around the mark itself, so no
+    square edge shows. The mark (anything far from BG, plus the terminal) is
+    grown by about `grow` px, then blurred by `soft` px."""
+    diff = ImageChops.difference(img, Image.new("RGB", img.size, BG))
+    # Sum of the channel differences (clipped at 255).
+    mark = diff.convert("L", (1, 1, 1, 0)).point(
+        lambda v: 255 if v > MARK_THRESHOLD else 0
+    )
+    ImageDraw.Draw(mark).rounded_rectangle(TERMINAL_BOX, TERMINAL_RADIUS, fill=255)
+    # Grow: blur, then keep anything the blur reached.
+    mark = mark.filter(ImageFilter.GaussianBlur(grow / 2)).point(
+        lambda v: 255 if v > 8 else 0
+    )
+    mark = mark.filter(ImageFilter.GaussianBlur(soft))
+    out = Image.new("RGB", img.size, BG)
+    out.paste(img, (0, 0), mark)
     return out
 
 
@@ -173,11 +201,12 @@ def glyph():
 
 def build(font_path):
     logo = Image.open(LOGO).convert("RGB")
+    mark = feather_mark(logo)
     return {
         "social-preview.png": lambda: lockup(
-            logo, (1280, 640), 540, 150, 36, font_path
+            mark, (1280, 640), 540, 150, 36, font_path
         ),
-        "banner.png": lambda: lockup(logo, (1200, 400), 340, 110, 30, font_path),
+        "banner.png": lambda: lockup(mark, (1200, 400), 340, 110, 30, font_path),
         "favicon.png": lambda: glyph().resize((32, 32), Image.LANCZOS),
         "favicon-16.png": lambda: glyph().resize((16, 16), Image.LANCZOS),
         "avatar.png": lambda: avatar(logo, 512),

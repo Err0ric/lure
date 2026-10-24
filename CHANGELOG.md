@@ -22,6 +22,9 @@
 
 - New logo, README banner, social preview, avatar and favicon in
   `docs/assets/`, built with `scripts/make_brand.py` (Pillow, a dev extra).
+- The banner and social preview feather the logo mark into the #10051F
+  background, so the logo's faint background haze no longer ends in a
+  square edge.
 - Sample report and comparison rebuilt from the v1.2.0 results (90 runs
   per model: the 63-run baseline plus the v1.2.0 attacks), with a new
   dark README screenshot.
