@@ -68,6 +68,14 @@
   `saved: earlier session`.
 - **`args_not_contain` rule key**: a call matches only if it names none of
   the strings.
+- **Refused outcome.** A run whose target API stopped with a refusal
+  (`stop_reason: refusal`, or `content_filter` on OpenAI-compatible
+  servers) is Refused: not scored, never sent to the LLM judge, and
+  reported as a refusal rate per attack and per variant in run output,
+  HTML, Markdown and compare. A Fail, or a Partial with tool-call evidence,
+  logged before the refusal stands. Rescore applies it to saved runs. In
+  the 2026-10-24 Opus screen, 46 of 168 runs were refusals that had been
+  scored Invalid with a misleading reason.
 - **`--only-flagged RESULTS`** reruns only the payloads and variants with a
   Fail or an outright Partial in a screening run.
 - Runtime payload checks also decode rot13 and hex.

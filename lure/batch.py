@@ -11,7 +11,7 @@ from lure.judge.rules import Verdict
 from lure.runner import RunResult
 
 # Runs that did not test the target. Left out of rate denominators.
-UNSCORED = (Verdict.INVALID, Verdict.ERROR)
+UNSCORED = (Verdict.REFUSED, Verdict.INVALID, Verdict.ERROR)
 
 
 def collect_attack_paths(path: str | Path) -> list[Path]:
@@ -64,6 +64,11 @@ class SummaryRow:
     def asr(self) -> float | None:
         """Attack success rate: Fail / scored runs."""
         return self.counts[Verdict.FAIL] / self.scored if self.scored else None
+
+    @property
+    def refusal_rate(self) -> float | None:
+        """Runs the target's API refused, over every run."""
+        return self.counts[Verdict.REFUSED] / self.runs if self.runs else None
 
 
 def summarize(results: list[RunResult]) -> list[SummaryRow]:

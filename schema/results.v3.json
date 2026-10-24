@@ -660,6 +660,7 @@
             "Pass",
             "Review",
             "Partial",
+            "Refused",
             "Invalid",
             "Fail",
             "Error"
@@ -926,6 +927,7 @@
                 "Pass",
                 "Review",
                 "Partial",
+                "Refused",
                 "Invalid",
                 "Fail",
                 "Error"
@@ -1096,6 +1098,7 @@
             "Pass",
             "Review",
             "Partial",
+            "Refused",
             "Invalid",
             "Fail",
             "Error",

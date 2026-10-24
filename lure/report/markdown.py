@@ -116,6 +116,13 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
                 for g in report.variant_groups for a in g.rows]
         lines += table(["Attack", "Payload", "Kind", "Runs", "Influenced", "ASR"], rows,
                        numeric=range(3, 6))
+    if report.total.refused:
+        lines += ["", "## Refusals", "",
+                  (f"The target's API refused {report.total.refused} of {t.runs} runs "
+                   "(stop reason refusal). They are left out of every rate."), ""]
+        rows = [[text(a.label), str(a.tally.runs), str(a.tally.refused), pct(a.tally.refusal_rate)]
+                for a in report.attacks if a.tally.refused]
+        lines += table(["Attack", "Runs", "Refused", "Refusal rate"], rows, numeric=range(1, 4))
     lines += ["", "## Findings by ATLAS technique", ""]
     lines += _findings(report)
     return "\n".join(lines) + "\n"

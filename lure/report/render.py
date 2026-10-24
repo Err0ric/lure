@@ -30,6 +30,7 @@ VERDICT_MARKS = {
     Verdict.PASS: "✓",      # check mark
     Verdict.PARTIAL: "◐",   # half-filled circle
     Verdict.REVIEW: "?",
+    Verdict.REFUSED: "⊘",   # circled slash
     Verdict.INVALID: "–",   # en dash
     Verdict.FAIL: "✕",      # multiplication x
     Verdict.ERROR: "!",

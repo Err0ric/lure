@@ -640,6 +640,8 @@ def print_comparison(comp, out: TextIO) -> None:
         ["Detection rate", *(_rate(c.report.total.detection_rate, c.report.total.detected,
                                    c.report.total.scored) for c in comp.columns)],
         ["Exposure (runs)", *(exposure(c.report.total) for c in comp.columns)],
+        ["Refusal rate", *(_rate(c.report.total.refusal_rate, c.report.total.refused,
+                                 c.report.total.runs) for c in comp.columns)],
         *([["Attacker tested", *(f"{c.report.attacker_tested} of {c.report.total.runs}"
                                  for c in comp.columns)],
            ["Attacker refused", *(f"{c.report.attacker_refused} of {c.report.attacker_calls}"
@@ -695,8 +697,9 @@ def print_comparison(comp, out: TextIO) -> None:
 
     if comp.variants:
         print(file=out)
-        var_rows = [[v.label, payload, *(_tally_rate(a.tally, "asr", Verdict.FAIL) if a else "not run"
-                                         for a in cells)]
+        var_rows = [[v.label, payload, *((_tally_rate(a.tally, "asr", Verdict.FAIL)
+                                          + (f", {a.tally.refused} refused" if a.tally.refused else ""))
+                                         if a else "not run" for a in cells)]
                     for v in comp.variants for payload, _, cells in v.rows]
         _print_table(["Attack", "Payload", *models], _blank_repeats(var_rows), out)
 
@@ -851,13 +854,13 @@ def print_progress(result: RunResult, i: int, total: int, n: int, repeat: int, o
 
 SUMMARY_VERDICTS = (
     Verdict.PASS, Verdict.PARTIAL, Verdict.REVIEW,
-    Verdict.INVALID, Verdict.FAIL, Verdict.ERROR,
+    Verdict.REFUSED, Verdict.INVALID, Verdict.FAIL, Verdict.ERROR,
 )
 
 
 def print_summary(rows: list[SummaryRow], out: TextIO) -> None:
     header = ["Attack", "Runs", "Scored", *(v.value for v in SUMMARY_VERDICTS),
-              "Pass rate", "ASR"]
+              "Pass rate", "ASR", "Refusal rate"]
     table = [header] + [
         [
             row.label,
@@ -866,6 +869,7 @@ def print_summary(rows: list[SummaryRow], out: TextIO) -> None:
             *(str(row.counts[v]) for v in SUMMARY_VERDICTS),
             _rate(row.pass_rate, row.counts[Verdict.PASS], row.scored),
             _rate(row.asr, row.counts[Verdict.FAIL], row.scored),
+            _rate(row.refusal_rate, row.counts[Verdict.REFUSED], row.runs),
         ]
         for row in rows
     ]

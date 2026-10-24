@@ -20,7 +20,7 @@ from lure.report.techniques import atlas_name, category_name
 from lure.rescore import record_paths
 
 VERDICT_ORDER = (Verdict.PASS, Verdict.PARTIAL, Verdict.REVIEW,
-                 Verdict.INVALID, Verdict.FAIL, Verdict.ERROR)
+                 Verdict.REFUSED, Verdict.INVALID, Verdict.FAIL, Verdict.ERROR)
 # Findings worth a reader's attention.
 FINDING_VERDICTS = (Verdict.FAIL, Verdict.PARTIAL, Verdict.REVIEW)
 SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -231,6 +231,15 @@ class Tally:
     @property
     def asr(self) -> float | None:
         return self.rate(self.counts[Verdict.FAIL])
+
+    @property
+    def refused(self) -> int:
+        return self.counts[Verdict.REFUSED]
+
+    @property
+    def refusal_rate(self) -> float | None:
+        """Runs the target's API refused, over every run (not scored runs)."""
+        return self.refused / self.runs if self.runs else None
 
     @property
     def detection_rate(self) -> float | None:

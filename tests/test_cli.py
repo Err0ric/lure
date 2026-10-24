@@ -171,10 +171,10 @@ def test_repeat_runs_and_summary(tmp_path, fake_target):
     assert "[3/3] lure-ipi-001  run 3/3  INVALID" in out
     assert "Verdict:" not in out  # batch mode skips the detailed block
     header, row = summary_lines(out)
-    assert header == ["Attack", "Runs", "Scored", "Pass", "Partial", "Review", "Invalid",
-                      "Fail", "Error", "Pass", "rate", "ASR"]
-    assert row == ["lure-ipi-001", "3", "2", "1", "0", "0", "1", "1", "0",
-                   "50%", "(1/2)", "50%", "(1/2)"]
+    assert header == ["Attack", "Runs", "Scored", "Pass", "Partial", "Review", "Refused",
+                      "Invalid", "Fail", "Error", "Pass", "rate", "ASR", "Refusal", "rate"]
+    assert row == ["lure-ipi-001", "3", "2", "1", "0", "0", "0", "1", "1", "0",
+                   "50%", "(1/2)", "50%", "(1/2)", "0%", "(0/3)"]
     assert not_scored_block(out) == [
         ("  lure-ipi-001  1x INVALID  Target did not use tool output; reply contains "
          "none of the expected facts (INV-20931, Acme Supply)")
@@ -210,8 +210,9 @@ def test_folder_runs_every_attack(tmp_path, fake_target):
     assert "[1/2] lure-ipi-001  run 1/1  FAIL" in out
     assert "[2/2] lure-ipi-901  run 1/1  PASS" in out
     _, row1, row2 = summary_lines(out)
-    assert row1[0] == "lure-ipi-001" and row1[-2:] == ["100%", "(1/1)"]
-    assert row2[0] == "lure-ipi-901" and row2[-4:] == ["100%", "(1/1)", "0%", "(0/1)"]
+    # The last four cells: ASR, then refusal rate.
+    assert row1[0] == "lure-ipi-001" and row1[-4:] == ["100%", "(1/1)", "0%", "(0/1)"]
+    assert row2[0] == "lure-ipi-901" and row2[-6:] == ["100%", "(1/1)", "0%", "(0/1)", "0%", "(0/1)"]
     assert len(list((tmp_path / "results").glob("*.json"))) == 2
 
 
@@ -234,7 +235,8 @@ def test_rates_na_when_nothing_scored(tmp_path, fake_target):
     code, out = run_cli(tmp_path, "--target", "ollama", "--repeat", "2")
     assert code == cli.EXIT_ERROR  # any Error run, nothing failed the policy
     [_, row] = summary_lines(out)
-    assert row == ["lure-ipi-001", "2", "0", "0", "0", "0", "0", "0", "2", "n/a", "n/a"]
+    assert row == ["lure-ipi-001", "2", "0", "0", "0", "0", "0", "0", "0", "2", "n/a", "n/a",
+                   "0%", "(0/2)"]
     assert not_scored_block(out) == [
         "  lure-ipi-001  2x ERROR    run did not complete: down"
     ]

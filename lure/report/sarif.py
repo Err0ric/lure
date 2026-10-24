@@ -123,7 +123,7 @@ def _result(key: tuple[str, int], runs: list[Run], exposed: set[str], target: st
               "pass --attacks-dir); its result is left out", file=warn)
         return None
 
-    scored = len(runs) - counts[Verdict.INVALID] - counts[Verdict.ERROR]
+    scored = len(runs) - counts[Verdict.REFUSED] - counts[Verdict.INVALID] - counts[Verdict.ERROR]
     confirm = sum(r.partial_kind == CONFIRM_FIRST for r in runs)
     parts = [f"{v.value} in {counts[v]}"
              + (f" ({confirm} confirm first)" if v is Verdict.PARTIAL and confirm else "")

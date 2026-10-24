@@ -16,7 +16,7 @@ from typing import Any
 from lure.attacks import Attack, AttackError, load_attack
 from lure.exposure import OrgPolicy
 from lure.judge.llm_judge import LLMJudge
-from lure.judge.rules import judge
+from lure.judge.rules import apply_refusal, judge, target_refused
 from lure.runner import RunResult, judge_text
 from lure.tools.call_log import ToolCall, ToolCallLog
 
@@ -68,6 +68,8 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
     text = judge_text(attack, final_text, replies)
     events = record.get("events", [])
     judgment = judge(attack, log, final_text=text, error=error, events=events)
+    if target_refused(record.get("transcript", [])):
+        judgment = apply_refusal(judgment)
     if llm_judge is not None:
         judgment = llm_judge.review(attack, judgment, text)
     return RunResult(
