@@ -213,3 +213,20 @@ def test_cli_bad_input(folders, tmp_path, capsys):
     assert cli.main(["compare", str(a), str(b), "--prices", str(tmp_path / "nope.yaml")]) \
         == cli.EXIT_BAD_INPUT
     assert "prices file not found" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("key, model, found", [
+    ("claude-haiku-5-5", "anthropic:claude-haiku-5-5", True),
+    ("anthropic:claude-haiku-5-5", "claude-haiku-5-5", True),
+    ("fake:judge-1", "fake:judge-1", True),
+    # An Ollama tag is part of the model name, not a provider prefix.
+    ("llama3.1:8b", "ollama:llama3.1:8b", True),
+    ("ollama:llama3.1:8b", "ollama:llama3.1:8b", True),
+    ("llama3.1:8b", "ollama:llama3.1:70b", False),
+    ("llama3.1:8b", "ollama:8b", False),
+    ("qwen3:8b", "openai:qwen3:8b", True),
+])
+def test_prices_match_tagged_local_models(tmp_path, key, model, found):
+    path = tmp_path / "prices.yaml"
+    path.write_text(f"models:\n  '{key}':\n    input: 0\n    output: 0\n")
+    assert (load_prices(path).rates(model) is not None) is found

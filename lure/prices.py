@@ -42,11 +42,13 @@ class Prices:
 
     def rates(self, model: str) -> dict[str, float] | None:
         """Rates for 'anthropic:claude-x' or 'claude-x', whichever way the
-        prices file names it; an exact match wins."""
+        prices file names it; an exact match wins. Only a provider prefix is
+        dropped, never a tag: 'ollama:llama3.1:8b' matches 'llama3.1:8b'."""
         if model in self.models:
             return self.models[model]
-        bare = model_name(model)
-        return next((r for name, r in self.models.items() if model_name(name) == bare), None)
+        if model_name(model) in self.models:
+            return self.models[model_name(model)]
+        return next((r for name, r in self.models.items() if model_name(name) == model), None)
 
     def cost(self, model: str, usage: dict[str, int]) -> float | None:
         """Dollars for this usage, or None if a needed rate is missing."""
