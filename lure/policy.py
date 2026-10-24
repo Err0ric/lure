@@ -91,6 +91,25 @@ class Violation:
 
 
 @dataclass(frozen=True)
+class PolicyResult:
+    """The policy applied to a set of runs."""
+
+    source: str
+    violations: list[Violation]
+    # Runs the policy checked, and runs of attacks it disables (not gated).
+    runs: int
+    skipped: int = 0
+
+    @property
+    def passed(self) -> bool:
+        return not self.violations
+
+    @property
+    def failed_runs(self) -> int:
+        return len({v.where for v in self.violations})
+
+
+@dataclass(frozen=True)
 class Policy:
     fail_on: FailOn = FailOn()
     exposure: OrgPolicy | None = None
@@ -132,6 +151,17 @@ class Policy:
 
     def evaluate(self, runs: Iterable[PolicyRun]) -> list[Violation]:
         return [v for run in runs for v in self.check(run)]
+
+    def gate(self, runs: list[PolicyRun], skipped: int = 0) -> PolicyResult:
+        return PolicyResult(self.source, self.evaluate(runs), len(runs), skipped)
+
+    def gate_saved(self, records: list[tuple[dict[str, Any], str]]) -> PolicyResult:
+        """Saved runs, checked with this policy. Attacks it disables are left
+        out, as a folder run would leave them out."""
+        checked = [(r, where) for r, where in records
+                   if self.enabled(r["attack"]["id"], r["attack"]["category"])]
+        return self.gate([PolicyRun.from_record(r, where) for r, where in checked],
+                         skipped=len(records) - len(checked))
 
 
 def load(path: str | Path) -> Policy:

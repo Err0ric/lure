@@ -25,7 +25,7 @@ from lure.batch import SummaryRow, collect_attack_paths, summarize
 from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
-from lure.policy import Policy, PolicyRun, Violation
+from lure.policy import Policy, PolicyResult, PolicyRun
 from lure.rescore import (
     add_exposure,
     attack_changed,
@@ -108,6 +108,7 @@ def build_parser() -> argparse.ArgumentParser:
     report_cmd.add_argument("--out", default="report.html", help="output file (default report.html)")
     report_cmd.add_argument("--target", help="only runs against this target, e.g. "
                                              "anthropic:claude-haiku-5-5 (needed if results mix targets)")
+    report_cmd.add_argument("--md", metavar="PATH", help="also write a Markdown report")
     _policy_args(report_cmd)
 
     compare_cmd = sub.add_parser("compare", help="compare targets side by side in one HTML page")
@@ -212,33 +213,35 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     if batch:
         print(file=out)
         print_summary(summarize(results), out)
-    violations = policy.evaluate(PolicyRun.from_result(r) for r in results)
+    gate = policy.gate([PolicyRun.from_result(r) for r in results])
     print(file=out)
-    print_policy(policy, violations, len(results), out)
-    return exit_code(violations, [r.judgment.verdict for r in results])
+    print_policy(gate, out)
+    return exit_code(gate, [r.judgment.verdict for r in results])
 
 
-def exit_code(violations: list[Violation], verdicts: list[Verdict]) -> int:
+def exit_code(gate: PolicyResult, verdicts: list[Verdict]) -> int:
     """A policy failure wins over a run error: a confirmed finding stands
     even if another run broke."""
-    if violations:
+    if not gate.passed:
         return EXIT_POLICY_FAIL
     if Verdict.ERROR in verdicts:
         return EXIT_ERROR
     return EXIT_OK
 
 
-def print_policy(policy: Policy, violations: list[Violation], runs: int, out: TextIO) -> None:
+def print_policy(gate: PolicyResult, out: TextIO) -> None:
     """One line per attack version that failed the policy, with run counts."""
+    if gate.skipped:
+        print(f"Not gated (disabled in {gate.source}): {gate.skipped} "
+              f"run{'' if gate.skipped == 1 else 's'}", file=out)
     failed: dict[tuple[str, int], dict[str, set[str]]] = {}
-    for v in violations:
+    for v in gate.violations:
         failed.setdefault((v.attack_id, v.version), {}).setdefault(v.kind, set()).add(v.where)
-    failed_runs = len({v.where for v in violations})
-    status = "FAIL" if violations else "PASS"
-    print(f"Policy:    {status} ({policy.source}): {failed_runs} of {runs} "
-          f"run{'' if runs == 1 else 's'} failed", file=out)
-    if runs == 1:
-        for v in violations:
+    status = "PASS" if gate.passed else "FAIL"
+    print(f"Policy:    {status} ({gate.source}): {gate.failed_runs} of {gate.runs} "
+          f"run{'' if gate.runs == 1 else 's'} failed", file=out)
+    if gate.runs == 1:
+        for v in gate.violations:
             print(f"  {v.kind}: {v.detail}", file=out)
         return
     for (attack_id, version), by_kind in failed.items():
@@ -285,10 +288,15 @@ def report_main(args, out: TextIO) -> int:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
     runs = [r for r in runs if r.record["target"] == report.target]
+    gate = policy.gate_saved([(r.record, str(r.path)) for r in runs])
     path = write_report(report, args.out)
     t = report.total
     print(f"Wrote {path}: {t.runs} runs of {len(report.attacks)} attacks against {report.target}, "
           f"{len(report.findings)} findings.", file=out)
+    if args.md:
+        from lure.report.markdown import write_markdown
+
+        print(f"Wrote {write_markdown(report, args.md, gate)}", file=out)
     print(f"ASR:       {_rate(t.asr, t.counts[Verdict.FAIL], t.scored)}", file=out)
     if not report.exposure_checked:
         print("Exposure:  not checked (no org policy in these results)", file=out)
@@ -298,20 +306,10 @@ def report_main(args, out: TextIO) -> int:
         for a in report.attacks:
             if a.tally.exposed:
                 print(f"  {a.label}: {a.tally.exposed} of {a.tally.runs} runs", file=out)
-    return _gate_saved(policy, runs, out)
-
-
-def _gate_saved(policy: Policy, runs: list, out: TextIO) -> int:
-    """Apply the policy to saved runs. Attacks the policy disables are left
-    out, as a folder run would leave them out."""
-    checked = [r for r in runs if policy.enabled(r.attack["id"], r.attack["category"])]
-    violations = policy.evaluate(PolicyRun.from_record(r.record, str(r.path)) for r in checked)
     print(file=out)
-    if len(checked) < len(runs):
-        n = len(runs) - len(checked)
-        print(f"Not gated (disabled in {policy.source}): {n} run{'' if n == 1 else 's'}", file=out)
-    print_policy(policy, violations, len(checked), out)
-    return exit_code(violations, [r.verdict for r in checked])
+    print_policy(gate, out)
+    gated = [r for r in runs if policy.enabled(r.attack["id"], r.attack["category"])]
+    return exit_code(gate, [r.verdict for r in gated])
 
 
 def compare_main(args, out: TextIO) -> int:

@@ -8,7 +8,7 @@ import pytest
 from lure import cli
 from lure.attacks import load_attack
 from lure.judge.rules import Verdict
-from lure.policy import Violation
+from lure.policy import PolicyResult, Violation
 from lure.runner import run_attack
 from tests.fakes import AdapterError, ScriptedAdapter, call, say
 
@@ -48,11 +48,12 @@ def policy(tmp_path, text):
 
 
 def test_exit_code_order():
-    v = [Violation("lure-ipi-001", 1, "x", "verdict", "Fail")]
-    assert cli.exit_code([], [Verdict.PASS, Verdict.PARTIAL]) == cli.EXIT_OK == 0
-    assert cli.exit_code(v, [Verdict.FAIL]) == cli.EXIT_POLICY_FAIL == 1
-    assert cli.exit_code([], [Verdict.PASS, Verdict.ERROR]) == cli.EXIT_ERROR == 2
-    assert cli.exit_code(v, [Verdict.FAIL, Verdict.ERROR]) == 1  # a finding wins
+    ok = PolicyResult("p", [], 2)
+    failed = PolicyResult("p", [Violation("lure-ipi-001", 1, "x", "verdict", "Fail")], 2)
+    assert cli.exit_code(ok, [Verdict.PASS, Verdict.PARTIAL]) == cli.EXIT_OK == 0
+    assert cli.exit_code(failed, [Verdict.FAIL]) == cli.EXIT_POLICY_FAIL == 1
+    assert cli.exit_code(ok, [Verdict.PASS, Verdict.ERROR]) == cli.EXIT_ERROR == 2
+    assert cli.exit_code(failed, [Verdict.FAIL, Verdict.ERROR]) == 1  # a finding wins
 
 
 # lure run
