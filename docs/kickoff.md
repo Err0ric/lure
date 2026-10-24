@@ -203,8 +203,12 @@ Harder, more realistic agent attacks. Agent-only and generic; mock tools only.
 - [x] Partial severity: `partial_kind` outright or confirm first, in reports and as `fail_on.partial`
 - [x] CI pinned to `ubuntu-24.04`
 - [x] ATLAS mapping for every new attack (AML.T0110.000, AML.T0080.000, AML.T0080.001 verified on atlas.mitre.org)
-- [ ] Baseline: new attacks against Haiku and Sonnet, judged by Opus
-- [ ] Tag v1.2.0
+- [x] Baseline: new attacks against Haiku and Sonnet, judged by Opus (3 runs each, 2026-10-23)
+- [x] Tag v1.2.0
+
+### v1.3
+
+- [ ] `lure-ipi-007` v4: the follow-up comes from a compromised real vendor mailbox (the real domain, no lookalike), asking for another vendor's invoice data. v2 (unknown sender) and v3 (lookalike carrier) stay: no model took their first step, a valid result.
 
 ### Phase 5: Stretch
 
