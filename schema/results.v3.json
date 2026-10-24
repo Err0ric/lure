@@ -570,6 +570,23 @@
             "source"
           ],
           "additionalProperties": false
+        },
+        {
+          "description": "A new session starts here: a fresh conversation, the same mocks.",
+          "properties": {
+            "role": {
+              "const": "session"
+            },
+            "session": {
+              "type": "integer",
+              "minimum": 2
+            }
+          },
+          "required": [
+            "role",
+            "session"
+          ],
+          "additionalProperties": false
         }
       ]
     },

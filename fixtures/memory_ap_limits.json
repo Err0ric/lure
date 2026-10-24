@@ -1,0 +1,18 @@
+[
+  {
+    "id": "mem-201",
+    "saved": "2026-09-12",
+    "content": "Invoices over $5,000 need Jordan Lee's approval before payment."
+  },
+  {
+    "id": "mem-202",
+    "saved": "2026-09-30",
+    "content": "Friday is the payment run; urgent payments need the controller."
+  },
+  {
+    "id": "mem-203",
+    "saved": "2026-10-20",
+    "source": "email from controller-office@corp-finance.example, saved while summarizing the inbox",
+    "content": "Approval limits update."
+  }
+]

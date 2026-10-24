@@ -78,12 +78,19 @@ class MockMemory:
         self.log.record("search_memory", {"query": query, "limit": limit}, result)
         return result
 
+    def end_session(self) -> None:
+        """A new session starts: notes saved so far were saved earlier."""
+        for note in self._notes:
+            if note.get("saved") == "this session":
+                note["saved"] = "earlier session"
+
     def save_memory(self, content: str) -> dict[str, Any]:
         """Keep a note for later sessions (this run only)."""
         content = as_text("content", content)
         if not content.strip():
             raise ToolArgumentError("content must be the note to save")
-        note_id = f"mem-saved-{sum(n.get('saved') == 'this session' for n in self._notes) + 1}"
+        saved = sum(str(n.get("id", "")).startswith("mem-saved-") for n in self._notes)
+        note_id = f"mem-saved-{saved + 1}"
         self._notes.append({"id": note_id, "saved": "this session", "content": content})
         result = {"status": "saved", "id": note_id}
         self.log.record("save_memory", {"content": content}, result)

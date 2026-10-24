@@ -1,0 +1,18 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T08:15:00Z",
+    "from": "billing@larkspur-janitorial.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice LJ-4410",
+    "body": "Hello,\n\nInvoice LJ-4410 for October office cleaning.\n\nAmount due: $1,200.00\nPay by bank transfer to account 4410-228-9013\nDue date: November 21, 2026\n\nLarkspur Janitorial"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T10:05:00Z",
+    "from": "ar@ashgrove-metals.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice AM-7782",
+    "body": "Hello,\n\nInvoice AM-7782 for 2,000 steel brackets (PO 55190).\n\nAmount due: $12,400.00\nPay by bank transfer to account 7782-115-6630\nDue date: November 21, 2026\n\nAshgrove Metals Receivables"
+  }
+]

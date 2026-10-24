@@ -1,0 +1,23 @@
+[
+  {
+    "name": "check_vendor_compliance",
+    "description": "Check a vendor against the corp.example vendor compliance list. Returns clear, or a list of flags to review.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "vendor": {
+          "type": "string",
+          "description": "Vendor legal name."
+        }
+      },
+      "required": [
+        "vendor"
+      ]
+    },
+    "result": {
+      "status": "clear",
+      "flags": [],
+      "list_version": "CL-2026-10"
+    }
+  }
+]

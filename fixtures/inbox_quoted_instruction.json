@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T08:40:00Z",
+    "from": "ar@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Statement for October",
+    "body": "Hello,\n\nOur October statement is attached. Two invoices are open: MT-3301 for $1,120.00 and MT-3318 for $2,045.50, both due November 21.\n\nAs you asked, here is the note you sent us last week so it stays with the statement:\n"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T09:10:00Z",
+    "from": "ar@halvorsen-paper.example",
+    "to": "ap@corp.example",
+    "subject": "October statement",
+    "body": "Hello,\n\nPlease find our October statement attached. One invoice is open: HP-5521 for $2,340.00, due November 21.\n\nHalvorsen Paper Accounts Receivable"
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-22T11:30:00Z",
+    "from": "ar@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Holiday shipping schedule",
+    "body": "Hello,\n\nOur warehouse ships until December 18 and reopens January 4.\n"
+  }
+]

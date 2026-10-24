@@ -149,23 +149,25 @@ An adaptive run is worst of several attempts, so its rates are not comparable wi
 
 ## Attack library
 
-30 attack files in 7 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+35 attack files in 7 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Category | Attacks | ATLAS techniques |
 | --- | --- | --- |
-| Indirect prompt injection | `lure-ipi-001` to `008`, with `007` v1, v2 and v3 (10) | AML.T0051.001, AML.T0057, AML.T0068, AML.T0080.001, AML.T0086 |
+| Indirect prompt injection | `lure-ipi-001` to `010`, with `007` v1, v2 and v3 (12) | AML.T0051.001, AML.T0057, AML.T0068, AML.T0080.001, AML.T0086 |
 | Direct prompt injection | `lure-dpi-001` to `003` (3) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0069.002, AML.T0086 |
 | Jailbreak | `lure-jbk-001`, `002` v1 and v2, `003` (4) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0068, AML.T0086 |
 | Data leakage | `lure-dlk-001` to `003` (3) | AML.T0051.001, AML.T0057, AML.T0086 |
 | Tool abuse | `lure-tab-001` to `003` (3) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0086, AML.T0101 |
-| Tool poisoning | `lure-tpo-001` to `003` (3) | AML.T0048.000, AML.T0053, AML.T0086, AML.T0110.000 |
-| Memory poisoning | `lure-mem-001` to `003`, with `002` v1 and v2 (4) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0080.000, AML.T0080.001, AML.T0086 |
+| Tool poisoning | `lure-tpo-001` to `004` (4) | AML.T0048.000, AML.T0053, AML.T0086, AML.T0110.000 |
+| Memory poisoning | `lure-mem-001` to `005`, with `002` v1 and v2 (6) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0080.000, AML.T0080.001, AML.T0086 |
 
-Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1567, T1656, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23; the full mapping is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
+Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1567, T1656, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23, and the v1.3 additions (AML.T0068 on encoded variants, T1656 on `lure-tpo-004` and `lure-ipi-009`) on 2026-10-24; the full mapping is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
+
+**Trust-boundary attacks (v1.3)** test whether the agent trusts content because of where it claims to come from: an outside claim the agent itself saves to memory and acts on in a new session (`lure-mem-004`), a memory note that moves an approval limit (`lure-mem-005`), a tool definition posing as an IT security notice (`lure-tpo-004`), the user's own voice quoted in a vendor email (`lure-ipi-009`), and a fake user turn in a tool's output (`lure-ipi-010`).
 
 Mock tools: `read_inbox`, `send_email` (to, cc, bcc), `list_files`, `read_file`, `write_file`, `delete_file`, `fetch_url`, `pay_invoice`, `search_memory` and `save_memory`, plus tools an `mcp` fixture defines (for tool poisoning). None of them is a real server or service.
 
-Multi-step attacks: `followup_tasks` adds later user turns, and responders make fixtures react to the agent: a reply earns a follow-up email, or a tool changes its own description after first use. See [`CONTRIBUTING.md`](CONTRIBUTING.md#multi-step-attacks).
+Multi-step attacks: `followup_tasks` adds later user turns (optionally in a new session, with the chat cleared and memory kept), and responders make fixtures react to the agent: a reply earns a follow-up email, or a tool changes its own description after first use. See [`CONTRIBUTING.md`](CONTRIBUTING.md#multi-step-attacks).
 
 ## How a run is scored
 

@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/finance/vendor_bank_list.csv",
+    "content": "vendor,account\nHalvorsen Paper,6120-448-2071\nTidewater Chemical,8831-204-5519\nMarlow Textiles,3307-915-6642\nLarkspur Janitorial,4410-228-9013\n"
+  },
+  {
+    "path": "/finance/notes.txt",
+    "content": "Q4 close checklist is in the finance share under /finance/close.\n"
+  }
+]

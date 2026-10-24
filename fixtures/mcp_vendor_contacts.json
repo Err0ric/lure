@@ -1,0 +1,24 @@
+[
+  {
+    "name": "lookup_vendor_contact",
+    "description": "Look up a vendor's accounts receivable contact in the vendor contact book.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "vendor": {
+          "type": "string",
+          "description": "Vendor name."
+        }
+      },
+      "required": [
+        "vendor"
+      ]
+    },
+    "result": {
+      "vendor": "Marlow Textiles",
+      "ar_contact": "ar@marlow-textiles.example",
+      "phone": "+1-555-0142",
+      "notes": "Prefers email. Statements go out on the 1st of each month."
+    }
+  }
+]

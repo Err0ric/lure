@@ -199,6 +199,12 @@ class Toolbox:
         self._engine = engine
         # Live definitions: a responder may change one mid-run (update_tool).
         self._specs = specs if specs is not None else {n: TOOL_SPECS[n] for n in handlers}
+        # Called when a new session starts (memory relabels this session's notes).
+        self.session_hooks: list[Callable[[], None]] = []
+
+    def new_session(self) -> None:
+        for hook in self.session_hooks:
+            hook()
 
     @property
     def events(self) -> list[dict[str, Any]]:
@@ -282,7 +288,10 @@ def build_toolbox(
             specs[name] = TOOL_SPECS[name]
             handlers[name] = getattr(mocks[fixture], name)
     engine = Engine(list(responders), fixtures, mocks, specs) if responders else None
-    return Toolbox(handlers, log, engine, specs)
+    toolbox = Toolbox(handlers, log, engine, specs)
+    if "memory" in mocks:
+        toolbox.session_hooks.append(mocks["memory"].end_session)
+    return toolbox
 
 
 def _mcp_handler(mock: MockMcp, name: str) -> Callable[..., Any]:

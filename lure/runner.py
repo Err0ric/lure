@@ -6,7 +6,9 @@ turn limit, then judges the run from the call log and final reply. With an
 LLM judge, runs the rules could not settle get a second opinion.
 
 A multi-turn attack sends each of its followup_tasks once the target
-finishes the turn before; max_turns applies to each user turn. The judge
+finishes the turn before; max_turns applies to each user turn. A follow-up
+marked new_session starts a fresh conversation with the same system prompt
+and tools: the chat is gone, the mocks (memory, files) and the log carry on. The judge
 then reads every user turn's final reply, so a leak or offer in an early
 turn still counts.
 
@@ -193,7 +195,13 @@ def run_attack(
     error = None
     try:
         convo = adapter.start(system_prompt, toolbox.specs)
-        for task in tasks:
+        session = 1
+        for n, task in enumerate(tasks):
+            if n and (n - 1) in attack.new_sessions:
+                toolbox.new_session()
+                convo = adapter.start(system_prompt, toolbox.specs)
+                session += 1
+                transcript.append({"role": "session", "session": session})
             transcript.append({"role": "user", "content": task})
             turn = convo.send_task(task)
             add_usage(usage, turn.usage)

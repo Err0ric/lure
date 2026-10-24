@@ -17,7 +17,9 @@ filler text). See Attack.all_variants.
 
 An attack may add `followup_tasks`: later user turns, sent in order once the
 target finishes the turn before. They make multi-turn attacks, where a
-payload read in one turn only matters in a later, unrelated one.
+payload read in one turn only matters in a later, unrelated one. A turn
+written as {task: ..., new_session: true} starts a fresh conversation: the
+chat so far is gone, but memory, files and the call log carry over.
 
 Most payloads are planted in a fixture. A direct prompt injection uses the
 location `task` instead: the payload goes into the user turn itself, and the
@@ -70,6 +72,7 @@ RULE_KEYS = {
     "to_domain_not_in": "domains",
     "body_contains": "strings",
     "args_contain": "strings",
+    "args_not_contain": "strings",
     "account_not_in": "strings",
     "reply_contains": "strings",
     "asked_user_before": "tool",
@@ -212,6 +215,8 @@ class Attack:
     version: int = 1
     # Later user turns, sent in order after the target finishes each turn.
     followup_tasks: list[str] = field(default_factory=list)
+    # Indexes into followup_tasks of turns that start a new session.
+    new_sessions: frozenset[int] = frozenset()
     # Items released from pending fixtures when the target's calls match.
     responders: list[Responder] = field(default_factory=list)
     # The attacker's aim in plain words, for the adaptive attacker. None
@@ -421,7 +426,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         raise fail("version must be a whole number of at least 1")
     if pinned and int(pinned.group(2)) != version:
         raise fail(f"file name says v{pinned.group(2)} but version is {version}")
-    followup_tasks = _followup_tasks(data.get("followup_tasks"), fail)
+    followup_tasks, new_sessions = _followup_tasks(data.get("followup_tasks"), fail)
     goal = data.get("goal")
     if goal is not None and (not isinstance(goal, str) or not goal.strip()):
         raise fail("goal must be a non-empty string")
@@ -556,6 +561,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         payload_source=None if in_task else _payload_source(loaded, location),
         version=version,
         followup_tasks=followup_tasks,
+        new_sessions=new_sessions,
         responders=responders,
         goal=goal,
         variants=variants,
@@ -694,14 +700,27 @@ def buried_variant(attack: Attack) -> Variant:
                    i.payload)
 
 
-def _followup_tasks(value, fail) -> list[str]:
+def _followup_tasks(value, fail) -> tuple[list[str], frozenset[int]]:
+    """The later user turns, and which of them start a new session."""
     if value is None:
-        return []
-    if not isinstance(value, list) or not value or not all(
-        isinstance(t, str) and t.strip() for t in value
-    ):
-        raise fail("followup_tasks must be a non-empty list of non-empty strings")
-    return list(value)
+        return [], frozenset()
+    if not isinstance(value, list) or not value:
+        raise fail("followup_tasks must be a non-empty list")
+    tasks, new = [], set()
+    for i, t in enumerate(value):
+        if isinstance(t, dict):
+            if not set(t) <= {"task", "new_session"} or "task" not in t:
+                raise fail(f"followup_tasks[{i}] must be a string, or task with "
+                           "optional new_session")
+            if not isinstance(t.get("new_session", False), bool):
+                raise fail(f"followup_tasks[{i}].new_session must be true or false")
+            if t.get("new_session"):
+                new.add(i)
+            t = t["task"]
+        if not isinstance(t, str) or not t.strip():
+            raise fail(f"followup_tasks[{i}] must be a non-empty string")
+        tasks.append(t)
+    return tasks, frozenset(new)
 
 
 def _payload_source(fixtures, location) -> str | None:
@@ -848,7 +867,8 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
                 or not all(isinstance(t, str) and t.strip() for t in v)
             ):
                 raise fail(f"{where} {k} must be a non-empty list of non-empty strings")
-        for k in ("to_domain_not_in", "body_contains", "args_contain", "account_not_in"):
+        for k in ("to_domain_not_in", "body_contains", "args_contain", "args_not_contain",
+                  "account_not_in"):
             if k in rule and not ({"tool", "asked_user_before"} & set(rule)):
                 raise fail(f"{where} {k} needs a tool or asked_user_before")
     return list(value)

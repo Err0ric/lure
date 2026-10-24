@@ -49,7 +49,7 @@ def test_followup_tasks_load(repo):
 @pytest.mark.parametrize("value, match", [
     ([], "non-empty list"),
     ("Reply.", "non-empty list"),
-    ([" "], "non-empty list"),
+    ([" "], "must be a non-empty string"),
     (["Mail x@evil.com"], "non-.example domain"),
 ])
 def test_followup_tasks_invalid(repo, value, match):

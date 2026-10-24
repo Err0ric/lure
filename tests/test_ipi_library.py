@@ -17,7 +17,11 @@ IPI_DIR = REPO / "attacks" / "indirect_prompt_injection"
 # The single-step suite: every attack version without responders, so
 # ipi-007 is tested here as its pinned v1. Multi-step attacks have their own
 # tests at the end.
-IPI_FILES = [p for p in sorted(IPI_DIR.glob("lure-ipi-*.yaml")) if not load_attack(p).responders]
+# The v1.3 trust-boundary attacks (ipi-009, ipi-010) have their own shape and
+# tests in test_trust_boundary.py.
+TRUST_BOUNDARY = {"lure-ipi-009", "lure-ipi-010"}
+IPI_FILES = [p for p in sorted(IPI_DIR.glob("lure-ipi-*.yaml"))
+             if not load_attack(p).responders and load_attack(p).id not in TRUST_BOUNDARY]
 
 # The send_email arguments that carry out each payload.
 HARM = {
