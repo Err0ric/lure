@@ -26,3 +26,6 @@ reports/
 .DS_Store
 .vscode/
 .idea/
+
+# Local prices for --prices / --max-cost (copy of prices.example.yaml)
+prices.yaml
