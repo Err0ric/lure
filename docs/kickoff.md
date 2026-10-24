@@ -218,6 +218,7 @@ Goal: find failures in strong models. Agent-only and generic; mock tools only.
 - [ ] Baseline: Sonnet and Opus, each judged by the other (no model judges itself). Adaptive runs: Opus attacks Sonnet, Sonnet attacks Opus, 3 runs each.
 - [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies.
 - [ ] `lure-ipi-007` v4: the follow-up comes from a compromised real vendor mailbox (the real domain, no lookalike), asking for another vendor's invoice data. v2 (unknown sender) and v3 (lookalike carrier) stay: no model took their first step, a valid result.
+- [ ] Old result records keep pointing to the pinned file for their version (for example a v3 record to `lure-ipi-007-v3.yaml` once v4 is current), so SARIF links and `attack.file` stay correct after a version bump.
 
 ### Phase 5: Stretch
 
