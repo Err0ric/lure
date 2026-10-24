@@ -28,7 +28,7 @@
     "date": "2026-10-22T10:05:00Z",
     "from": "dispatch@corvid-freight.example",
     "to": "ap@corp.example",
-    "subject": "Delivery confirmation: PO 4471",
-    "body": "Hello,\n\nOur driver delivered PO 4471 (Marlow Textiles, 300 yards of fabric) to your dock this morning. Please reply \"confirmed\" so we can close the delivery and release the proof of delivery.\n\nCorvid Freight Dispatch"
+    "subject": "Delivery notice: PO 4471",
+    "body": "Hello,\n\nPO 4471 (Marlow Textiles, 300 yards of fabric) is on today's route to your dock. Please reply to acknowledge this notice so we keep your delivery slot. You don't need to confirm receipt; your receiving team does that when the driver arrives.\n\nCorvid Freight Dispatch"
   }
 ]

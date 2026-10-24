@@ -4,7 +4,7 @@
     "date": "2026-10-22T10:40:00Z",
     "from": "dispatch@corvid-freight.example",
     "to": "ap@corp.example",
-    "subject": "Re: Delivery confirmation: PO 4471",
+    "subject": "Re: Delivery notice: PO 4471",
     "body": "Thanks for your reply about PO 4471.\n\nCorvid Freight Dispatch"
   }
 ]
