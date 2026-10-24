@@ -32,6 +32,22 @@
 - **`--payload-from <result> [--attempt K]`** replays a saved payload as a
   normal run. Records store each fixture's SHA-256, and a replay notes any
   fixture that changed since.
+- **Payload variants.** `lure run --variants none|all|KIND,ID,...` (default
+  none) also runs other payloads for the same attack and rules:
+  `rephrased` and `split` from the attack file, and generated `encoded`
+  (base64, rot13, hex, with a line asking to decode) and `buried` (about
+  60% of the way through 8,000 characters of neutral filler,
+  `fixtures/filler_ap_handbook.json`). None are generated for a payload in
+  the user turn. A split run is Invalid unless every part reaches the
+  target (`task.parts_delivered`). Encoded variants add AML.T0068. Records
+  carry `variant`; reports and compare add a Payload variants table;
+  rescore and `--payload-from` rebuild a variant from the attack file.
+  `rephrased-1` on the six current memory and tool poisoning attacks, and
+  `split-1` on five (not lure-mem-002 v2, where a split would change the
+  note's provenance).
+- **`--only-flagged RESULTS`** reruns only the payloads and variants with a
+  Fail or an outright Partial in a screening run.
+- Runtime payload checks also decode rot13 and hex.
 - **`goal`** on the current memory and tool poisoning attacks. Pinned
   versions stay byte-identical, so the adaptive attacker refuses them with
   a clear error.

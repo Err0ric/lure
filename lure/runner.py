@@ -148,6 +148,7 @@ class RunResult:
             "transcript": self.transcript,
             "tool_calls": self.log.to_list(),
             "judgment": self.judgment.to_dict(),
+            "variant": a.variant.to_dict() if a.variant is not None else None,
             "adaptive": self.adaptive,
             "cost": self.cost,
             "replay": self.replay,

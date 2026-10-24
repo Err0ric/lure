@@ -146,6 +146,33 @@ table.overall { max-width: 46rem; }
 </section>
 {% endif %}
 
+{% if comp.variants %}
+<section aria-labelledby="variants">
+  <h2 id="variants">Payload variants</h2>
+  <p class="lede">Attack success rate per payload, side by side. The rules are the same for every payload of an attack.</p>
+  <div class="scroll">
+  <table>
+    <caption>Attack success rate (runs) per payload variant and target.</caption>
+    <thead><tr>
+      <th scope="col">Attack and payload</th>
+      {% for c in comp.columns %}<th scope="col">{{ c.model }}</th>{% endfor %}
+    </tr></thead>
+    {% for v in comp.variants %}
+    <tbody class="category">
+      <tr class="cat"><th scope="rowgroup" colspan="{{ comp.columns|length + 1 }}">{{ v.label }} <span class="tech-id" style="display:inline">{{ v.name }}</span></th></tr>
+      {% for payload, kind, cells in v.rows %}
+      <tr class="att">
+        <td><span class="mono">{{ payload }}</span>{% if kind %}<span class="tech-id">{{ kind }}</span>{% endif %}</td>
+        {% for a in cells %}<td>{% if a %}{{ rate(a.tally.asr, a.tally) }}<span class="tech-id">{{ a.tally.runs }} runs</span>{% else %}not run{% endif %}</td>{% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% endfor %}
+  </table>
+  </div>
+</section>
+{% endif %}
+
 <section aria-labelledby="tokens">
   <h2 id="tokens">Tokens{% if comp.prices %} and cost{% endif %}</h2>
   <p class="lede">As recorded in the saved runs. Target tokens are the agent under test; judge tokens are the LLM judge classifying replies.{% if comp.prices %} Cost is an estimate at the rates in <code>{{ comp.prices.source }}</code>{% if comp.prices.as_of %} (as of {{ comp.prices.as_of }}){% endif %}; check current pricing before quoting it.{% endif %}</p>

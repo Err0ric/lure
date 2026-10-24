@@ -56,7 +56,17 @@ class Run:
         An adaptive run no attacker payload reached is single-shot, and says
         why, so it never reads as an adaptive Pass."""
         attack_id, version = self.key
-        return f"{attack_id} v{version}" + (f" {self.mode}" if self.mode else "")
+        variant = f" {self.variant}" if self.variant else ""
+        return f"{attack_id} v{version}{variant}" + (f" {self.mode}" if self.mode else "")
+
+    @property
+    def variant(self) -> str:
+        """The payload variant id; '' for the attack's own payload."""
+        return (self.record.get("variant") or {}).get("id", "")
+
+    @property
+    def variant_kind(self) -> str:
+        return (self.record.get("variant") or {}).get("kind", "")
 
     @property
     def adaptive(self) -> bool:
@@ -255,6 +265,9 @@ class AttackRow:
     severity: str
     atlas: list[str]
     tally: Tally = field(default_factory=Tally)
+    # The payload variant id and kind; '' for the attack's own payload.
+    variant: str = ""
+    variant_kind: str = ""
     # Adaptive runs only: attacker calls, and calls that wrote no payload.
     attacker_calls: int = 0
     attacker_refused: int = 0
@@ -290,6 +303,15 @@ class VersionRow:
 
 
 @dataclass
+class VariantGroup:
+    """One attack version: its own payload's row, then each variant's."""
+
+    label: str
+    name: str
+    rows: list[AttackRow]
+
+
+@dataclass
 class PolicyComparison:
     """One attack run under more than one version, side by side."""
 
@@ -311,6 +333,8 @@ class Report:
     techniques: list[TechniqueRow]
     findings: list[Run]
     comparisons: list[PolicyComparison] = field(default_factory=list)
+    # Attack versions run with payload variants, base row first.
+    variant_groups: list[VariantGroup] = field(default_factory=list)
     # Runs with an exposure record, and the runs that have exposure.
     exposure_checked: int = 0
     exposed_runs: list[Run] = field(default_factory=list)
@@ -370,15 +394,16 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
                           "(worst of several attempts is not comparable with one attempt)")
 
     total = Tally()
-    # One row per attack version and mode, so an adaptive run no attacker
-    # payload reached never shares a row with attacker-tested runs.
-    attacks: dict[tuple[tuple[str, int], str], AttackRow] = {}
+    # One row per attack version, variant and mode, so an adaptive run no
+    # attacker payload reached never shares a row with attacker-tested runs.
+    attacks: dict[tuple[tuple[str, int], str, str], AttackRow] = {}
     techniques: dict[str, TechniqueRow] = {}
-    for run in sorted(runs, key=lambda r: (r.key, r.mode, r.started_at)):
+    for run in sorted(runs, key=lambda r: (r.key, r.variant, r.mode, r.started_at)):
         total.add(run)
         a = run.attack
-        row = attacks.setdefault((run.key, run.mode), AttackRow(
-            run.label, a["name"], a["category"], a.get("severity", "medium"), list(a["atlas"])))
+        row = attacks.setdefault((run.key, run.variant, run.mode), AttackRow(
+            run.label, a["name"], a["category"], a.get("severity", "medium"), list(a["atlas"]),
+            variant=run.variant, variant_kind=run.variant_kind))
         row.tally.add(run)
         row.attacker_calls += run.attacker_calls
         row.attacker_refused += run.attacker_refused
@@ -419,17 +444,34 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
         techniques=technique_rows,
         findings=findings,
         comparisons=_comparisons(runs, attacks),
+        variant_groups=_variant_groups(attacks),
         exposure_checked=sum(r.exposure_checked for r in runs),
         exposed_runs=sorted((r for r in runs if r.exposure_calls),
                             key=lambda r: (r.key, r.started_at)),
     )
 
 
-def _comparisons(runs: list[Run], attacks: dict[tuple[tuple[str, int], str], AttackRow],
+def _variant_groups(attacks: dict[tuple[tuple[str, int], str, str], AttackRow],
+                    ) -> list[VariantGroup]:
+    by_key: dict[tuple[tuple[str, int], str], list[AttackRow]] = {}
+    for (key, _, mode), row in attacks.items():
+        by_key.setdefault((key, mode), []).append(row)
+    groups = []
+    for ((attack_id, version), mode), rows in sorted(by_key.items()):
+        if any(r.variant for r in rows):
+            rows = sorted(rows, key=lambda r: (r.variant != "", r.variant))
+            label = f"{attack_id} v{version}" + (f" {mode}" if mode else "")
+            groups.append(VariantGroup(label, rows[0].name, rows))
+    return groups
+
+
+def _comparisons(runs: list[Run], attacks: dict[tuple[tuple[str, int], str, str], AttackRow],
                  ) -> list[PolicyComparison]:
+    """Versions side by side, on each attack's own payload only."""
     by_id: dict[str, list[tuple[tuple[str, int], str]]] = {}
-    for row_key in attacks:
-        by_id.setdefault(row_key[0][0], []).append(row_key)
+    for key, variant, mode in attacks:
+        if not variant:
+            by_id.setdefault(key[0], []).append((key, mode))
     out = []
     for attack_id, row_keys in sorted(by_id.items()):
         if len({key[1] for key, _ in row_keys}) < 2:
@@ -437,9 +479,12 @@ def _comparisons(runs: list[Run], attacks: dict[tuple[tuple[str, int], str], Att
         rows = []
         for row_key in sorted(row_keys, key=lambda k: (k[0][1], k[1])):
             key, mode = row_key
-            version_runs = sorted((r for r in runs if r.key == key and r.mode == mode),
+            version_runs = sorted((r for r in runs
+                                   if r.key == key and r.mode == mode and not r.variant),
                                   key=lambda r: r.started_at)
-            rows.append(VersionRow(attacks[row_key].label, key[1], version_runs[0].policy,
-                                   attacks[row_key].tally, version_runs))
-        out.append(PolicyComparison(attack_id, attacks[row_keys[-1]].name, rows))
+            row = attacks[(key, "", mode)]
+            rows.append(VersionRow(row.label, key[1], version_runs[0].policy,
+                                   row.tally, version_runs))
+        last_key, last_mode = row_keys[-1]
+        out.append(PolicyComparison(attack_id, attacks[(last_key, "", last_mode)].name, rows))
     return out

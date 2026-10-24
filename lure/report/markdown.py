@@ -107,6 +107,15 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
                          text(", ".join(c["outside"])), _file(r)]
                         for r in report.exposed_runs for c in r.exposure_calls])
 
+    if report.variant_groups:
+        lines += ["", "## Payload variants", "",
+                  ("Each attack's own payload, then the same attack with another payload. The "
+                  "rules are the same, so the rates compare directly."), ""]
+        rows = [[text(g.label), text(a.variant or "own payload"), text(a.variant_kind),
+                 str(a.tally.runs), pct(a.tally.influenced_rate), pct(a.tally.asr)]
+                for g in report.variant_groups for a in g.rows]
+        lines += table(["Attack", "Payload", "Kind", "Runs", "Influenced", "ASR"], rows,
+                       numeric=range(3, 6))
     lines += ["", "## Findings by ATLAS technique", ""]
     lines += _findings(report)
     return "\n".join(lines) + "\n"

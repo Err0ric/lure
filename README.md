@@ -115,9 +115,17 @@ Other useful commands:
 | `lure run ... --prices prices.yaml --max-cost 15` | Print the estimated spend (attacker, target and judge together) and stop the batch before it passes $15; exits 3 when it stops |
 | `lure run attacks/memory_poisoning/ attacks/tool_poisoning/ --target anthropic --model claude-sonnet-5-5 --attacker-model claude-opus-5-5` | Adaptive attacker: see below |
 | `lure run <attack.yaml> --payload-from <result.json> [--attempt K]` | Replay a saved payload (by default the deciding one of an adaptive run) as a normal run |
+| `lure run attacks/ ... --variants all` | Also run each attack's payload variants: `rephrased`, `split`, `encoded` (base64, rot13, hex) and `buried`; or pick kinds and ids, e.g. `--variants rephrased,split,encoded-base64,buried` |
+| `lure run attacks/ ... --only-flagged results/screen/ --repeat 10` | Rerun only the payloads and variants that had a Fail or an outright Partial in a screening run |
 | `pytest` and `ruff check .` | Tests (no network) and lint |
 
 `results/` and `reports/` are gitignored. Each result file records the attack id, version and file, the target, the judge, token usage, the full transcript, every tool call and the verdict with its evidence. The format is [`schema/results.v3.json`](schema/results.v3.json) (JSON Schema; older records follow [`results.v2.json`](schema/results.v2.json) or [`results.v1.json`](schema/results.v1.json) and are still read); each file names its `schema_version` and `lure_version`.
+
+### Payload variants
+
+`--variants` runs other payloads for the same attack and rules, next to the attack's own: reworded (`rephrased`), spread over several places (`split`, Invalid unless every part reaches the agent), encoded in base64, rot13 or hex (`encoded`, also mapped to AML.T0068 LLM Prompt Obfuscation), or about 60% of the way through 8,000 characters of neutral filler (`buried`). `rephrased` and `split` are written in the attack file; `encoded` and `buried` are generated for every attack whose payload sits in a fixture. Reports add a Payload variants table, and `lure compare` puts each variant side by side across targets.
+
+A cheap way to find weak spots: screen everything at `--repeat 3 --variants all`, then rerun just what broke with `--only-flagged <screening results> --repeat 10`.
 
 ### Adaptive attacker
 

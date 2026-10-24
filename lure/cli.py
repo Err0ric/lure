@@ -3,6 +3,7 @@
   lure run <attack.yaml|folder>... --target ollama|anthropic|openai
       [--attacker-model M] [--prices prices.yaml --max-cost USD] [--baseline]
       [--payload-from result.json [--attempt K]]
+      [--variants none|all|KIND,ID,...] [--only-flagged RESULTS]
   lure rescore <results folder|file>...  (re-judge saved runs, no target calls)
   lure report <results folder|file>... --out report.html
   lure compare <results folder> <results folder>... --out compare.html [--prices prices.yaml]
@@ -25,8 +26,10 @@ from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacker import MAX_TOKENS as ATTACKER_MAX_TOKENS
 from lure.attacker import Attacker
 from lure.attacks import (
+    VARIANT_KINDS,
     Attack,
     AttackError,
+    Variant,
     attacks_root,
     discover_categories,
     load_attack,
@@ -36,7 +39,7 @@ from lure.batch import SummaryRow, collect_attack_paths, summarize
 from lure.budget import ROLES, Budget
 from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError
 from lure.judge.llm_judge import LLMJudge
-from lure.judge.rules import DETECTED, HEURISTIC, Judgment, Verdict
+from lure.judge.rules import CONFIRM_FIRST, DETECTED, HEURISTIC, Judgment, Verdict
 from lure.policy import Policy, PolicyResult, PolicyRun
 from lure.prices import PricesError, load_prices
 from lure.rescore import (
@@ -128,6 +131,13 @@ def build_parser() -> argparse.ArgumentParser:
                           "judge) passes USD; needs --prices; exits 3")
     run.add_argument("--payload-from", metavar="RESULT",
                      help="replay the payload saved in this result file (one attack file only)")
+    run.add_argument("--variants", default="none", metavar="SPEC",
+                     help="payload variants to run besides each attack's own payload: none "
+                          "(default), all, or a comma list of kinds (rephrased, split, encoded, "
+                          "buried) and variant ids (encoded-base64, split-1, ...)")
+    run.add_argument("--only-flagged", metavar="RESULTS",
+                     help="run only the attack payloads and variants that had a Fail or an "
+                          "outright Partial in this results folder (a screening run)")
     run.add_argument("--attempt", type=_positive_int, metavar="K",
                      help="with --payload-from: replay adaptive attempt K (default the "
                           "deciding attempt)")
@@ -262,7 +272,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
             attacks, replay = _replay(attacks, args, out)
         elif args.attempt:
             raise AttackError("--attempt needs --payload-from")
-        for a in attacks:
+        selected = _plan_variants(attacks, args, out)
+        for a in selected:
             build_toolbox(a.tools, a.planted_fixtures(), ToolCallLog())
         adapter = make_adapter(args.target, args.model)
         llm_judge = _llm_judge(args)
@@ -275,8 +286,13 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     except (AttackError, ToolboxError, AdapterError, PolicyError, PricesError) as e:
         print(f"lure: {e}", file=sys.stderr)
         return EXIT_BAD_INPUT
-    batch = any(Path(t).is_dir() for t in args.attack) or len(attacks) > 1 or args.repeat > 1
-    plan = [(a, n) for a in attacks for n in range(1, args.repeat + 1)]
+    if not selected:
+        print(f"Nothing flagged in {args.only_flagged}: no Fail or outright Partial for these "
+              "attacks.", file=out)
+        return EXIT_OK
+    batch = (any(Path(t).is_dir() for t in args.attack) or len(selected) > 1
+             or args.repeat > 1)
+    plan = [(a, n) for a in selected for n in range(1, args.repeat + 1)]
     results: list[RunResult] = []
     for i, (attack, n) in enumerate(plan, 1):
         if budget is not None and not budget.allows_another():
@@ -320,6 +336,73 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     print(file=out)
     print_policy(gate, out)
     return exit_code(gate, [r.judgment.verdict for r in results], stopped)
+
+
+def _plan_variants(attacks: list[Attack], args, out: TextIO) -> list[Attack]:
+    """Each attack's own payload, plus the variants --variants picks; or
+    with --only-flagged, just the payloads and variants a screening run
+    flagged."""
+    spec = args.variants.strip().lower()
+    if spec != "none" and args.attacker_model:
+        raise AttackError("--variants and --attacker-model cannot be combined yet")
+    if spec != "none" and args.payload_from:
+        raise AttackError("--payload-from replays a saved run's own variant; leave out --variants")
+    if args.only_flagged:
+        if spec != "none":
+            raise AttackError("--only-flagged picks the variants itself; leave out --variants")
+        return _flagged_plan(attacks, args.only_flagged, out)
+    if spec == "none" or args.payload_from:
+        return list(attacks)
+    tokens = {t.strip() for t in spec.split(",") if t.strip()}
+    plan, used = [], set()
+    for a in attacks:
+        plan.append(a)
+        for v in a.all_variants():
+            if "all" in tokens or v.kind in tokens or v.id in tokens:
+                plan.append(a.with_variant(v))
+                used |= {v.kind, v.id}
+    unknown = sorted(tokens - used - {"all"})
+    if unknown:
+        raise AttackError(f"--variants: no selected attack has {', '.join(unknown)}; use a kind "
+                          f"({', '.join(VARIANT_KINDS)}) or a variant id such as encoded-base64")
+    return plan
+
+
+def _flagged_plan(attacks: list[Attack], folder: str, out: TextIO) -> list[Attack]:
+    """The attack payloads and variants with a Fail or an outright Partial
+    (a Partial with no kind counts as outright) in a results folder."""
+    paths = record_paths([folder])
+    flagged: set[tuple[str, int, str | None]] = set()
+    seen = 0
+    for path in paths:
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+            key = record_key(record)
+            verdict = Verdict(record["judgment"]["verdict"])
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            continue
+        seen += 1
+        if record.get("adaptive"):
+            raise AttackError(f"{path}: adaptive run; --only-flagged reads single-shot "
+                              "screening runs")
+        kind = record["judgment"].get("partial_kind")
+        if verdict is Verdict.FAIL or (verdict is Verdict.PARTIAL and kind != CONFIRM_FIRST):
+            flagged.add((*key, (record.get("variant") or {}).get("id")))
+    if not seen:
+        raise AttackError(f"no Lure results found in {folder}")
+    plan, found = [], set()
+    for a in attacks:
+        for v in [None, *a.all_variants()]:
+            key = (a.id, a.version, v.id if v else None)
+            if key in flagged:
+                plan.append(a.with_variant(v) if v else a)
+                found.add(key)
+    selected = {(a.id, a.version) for a in attacks}
+    gone = sorted(f"{i} v{n} {v or 'base'}" for i, n, v in flagged - found if (i, n) in selected)
+    if gone:
+        print(f"Note: flagged in {folder} but not in the attack files now: {', '.join(gone)}",
+              file=out)
+    return plan
 
 
 def _attacker(args, attacks: list[Attack], target: ModelAdapter) -> Attacker | None:
@@ -372,6 +455,8 @@ def _replay(attacks: list[Attack], args, out: TextIO) -> tuple[list[Attack], dic
     if key != (attack.id, attack.version):
         raise AttackError(f"{path} is a run of {key[0]} v{key[1]}, not {attack.id} "
                           f"v{attack.version}")
+    if record.get("variant"):
+        return [_replay_variant(attack, record, path)], {"from": str(path), "attempt": None}
     adaptive = record.get("adaptive")
     if args.attempt:
         if not adaptive:
@@ -393,6 +478,19 @@ def _replay(attacks: list[Attack], args, out: TextIO) -> tuple[list[Attack], dic
         print(f"Note: fixtures changed since {path.name}: {', '.join(changed)}; the replay "
               "uses the current files.", file=out)
     return [attack.with_payload(payload)], {"from": str(path), "attempt": attempt}
+
+
+def _replay_variant(attack: Attack, record: dict, path: Path) -> Attack:
+    """The saved run's variant, rebuilt from the attack file; it must plant
+    exactly what the saved run planted."""
+    saved = record["variant"]
+    variant: Variant | None = attack.variant_by_id(saved["id"])
+    if variant is None:
+        raise AttackError(f"{path}: {attack.id} has no variant {saved['id']!r} now")
+    if [p.to_dict() for p in variant.parts] != saved["parts"]:
+        raise AttackError(f"{path}: variant {saved['id']!r} changed since this run; it would "
+                          "not replay the same payload")
+    return attack.with_variant(variant)
 
 
 def exit_code(gate: PolicyResult, verdicts: list[Verdict], stopped: bool = False) -> int:
@@ -594,6 +692,13 @@ def print_comparison(comp, out: TextIO) -> None:
         _print_table(["Version", "Target", "Runs", "Influenced", "ASR", "Exposure"],
                      _blank_repeats(pol_rows), out)
 
+    if comp.variants:
+        print(file=out)
+        var_rows = [[v.label, payload, *(_tally_rate(a.tally, "asr", Verdict.FAIL) if a else "not run"
+                                         for a in cells)]
+                    for v in comp.variants for payload, _, cells in v.rows]
+        _print_table(["Attack", "Payload", *models], _blank_repeats(var_rows), out)
+
     from lure.report.compare import compare_lede
 
     notes = compare_lede(comp)
@@ -664,7 +769,15 @@ def rescore_main(args, out: TextIO) -> int:
             print(f"lure: skipping {path}: adaptive run; rescore does not re-judge attempts yet",
                   file=sys.stderr)
             continue
-        picked.append((path, record, index[key]))
+        attack = index[key]
+        if record.get("variant"):
+            variant = attack.variant_by_id(record["variant"]["id"])
+            if variant is None:
+                print(f"lure: skipping {path}: {key[0]} has no variant "
+                      f"{record['variant']['id']!r} now", file=sys.stderr)
+                continue
+            attack = attack.with_variant(variant)
+        picked.append((path, record, attack))
     if not picked:
         print("lure: no matching results to rescore", file=sys.stderr)
         return EXIT_BAD_INPUT
@@ -730,7 +843,8 @@ def print_progress(result: RunResult, i: int, total: int, n: int, repeat: int, o
         if not result.adaptive["attacker_tested"]:
             notes.append("single-shot: no attacker payload reached the target")
     note = f"  [{', '.join(notes)}]" if notes else ""
-    print(f"[{i:>{width}}/{total}] {result.attack.id}  run {n}/{repeat}  "
+    variant = f" [{result.attack.variant.id}]" if result.attack.variant else ""
+    print(f"[{i:>{width}}/{total}] {result.attack.id}{variant}  run {n}/{repeat}  "
           f"{verdict:<8}  {result.saved_to}{note}", file=out)
 
 

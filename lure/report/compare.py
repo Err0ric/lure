@@ -124,6 +124,16 @@ class PolicyCompare:
 
 
 @dataclass
+class VariantCompare:
+    """One attack version's payloads across targets: own payload first."""
+
+    label: str
+    name: str
+    # (payload label, kind, one AttackRow per column or None where not run)
+    rows: list[tuple[str, str, list[AttackRow | None]]]
+
+
+@dataclass
 class Comparison:
     columns: list[Column]
     categories: list[CategoryCompare]
@@ -160,6 +170,31 @@ class Comparison:
     @property
     def adaptive(self) -> bool:
         return any(c.report.adaptive for c in self.columns)
+
+    @property
+    def variants(self) -> list[VariantCompare]:
+        groups: dict[str, VariantCompare] = {}
+        for i, c in enumerate(self.columns):
+            for g in c.report.variant_groups:
+                vc = groups.setdefault(g.label, VariantCompare(g.label, g.name, []))
+                for row in g.rows:
+                    payload = row.variant or "own payload"
+                    found = next((r for r in vc.rows if r[0] == payload), None)
+                    if found is None:
+                        found = (payload, row.variant_kind, [None] * len(self.columns))
+                        vc.rows.append(found)
+                    found[2][i] = row
+        for vc in groups.values():
+            # A target that ran only the attack's own payload still fills that row.
+            own = next((r for r in vc.rows if r[0] == "own payload"), None)
+            if own is None:
+                own = ("own payload", "", [None] * len(self.columns))
+                vc.rows.append(own)
+            for i, c in enumerate(self.columns):
+                if own[2][i] is None:
+                    own[2][i] = c.attacks.get(vc.label)
+            vc.rows.sort(key=lambda r: (r[0] != "own payload", r[0]))
+        return [groups[k] for k in sorted(groups)]
 
 
 def build_comparison(sources: list[str | Path], prices: Prices | None = None) -> Comparison:

@@ -36,14 +36,17 @@ def collect_attack_paths(path: str | Path) -> list[Path]:
 class SummaryRow:
     attack_id: str
     version: int = 1
+    # The payload variant id; None for the attack's own payload.
+    variant: str | None = None
     counts: Counter = field(default_factory=Counter)
     # (verdict, reason) -> runs, for Invalid and Error runs.
     unscored_reasons: Counter = field(default_factory=Counter)
 
     @property
     def label(self) -> str:
-        """The attack id, plus the version when it is past v1."""
-        return self.attack_id if self.version == 1 else f"{self.attack_id} v{self.version}"
+        """The attack id, plus the version when it is past v1, plus the variant."""
+        label = self.attack_id if self.version == 1 else f"{self.attack_id} v{self.version}"
+        return f"{label} [{self.variant}]" if self.variant else label
 
     @property
     def runs(self) -> int:
@@ -64,11 +67,12 @@ class SummaryRow:
 
 
 def summarize(results: list[RunResult]) -> list[SummaryRow]:
-    """One row per attack id and version, in first-seen order. Versions are
-    never mixed: a stricter v2 is a different test from v1."""
-    rows: dict[tuple[str, int], SummaryRow] = {}
+    """One row per attack id, version and variant, in first-seen order.
+    Versions are never mixed: a stricter v2 is a different test from v1."""
+    rows: dict[tuple[str, int, str | None], SummaryRow] = {}
     for r in results:
-        key = (r.attack.id, r.attack.version)
+        variant = getattr(r.attack, "variant", None)
+        key = (r.attack.id, r.attack.version, variant.id if variant else None)
         row = rows.setdefault(key, SummaryRow(*key))
         row.counts[r.judgment.verdict] += 1
         if r.judgment.verdict in UNSCORED:

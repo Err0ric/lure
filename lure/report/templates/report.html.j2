@@ -110,6 +110,36 @@
   </div>
 </section>
 
+{% if report.variant_groups %}
+<section aria-labelledby="variants">
+  <h2 id="variants">Payload variants</h2>
+  <p class="lede">Each attack's own payload, then the same attack with another payload: reworded, split over several places, encoded, or buried in long text. The rules are the same, so the rates compare directly.</p>
+  <div class="scroll">
+  <table>
+    <caption>Rates per payload variant. Rates leave out Invalid and Error runs.</caption>
+    <thead><tr>
+      <th scope="col">Attack and payload</th>
+      <th scope="col">Runs</th>
+      <th scope="col">Influenced rate</th>
+      <th scope="col">Attack success rate</th>
+      <th scope="col">Detection rate</th>
+    </tr></thead>
+    {% for g in report.variant_groups %}
+    <tbody class="category">
+      <tr class="cat"><th scope="rowgroup" colspan="5">{{ g.label }} <span class="tech-id" style="display:inline">{{ g.name }}</span></th></tr>
+      {% for a in g.rows %}
+      <tr class="att">
+        <td><span class="mono">{{ a.variant or "own payload" }}</span>{% if a.variant_kind %}<span class="tech-id">{{ a.variant_kind }}</span>{% endif %}</td>
+        <td>{{ a.tally.runs }}</td><td>{{ rate(a.tally.influenced_rate, a.tally) }}</td><td>{{ rate(a.tally.asr, a.tally) }}</td><td>{{ rate(a.tally.detection_rate, a.tally) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% endfor %}
+  </table>
+  </div>
+</section>
+{% endif %}
+
 <section aria-labelledby="categories">
   <h2 id="categories">Results by category</h2>
   <p class="lede">Each attack version is its own row: a stricter v2 is a different test, so its runs never mix with v1.</p>

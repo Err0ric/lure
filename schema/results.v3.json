@@ -122,6 +122,17 @@
     "judgment": {
       "$ref": "#/$defs/judgment"
     },
+    "variant": {
+      "description": "The payload variant this run planted. Null for the attack's own payload.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/variant"
+        }
+      ]
+    },
     "rescore": {
       "$ref": "#/$defs/rescore"
     },
@@ -823,6 +834,20 @@
             "null"
           ]
         },
+        "parts_delivered": {
+          "description": "For a split variant: whether each part reached the target. Null otherwise.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "boolean"
+              }
+            }
+          ]
+        },
         "problems": {
           "type": "array",
           "items": {
@@ -1151,6 +1176,87 @@
               }
             }
           ]
+        }
+      }
+    },
+    "variant": {
+      "description": "Another payload for the same attack and rules.",
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "source",
+        "encoding",
+        "plain",
+        "parts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "kind": {
+          "enum": [
+            "rephrased",
+            "split",
+            "encoded",
+            "buried"
+          ]
+        },
+        "source": {
+          "description": "yaml: written in the attack file. generated: built by Lure.",
+          "enum": [
+            "yaml",
+            "generated"
+          ]
+        },
+        "encoding": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "base64",
+                "rot13",
+                "hex"
+              ]
+            }
+          ]
+        },
+        "plain": {
+          "description": "The payload as a reader sees it: decoded, parts joined.",
+          "type": "string"
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "location",
+              "placement",
+              "payload"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "location": {
+                "type": "string",
+                "minLength": 1
+              },
+              "placement": {
+                "enum": [
+                  "append",
+                  "prepend",
+                  "replace"
+                ]
+              },
+              "payload": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     }

@@ -13,6 +13,8 @@ All IDs below were checked on https://atlas.mitre.org/ and https://attack.mitre.
 | Report | ATLAS heatmap, findings grouped by technique (HTML and Markdown) | An attack mapped to two techniques counts under both |
 | SARIF | Rule `properties.tags`, `properties.atlas`, `properties.attack` | One rule per attack id |
 
+| Payload variants | `variant` in each result (`lure run --variants`) | A variant keeps its attack's IDs. An `encoded` variant (base64, rot13, hex) also adds AML.T0068 LLM Prompt Obfuscation, verified 2026-10-24; `rephrased`, `split` and `buried` add nothing |
+
 Map what the attack *exercises*, not everything it could lead to. Typical pattern: the delivery technique (direct or indirect prompt injection, jailbreak), plus the harm the `fail_if` rules catch (exfiltration via tool, data destruction via tool, financial harm), plus any evasion the payload uses (obfuscation).
 
 ## ATLAS techniques in the library
@@ -26,7 +28,7 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | AML.T0054 | LLM Jailbreak | lure-dpi-003, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-jbk-003 |
 | AML.T0056 | Extract LLM System Prompt | lure-dpi-001, lure-jbk-003 |
 | AML.T0057 | LLM Data Leakage | lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-ipi-008 |
-| AML.T0068 | LLM Prompt Obfuscation | lure-ipi-004, lure-jbk-003 |
+| AML.T0068 | LLM Prompt Obfuscation | lure-ipi-004, lure-jbk-003; every `encoded` variant |
 | AML.T0069.002 | Discover LLM System Information: System Prompt | lure-dpi-001 |
 | AML.T0080.000 | AI Agent Context Poisoning: Memory | lure-mem-002 v1, lure-mem-002 v2, lure-mem-003 |
 | AML.T0080.001 | AI Agent Context Poisoning: Thread | lure-ipi-007 v2, lure-ipi-007 v3, lure-mem-001 |
