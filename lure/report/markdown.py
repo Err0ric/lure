@@ -49,7 +49,7 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
         f"**{text(headline(report))}**",
         "",
         (f"Target `{report.target}`, judged by {text(judges)}, "
-        f"{t.runs} runs of {len(report.attacks)} attacks, {date_range(report.first, report.last)}."),
+        f"{t.runs} runs of {report.scope}, {date_range(report.first, report.last)}."),
     ]
     if report.adaptive:
         lines[-1] += (f" Adaptive attacker {text(', '.join(report.attackers))}, worst case: it "

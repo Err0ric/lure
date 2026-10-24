@@ -56,7 +56,7 @@
     </dd></div>
     {% if report.adaptive %}<div><dt>Attacker</dt><dd>Adaptive<small>{{ report.attackers|join(", ") }}; attacker payloads reached the target in {{ report.attacker_tested }} of {{ report.total.runs }} runs, the rest are single-shot; refused {{ report.attacker_refused }} of {{ report.attacker_calls }} calls. Worst case: the attacker sees the agent's replies. Each run is its worst attempt, so rates are not comparable with single-shot runs</small></dd></div>{% endif %}
     <div><dt>Date</dt><dd>{{ dates }}</dd></div>
-    <div><dt>Runs</dt><dd>{{ report.total.runs }}<small>{{ report.total.scored }} scored, {{ report.attacks|length }} attacks{% if report.total.refused %}, {{ report.total.refused }} refused by the target{% endif %}</small></dd></div>
+    <div><dt>Runs</dt><dd>{{ report.total.runs }}<small>{{ report.total.scored }} scored, {{ report.scope }}{% if report.total.refused %}, {{ report.total.refused }} refused by the target{% endif %}</small></dd></div>
     <div><dt>Pass rate</dt><dd>{{ report.total.pass_rate|pct }}<small>{{ report.total.counts[Verdict.PASS] }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
     <div><dt>Influenced rate</dt><dd>{{ report.total.influenced_rate|pct }}<small>{{ report.total.influenced }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}{% if report.total.confirm_first %}; {{ report.total.confirm_first }} Partial confirm first{% endif %}</small></dd></div>
     <div><dt>Attack success rate</dt><dd>{{ report.total.asr|pct }}<small>{{ report.total.counts[Verdict.FAIL] }} runs broke the rules</small></dd></div>
@@ -93,7 +93,7 @@
     {% for t in report.techniques %}
     <tr>
       <th scope="row" style="font-weight:400">{{ t.name }}<span class="tech-id">{{ t.technique }}</span></th>
-      <td>{{ t.attacks|length }}</td>
+      <td>{{ t.attack_count }}{% if t.payload_count != t.attack_count %}<span class="tech-id">{{ t.payload_count }} payloads</span>{% endif %}</td>
       {% for v in verdicts %}{% set n = t.tally.counts[v] %}<td{% if not n %} class="zero"{% endif %}>{{ n }}</td>{% endfor %}
       <td class="asr {{ t.tally.influenced_rate|asr_step }}" title="{{ t.technique }}: influenced in {{ t.tally.influenced }} of {{ t.tally.scored }} scored runs">{{ rate(t.tally.influenced_rate, t.tally) }}</td>
       <td title="{{ t.technique }}: {{ t.tally.counts[Verdict.FAIL] }} of {{ t.tally.scored }} scored runs broke the rules">{{ rate(t.tally.asr, t.tally) }}</td>
@@ -161,7 +161,7 @@
     {% for c in report.categories %}
     <tbody class="category">
       <tr class="cat">
-        <th scope="rowgroup">{{ c.name }} <span class="tech-id" style="display:inline">{{ c.attacks|length }} attacks</span></th>
+        <th scope="rowgroup">{{ c.name }} <span class="tech-id" style="display:inline">{{ c.scope }}</span></th>
         <td>{{ c.tally.runs }}</td><td>{{ rate(c.tally.pass_rate, c.tally) }}</td><td>{{ rate(c.tally.influenced_rate, c.tally) }}</td><td>{{ rate(c.tally.asr, c.tally) }}</td><td>{{ rate(c.tally.detection_rate, c.tally) }}</td><td{% if not c.tally.refused %} class="zero"{% endif %}>{{ refusal_cell(c.tally) }}</td><td{% if not c.tally.exposed %} class="zero"{% endif %}>{{ exposure_cell(c.tally) }}</td>
       </tr>
       {% for a in c.attacks %}

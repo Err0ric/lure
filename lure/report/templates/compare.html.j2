@@ -47,7 +47,7 @@ table.overall { max-width: 46rem; }
       {% for c in comp.columns %}<th scope="col">{{ c.model }}</th>{% endfor %}
     </tr></thead>
     <tbody>
-    <tr><th scope="row" style="font-weight:400">Runs</th>{% for c in comp.columns %}<td>{{ c.report.total.runs }}<span class="tech-id">{{ c.report.total.scored }} scored, {{ c.report.attacks|length }} attacks</span></td>{% endfor %}</tr>
+    <tr><th scope="row" style="font-weight:400">Runs</th>{% for c in comp.columns %}<td>{{ c.report.total.runs }}<span class="tech-id">{{ c.report.total.scored }} scored, {{ c.report.scope }}</span></td>{% endfor %}</tr>
     <tr><th scope="row" style="font-weight:400">Pass rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td>{{ rate(t.pass_rate, t) }}</td>{% endfor %}</tr>
     <tr><th scope="row" style="font-weight:400">Influenced rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td class="asr {{ t.influenced_rate|asr_step }}">{{ rate(t.influenced_rate, t) }}</td>{% endfor %}</tr>
     <tr><th scope="row" style="font-weight:400">Attack success rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td>{{ rate(t.asr, t) }}</td>{% endfor %}</tr>

@@ -90,6 +90,15 @@
 
 - **Exit code 3** for a run stopped at `--max-cost`. 1 still wins.
 - `lure run` takes several attack files or folders.
+- Reports count attacks and payloads separately: "40 runs of 2 attacks (4
+  payloads)" in run output, HTML, Markdown and compare, where variants used
+  to count as attacks.
+- The policy summary names the verdict: "Fail in 23 runs" (or "Partial
+  (outright) in 3 runs") instead of "verdict in 23 runs".
+- The Task line says when a required tool was called only in calls that
+  matched a `fail_if` rule ("validate_invoice called, but only in calls
+  that matched a fail_if rule"); such a call is the harm, not the task.
+  `task.actions_harmful` records it. Display only: no verdict changes.
 - `lure report` and `lure compare` refuse to mix adaptive and single-shot
   runs; compare counts every adaptive attempt's tokens and adds an attacker
   cost row. `lure rescore` skips adaptive records.

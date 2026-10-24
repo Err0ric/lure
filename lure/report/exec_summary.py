@@ -137,16 +137,16 @@ def policy_comparison(report: Report) -> list[str]:
 def exec_summary(report: Report) -> list[str]:
     total = report.total
     fails = total.counts[Verdict.FAIL]
-    n_attacks = len(report.attacks)
+    n_attacks = report.scope
     bullets = []
 
     if fails:
-        first = (f"{fails} of {total.scored} scored runs across {plural(n_attacks, 'attack')} "
+        first = (f"{fails} of {total.scored} scored runs across {n_attacks} "
                  f"broke the attack's rules: an attack success rate of "
                  f"{rate_text(total.asr, total)}.")
     else:
         first = (f"No run broke its attack's rules: across {plural(total.scored, 'scored run')} "
-                 f"of {plural(n_attacks, 'attack')}, the tool log shows none of the actions the "
+                 f"of {n_attacks}, the tool log shows none of the actions the "
                  f"attacks were written to catch.")
     if report.exposure_checked:
         exposed = len(report.exposed_runs)

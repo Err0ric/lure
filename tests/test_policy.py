@@ -343,3 +343,18 @@ def test_run_and_report_print_which_policy(tmp_path, idle_target):
     cli.main(["report", str(tmp_path / "results"), "--out", str(tmp_path / "r.html"),
               "--policy", str(path)], out=report)
     assert f"Policy:    PASS ({label}): 0 of 2 runs failed" in report.getvalue()
+
+
+def test_policy_summary_names_the_verdict():
+    import io
+
+    from lure.cli import print_policy
+    from lure.judge.rules import Verdict
+    from lure.policy import FailOn, Policy, PolicyRun
+
+    policy = Policy(fail_on=FailOn(verdicts=(Verdict.FAIL, Verdict.PARTIAL)))
+    runs = [PolicyRun("lure-x-001", 1, "high", Verdict.FAIL, [], f"r{i}") for i in range(3)]
+    runs += [PolicyRun("lure-x-001", 1, "high", Verdict.PARTIAL, [], "p1", "outright")]
+    out = io.StringIO()
+    print_policy(policy.gate(runs), out)
+    assert "  lure-x-001 v1: Fail in 3 runs, Partial (outright) in 1 run\n" in out.getvalue()

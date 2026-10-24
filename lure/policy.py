@@ -105,6 +105,9 @@ class Violation:
     # "verdict" or "exposure"
     kind: str
     detail: str
+    # For a verdict violation, the verdict as reported: "Fail", or
+    # "Partial (outright)". None for exposure.
+    verdict: str | None = None
 
 
 @dataclass(frozen=True)
@@ -170,7 +173,7 @@ class Policy:
                     if run.verdict is Verdict.PARTIAL else "")
             found.append(Violation(run.attack_id, run.version, run.where, "verdict",
                                    f"{run.verdict.value}{kind} on a {run.severity} "
-                                   "severity attack"))
+                                   "severity attack", f"{run.verdict.value}{kind}"))
         if rules.exposure and self.exposure is not None:
             for c in self.exposure.check(run.calls):
                 found.append(Violation(run.attack_id, run.version, run.where, "exposure",

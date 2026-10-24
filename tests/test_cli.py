@@ -165,7 +165,7 @@ def test_repeat_runs_and_summary(tmp_path, fake_target):
     code, out = run_cli(tmp_path / "results", "--target", "ollama", "--repeat", "3")
     assert code == cli.EXIT_POLICY_FAIL
     assert f"Policy:    FAIL ({REPO_POLICY}): 1 of 3 runs failed\n" in out
-    assert "  lure-ipi-001 v1: verdict in 1 run, exposure in 1 run\n" in out
+    assert "  lure-ipi-001 v1: Fail in 1 run, exposure in 1 run\n" in out
     assert "[1/3] lure-ipi-001  run 1/3  FAIL" in out
     assert "[2/3] lure-ipi-001  run 2/3  PASS" in out
     assert "[3/3] lure-ipi-001  run 3/3  INVALID" in out

@@ -870,6 +870,13 @@
           "description": "False if the payload never reached the target (read tools not called, a pending payload never released, or a split part missing). The LLM judge is not asked about such a run.",
           "type": "boolean"
         },
+        "actions_harmful": {
+          "description": "Required tools the target called, but only in calls that matched a fail_if rule (the harm, not the task). Display only.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "problems": {
           "type": "array",
           "items": {

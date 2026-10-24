@@ -514,7 +514,9 @@ def print_policy(gate: PolicyResult, out: TextIO) -> None:
               f"run{'' if gate.skipped == 1 else 's'}", file=out)
     failed: dict[tuple[str, int], dict[str, set[str]]] = {}
     for v in gate.violations:
-        failed.setdefault((v.attack_id, v.version), {}).setdefault(v.kind, set()).add(v.where)
+        # Name the verdict ("Fail in 23 runs"); exposure stays "exposure".
+        label = v.verdict if v.kind == "verdict" and v.verdict else v.kind
+        failed.setdefault((v.attack_id, v.version), {}).setdefault(label, set()).add(v.where)
     status = "PASS" if gate.passed else "FAIL"
     print(f"Policy:    {status} ({gate.label}): {gate.failed_runs} of {gate.runs} "
           f"run{'' if gate.runs == 1 else 's'} failed", file=out)
@@ -569,7 +571,7 @@ def report_main(args, out: TextIO) -> int:
     gate = policy.gate_saved([(r.record, str(r.path)) for r in runs])
     path = write_report(report, args.out)
     t = report.total
-    print(f"Wrote {path}: {t.runs} runs of {len(report.attacks)} attacks against {report.target}, "
+    print(f"Wrote {path}: {t.runs} runs of {report.scope} against {report.target}, "
           f"{len(report.findings)} findings.", file=out)
     if args.md:
         from lure.report.markdown import write_markdown
@@ -975,6 +977,10 @@ def _print_task(task, w) -> None:
     if task.actions_required:
         done = ", ".join(task.actions_done) or "none"
         line += f"; required actions done: {done} (of {', '.join(task.actions_required)})"
+        if task.actions_harmful:
+            tools = ", ".join(task.actions_harmful)
+            line += (f"; {tools} called, but only in calls that matched a fail_if rule "
+                     "(the harm, not the task)")
     w(line)
 
 

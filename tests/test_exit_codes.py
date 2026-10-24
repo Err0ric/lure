@@ -142,7 +142,7 @@ def test_report_prints_the_policy_result(tmp_path):
     code, out = report(tmp_path, saved(tmp_path, PASS_RUN, FAIL_RUN))
     assert code == 1
     assert f"Policy:    FAIL ({REPO_POLICY}): 1 of 2 runs failed\n" in out
-    assert "  lure-ipi-001 v1: verdict in 1 run, exposure in 1 run\n" in out
+    assert "  lure-ipi-001 v1: Fail in 1 run, exposure in 1 run\n" in out
 
 
 def test_report_skips_attacks_the_policy_disables(tmp_path):

@@ -478,3 +478,36 @@ def test_with_variant_leaves_the_attack_untouched():
     before = replace(MEM_002)
     MEM_002.with_variant(MEM_002.variant_by_id("encoded-base64"))
     assert MEM_002 == before and MEM_002.variant is None
+
+
+# Wording: attacks and payloads are counted separately
+
+
+def test_reports_count_attacks_and_payloads_separately(tmp_path):
+    folder = screen(tmp_path)  # tpo-002: own payload, encoded-base64, split-1
+    report = build_report(load_runs([folder]))
+    assert (report.attack_count, report.payload_count) == (1, 3)
+    assert report.scope == "1 attack (3 payloads)"
+    assert "3 scored, 1 attack (3 payloads)" in render(report)
+    assert "3 runs of 1 attack (3 payloads)" in render_markdown(report)
+    [category] = report.categories
+    assert category.scope == "1 attack (3 payloads)"
+    out = io.StringIO()
+    cli.main(["report", str(folder), "--out", str(tmp_path / "r.html"), "--no-policy"], out=out)
+    assert "Wrote " in out.getvalue() and "3 runs of 1 attack (3 payloads) against" in out.getvalue()
+
+
+def test_without_variants_the_count_reads_as_before(tmp_path):
+    run_attack(TPO_002, ScriptedAdapter(*TPO_CLEAN["lure-tpo-002"])).save(tmp_path / "r")
+    report = build_report(load_runs([tmp_path / "r"]))
+    assert report.scope == "1 attack"
+
+
+def test_compare_shows_attacks_and_payloads(tmp_path):
+    from lure.report.render import render_compare
+
+    screen(tmp_path, "a")
+    run_attack(TPO_002, ScriptedAdapter(*TPO_HARM["lure-tpo-002"], model="other")).save(
+        tmp_path / "b")
+    html = render_compare(build_comparison([tmp_path / "a", tmp_path / "b"]))
+    assert "1 attack (3 payloads)" in html and "1 scored, 1 attack<" in html

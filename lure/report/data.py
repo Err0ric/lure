@@ -32,6 +32,12 @@ SWAYED_LABELS = ("offered_attacker_action", "complied")
 PARTIAL_KIND_LABELS = {"outright": "outright", "confirm_first": "confirm first"}
 
 
+def scope(attacks: int, payloads: int) -> str:
+    """'30 attacks', or '2 attacks (4 payloads)' when variants were run."""
+    text = f"{attacks} attack{'' if attacks == 1 else 's'}"
+    return text + (f" ({payloads} payloads)" if payloads != attacks else "")
+
+
 class ReportError(ValueError):
     """The results cannot make one coherent report."""
 
@@ -277,6 +283,8 @@ class AttackRow:
     # The payload variant id and kind; '' for the attack's own payload.
     variant: str = ""
     variant_kind: str = ""
+    # (attack id, version): rows with the same key are one attack.
+    key: tuple[str, int] = ("", 0)
     # Adaptive runs only: attacker calls, and calls that wrote no payload.
     attacker_calls: int = 0
     attacker_refused: int = 0
@@ -293,6 +301,18 @@ class CategoryRow:
     attacks: list[AttackRow] = field(default_factory=list)
     tally: Tally = field(default_factory=Tally)
 
+    @property
+    def attack_count(self) -> int:
+        return len({a.key for a in self.attacks})
+
+    @property
+    def payload_count(self) -> int:
+        return len({(a.key, a.variant) for a in self.attacks})
+
+    @property
+    def scope(self) -> str:
+        return scope(self.attack_count, self.payload_count)
+
 
 @dataclass
 class TechniqueRow:
@@ -300,6 +320,16 @@ class TechniqueRow:
     name: str
     attacks: set[str] = field(default_factory=set)
     tally: Tally = field(default_factory=Tally)
+    keys: set[tuple[str, int]] = field(default_factory=set)
+    payloads: set[tuple[tuple[str, int], str]] = field(default_factory=set)
+
+    @property
+    def attack_count(self) -> int:
+        return len(self.keys)
+
+    @property
+    def payload_count(self) -> int:
+        return len(self.payloads)
 
 
 @dataclass
@@ -352,6 +382,20 @@ class Report:
     def adaptive(self) -> bool:
         """True when the runs are adaptive (build_report never mixes the two)."""
         return any(r.adaptive for r in self.runs)
+
+    @property
+    def attack_count(self) -> int:
+        """Attack versions run; payload variants of one attack count once."""
+        return len({r.key for r in self.runs})
+
+    @property
+    def payload_count(self) -> int:
+        """Attack versions times the payloads (own and variants) each ran."""
+        return len({(r.key, r.variant) for r in self.runs})
+
+    @property
+    def scope(self) -> str:
+        return scope(self.attack_count, self.payload_count)
 
     @property
     def attackers(self) -> list[str]:
@@ -412,13 +456,15 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
         a = run.attack
         row = attacks.setdefault((run.key, run.variant, run.mode), AttackRow(
             run.label, a["name"], a["category"], a.get("severity", "medium"), list(a["atlas"]),
-            variant=run.variant, variant_kind=run.variant_kind))
+            variant=run.variant, variant_kind=run.variant_kind, key=run.key))
         row.tally.add(run)
         row.attacker_calls += run.attacker_calls
         row.attacker_refused += run.attacker_refused
         for t in a["atlas"]:
             trow = techniques.setdefault(t, TechniqueRow(t, atlas_name(t)))
             trow.attacks.add(run.label)
+            trow.keys.add(run.key)
+            trow.payloads.add((run.key, run.variant))
             trow.tally.add(run)
 
     categories: dict[str, CategoryRow] = {}
