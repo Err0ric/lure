@@ -52,13 +52,54 @@ class Run:
     @property
     def label(self) -> str:
         """Always names the version, v1 included, so versions never blur.
-        Adaptive runs say so: worst of several attempts is a different rate."""
+        Adaptive runs say so: worst of several attempts is a different rate.
+        An adaptive run no attacker payload reached is single-shot, and says
+        why, so it never reads as an adaptive Pass."""
         attack_id, version = self.key
-        return f"{attack_id} v{version}" + (" adaptive" if self.adaptive else "")
+        return f"{attack_id} v{version}" + (f" {self.mode}" if self.mode else "")
 
     @property
     def adaptive(self) -> bool:
         return bool(self.record.get("adaptive"))
+
+    @property
+    def attacker_tested(self) -> bool:
+        """True if an attacker payload reached the target. Computed from the
+        attempts, so records written before the field existed read right."""
+        ad = self.record.get("adaptive")
+        return bool(ad) and any(a["source"] == "attacker" and "judgment" in a
+                                for a in ad["attempts"])
+
+    @property
+    def attacker_calls(self) -> int:
+        ad = self.record.get("adaptive") or {}
+        return sum(a["source"] == "attacker" for a in ad.get("attempts", []))
+
+    @property
+    def attacker_refused(self) -> int:
+        ad = self.record.get("adaptive") or {}
+        return sum(a["outcome"] == "attacker_refused" for a in ad.get("attempts", []))
+
+    @property
+    def mode(self) -> str:
+        """'' for a single-shot run; 'adaptive'; or 'single-shot (...)' with
+        the reason no attacker payload reached the target."""
+        ad = self.record.get("adaptive")
+        if not ad:
+            return ""
+        if self.attacker_tested:
+            return "adaptive"
+        if self.attacker_calls and self.attacker_refused == self.attacker_calls:
+            why = "attacker refused"
+        elif self.attacker_calls:
+            why = "attacker wrote no usable payload"
+        elif ad["outcome"] == "target_failed":
+            why = "failed on attempt 1"
+        elif ad["outcome"] == "max_cost":
+            why = "stopped at max cost"
+        else:
+            why = "attacker not called"
+        return f"single-shot ({why})"
 
     @property
     def verdict(self) -> Verdict:
@@ -214,6 +255,13 @@ class AttackRow:
     severity: str
     atlas: list[str]
     tally: Tally = field(default_factory=Tally)
+    # Adaptive runs only: attacker calls, and calls that wrote no payload.
+    attacker_calls: int = 0
+    attacker_refused: int = 0
+
+    @property
+    def attacker_refusal_rate(self) -> float | None:
+        return self.attacker_refused / self.attacker_calls if self.attacker_calls else None
 
 
 @dataclass
@@ -276,6 +324,19 @@ class Report:
     def attackers(self) -> list[str]:
         return sorted({r.record["adaptive"]["attacker"] for r in self.runs if r.adaptive})
 
+    @property
+    def attacker_tested(self) -> int:
+        """Adaptive runs an attacker payload reached; the rest are single-shot."""
+        return sum(r.attacker_tested for r in self.runs)
+
+    @property
+    def attacker_calls(self) -> int:
+        return sum(r.attacker_calls for r in self.runs)
+
+    @property
+    def attacker_refused(self) -> int:
+        return sum(r.attacker_refused for r in self.runs)
+
 
 def load_runs(paths: list[str | Path]) -> list[Run]:
     """Lure result files: each file given, plus *.json directly in each
@@ -309,14 +370,18 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
                           "(worst of several attempts is not comparable with one attempt)")
 
     total = Tally()
-    attacks: dict[tuple[str, int], AttackRow] = {}
+    # One row per attack version and mode, so an adaptive run no attacker
+    # payload reached never shares a row with attacker-tested runs.
+    attacks: dict[tuple[tuple[str, int], str], AttackRow] = {}
     techniques: dict[str, TechniqueRow] = {}
-    for run in sorted(runs, key=lambda r: (r.key, r.started_at)):
+    for run in sorted(runs, key=lambda r: (r.key, r.mode, r.started_at)):
         total.add(run)
         a = run.attack
-        row = attacks.setdefault(run.key, AttackRow(
+        row = attacks.setdefault((run.key, run.mode), AttackRow(
             run.label, a["name"], a["category"], a.get("severity", "medium"), list(a["atlas"])))
         row.tally.add(run)
+        row.attacker_calls += run.attacker_calls
+        row.attacker_refused += run.attacker_refused
         for t in a["atlas"]:
             trow = techniques.setdefault(t, TechniqueRow(t, atlas_name(t)))
             trow.attacks.add(run.label)
@@ -360,18 +425,21 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
     )
 
 
-def _comparisons(runs: list[Run], attacks: dict[tuple[str, int], AttackRow]) -> list[PolicyComparison]:
-    by_id: dict[str, list[tuple[str, int]]] = {}
-    for key in attacks:
-        by_id.setdefault(key[0], []).append(key)
+def _comparisons(runs: list[Run], attacks: dict[tuple[tuple[str, int], str], AttackRow],
+                 ) -> list[PolicyComparison]:
+    by_id: dict[str, list[tuple[tuple[str, int], str]]] = {}
+    for row_key in attacks:
+        by_id.setdefault(row_key[0][0], []).append(row_key)
     out = []
-    for attack_id, keys in sorted(by_id.items()):
-        if len(keys) < 2:
+    for attack_id, row_keys in sorted(by_id.items()):
+        if len({key[1] for key, _ in row_keys}) < 2:
             continue
         rows = []
-        for key in sorted(keys, key=lambda k: k[1]):
-            version_runs = sorted((r for r in runs if r.key == key), key=lambda r: r.started_at)
-            rows.append(VersionRow(attacks[key].label, key[1], version_runs[0].policy,
-                                   attacks[key].tally, version_runs))
-        out.append(PolicyComparison(attack_id, attacks[keys[-1]].name, rows))
+        for row_key in sorted(row_keys, key=lambda k: (k[0][1], k[1])):
+            key, mode = row_key
+            version_runs = sorted((r for r in runs if r.key == key and r.mode == mode),
+                                  key=lambda r: r.started_at)
+            rows.append(VersionRow(attacks[row_key].label, key[1], version_runs[0].policy,
+                                   attacks[row_key].tally, version_runs))
+        out.append(PolicyComparison(attack_id, attacks[row_keys[-1]].name, rows))
     return out

@@ -28,6 +28,7 @@ from typing import Any
 from lure import __version__
 from lure.adapters.base import AdapterError, ModelAdapter, ModelTurn, add_usage
 from lure.attacker import OK as DRAFT_OK
+from lure.attacker import REFUSED as DRAFT_REFUSED
 from lure.attacker import Attacker, Attempt
 from lure.attacks import Attack
 from lure.budget import Budget
@@ -331,6 +332,11 @@ def run_adaptive(
         "attempts_to_worst": n,
         "attacker_failures": sum(r["source"] == "attacker" and "judgment" not in r
                                  for r in records),
+        "attacker_calls": sum(r["source"] == "attacker" for r in records),
+        "attacker_refused": sum(r["outcome"] == DRAFT_REFUSED for r in records),
+        # False when no attacker payload ever reached the target: the run is
+        # single-shot, whatever its verdict.
+        "attacker_tested": any(r["source"] == "attacker" and "judgment" in r for r in records),
         "usage": usage,
         "attempts": records,
     }

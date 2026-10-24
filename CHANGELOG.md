@@ -17,7 +17,12 @@
   `attempts_to_worst` records how many attempts it took. This is a
   worst-case attacker: it sees the agent's replies, which a real
   indirect-injection attacker usually cannot (`attacker_feedback:
-  "replies"` in every record).
+  "replies"` in every record). A run no attacker payload reached records
+  `attacker_tested: false` and shows as single-shot with the reason
+  (attacker refused, no usable payload, failed on attempt 1), in its own
+  report row; reports, compare and `lure run` show attacker refusal rates
+  per attack. Payload cap: 4 times the attack's payload, at least 1,000
+  and at most 4,000 characters; attacker output cap 2,048 tokens.
 - **`--prices` and `--max-cost USD` on `lure run`.** Spend is estimated
   for attacker, target and judge together, printed at the end, and saved
   per run as `cost`. The batch stops before the next attempt would pass the

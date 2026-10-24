@@ -157,6 +157,10 @@ class Comparison:
     def exposure_checked(self) -> bool:
         return all(c.report.exposure_checked for c in self.columns)
 
+    @property
+    def adaptive(self) -> bool:
+        return any(c.report.adaptive for c in self.columns)
+
 
 def build_comparison(sources: list[str | Path], prices: Prices | None = None) -> Comparison:
     if len(sources) < 2:

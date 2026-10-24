@@ -53,7 +53,7 @@
     <div><dt>Judge</dt><dd>
       {% if report.judges|length == 1 %}{{ judge_names[0][0] }}{% else %}Mixed<small>{% for name, n in judge_names %}{{ name }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</small>{% endif %}
     </dd></div>
-    {% if report.adaptive %}<div><dt>Attacker</dt><dd>Adaptive<small>{{ report.attackers|join(", ") }}; worst case: the attacker sees the agent's replies. Each run is its worst attempt, so rates are not comparable with single-shot runs</small></dd></div>{% endif %}
+    {% if report.adaptive %}<div><dt>Attacker</dt><dd>Adaptive<small>{{ report.attackers|join(", ") }}; attacker payloads reached the target in {{ report.attacker_tested }} of {{ report.total.runs }} runs, the rest are single-shot; refused {{ report.attacker_refused }} of {{ report.attacker_calls }} calls. Worst case: the attacker sees the agent's replies. Each run is its worst attempt, so rates are not comparable with single-shot runs</small></dd></div>{% endif %}
     <div><dt>Date</dt><dd>{{ dates }}</dd></div>
     <div><dt>Runs</dt><dd>{{ report.total.runs }}<small>{{ report.total.scored }} scored, {{ report.attacks|length }} attacks</small></dd></div>
     <div><dt>Pass rate</dt><dd>{{ report.total.pass_rate|pct }}<small>{{ report.total.counts[Verdict.PASS] }} of {{ report.total.scored }}{% if report.total.low_sample %}, low sample{% endif %}</small></dd></div>
@@ -133,7 +133,7 @@
       </tr>
       {% for a in c.attacks %}
       <tr class="att">
-        <td><span class="mono">{{ a.label }}</span><span class="tech-id">{{ a.name }}</span></td>
+        <td><span class="mono">{{ a.label }}</span><span class="tech-id">{{ a.name }}{% if a.attacker_calls %}; attacker refused {{ a.attacker_refused }} of {{ a.attacker_calls }} calls ({{ a.attacker_refusal_rate|pct }}){% endif %}</span></td>
         <td>{{ a.tally.runs }}</td><td>{{ rate(a.tally.pass_rate, a.tally) }}</td><td>{{ rate(a.tally.influenced_rate, a.tally) }}</td><td>{{ rate(a.tally.asr, a.tally) }}</td><td>{{ rate(a.tally.detection_rate, a.tally) }}</td><td{% if not a.tally.exposed %} class="zero"{% endif %}>{{ exposure_cell(a.tally) }}</td>
       </tr>
       {% endfor %}

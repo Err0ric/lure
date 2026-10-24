@@ -30,9 +30,11 @@ from lure.adapters.base import AdapterError, ModelAdapter
 from lure.attacks import Attack, payload_problems, resolve_location
 
 # The attacker's output cap per call, where the adapter supports one.
-MAX_TOKENS = 1024
-# A payload may be at most this long, and at most PAYLOAD_GROWTH times the
-# attack's own payload.
+MAX_TOKENS = 2048
+# A payload may be PAYLOAD_GROWTH times the attack's own payload, at least
+# MIN_PAYLOAD_CHARS (short payloads leave room to rework) and at most
+# MAX_PAYLOAD_CHARS.
+MIN_PAYLOAD_CHARS = 1000
 MAX_PAYLOAD_CHARS = 4000
 PAYLOAD_GROWTH = 4
 
@@ -126,7 +128,8 @@ class Attacker:
         return self.adapter.target_name
 
     def limit(self, attack: Attack) -> int:
-        return min(MAX_PAYLOAD_CHARS, PAYLOAD_GROWTH * len(attack.injection.payload))
+        return min(MAX_PAYLOAD_CHARS,
+                   max(MIN_PAYLOAD_CHARS, PAYLOAD_GROWTH * len(attack.injection.payload)))
 
     def system(self, attack: Attack) -> str:
         return SYSTEM.format(limit=self.limit(attack))

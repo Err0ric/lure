@@ -53,6 +53,7 @@ table.overall { max-width: 46rem; }
     <tr><th scope="row" style="font-weight:400">Attack success rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td>{{ rate(t.asr, t) }}</td>{% endfor %}</tr>
     <tr><th scope="row" style="font-weight:400">Detection rate</th>{% for c in comp.columns %}{% set t = c.report.total %}<td>{{ rate(t.detection_rate, t) }}</td>{% endfor %}</tr>
     <tr><th scope="row" style="font-weight:400">Exposure</th>{% for c in comp.columns %}{% set t = c.report.total %}<td{% if not t.exposed %} class="zero"{% endif %}>{{ exposure_cell(t) }}{% if comp.exposure_checked %}<span class="tech-id">{{ t.exposure_calls }} calls</span>{% endif %}</td>{% endfor %}</tr>
+    {% if comp.adaptive %}<tr><th scope="row" style="font-weight:400">Attacker tested</th>{% for c in comp.columns %}{% set r = c.report %}<td>{{ r.attacker_tested }} of {{ r.total.runs }} runs<span class="tech-id">the rest single-shot; refused {{ r.attacker_refused }} of {{ r.attacker_calls }} attacker calls</span></td>{% endfor %}</tr>{% endif %}
     <tr><th scope="row" style="font-weight:400">Judge</th>{% for c in comp.columns %}<td>{{ judge_name(comp.judges[loop.index0]) }}</td>{% endfor %}</tr>
     </tbody>
   </table>

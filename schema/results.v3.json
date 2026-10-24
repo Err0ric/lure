@@ -141,6 +141,9 @@
             "deciding_attempt",
             "attempts_to_worst",
             "attacker_failures",
+            "attacker_calls",
+            "attacker_refused",
+            "attacker_tested",
             "usage",
             "attempts"
           ],
@@ -181,6 +184,20 @@
             "attacker_failures": {
               "type": "integer",
               "minimum": 0
+            },
+            "attacker_calls": {
+              "description": "Attacker calls made (attempts 2 and later).",
+              "type": "integer",
+              "minimum": 0
+            },
+            "attacker_refused": {
+              "description": "Attacker calls that wrote no payload (attacker_refused).",
+              "type": "integer",
+              "minimum": 0
+            },
+            "attacker_tested": {
+              "description": "True if at least one attacker payload reached the target. False means the run is single-shot: the attacker refused, wrote nothing usable, or was never needed (Fail on attempt 1) or reached (max cost).",
+              "type": "boolean"
             },
             "usage": {
               "type": "object",

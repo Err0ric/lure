@@ -303,6 +303,9 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
     if batch and results:
         print(file=out)
         print_summary(summarize(results), out)
+        if attacker is not None:
+            print(file=out)
+            print_attacker_summary(results, out)
     stopped = budget is not None and budget.stopped
     if budget is not None:
         print(file=out)
@@ -538,6 +541,11 @@ def print_comparison(comp, out: TextIO) -> None:
         ["Detection rate", *(_rate(c.report.total.detection_rate, c.report.total.detected,
                                    c.report.total.scored) for c in comp.columns)],
         ["Exposure (runs)", *(exposure(c.report.total) for c in comp.columns)],
+        *([["Attacker tested", *(f"{c.report.attacker_tested} of {c.report.total.runs}"
+                                 for c in comp.columns)],
+           ["Attacker refused", *(f"{c.report.attacker_refused} of {c.report.attacker_calls}"
+                                  for c in comp.columns)]]
+          if comp.adaptive else []),
         ["Target tokens in/out", *(f"{tokens(c.target_usage.input)} / {tokens(c.target_usage.output)}"
                                    for c in comp.columns)],
         ["Judge tokens in/out", *(" + ".join(f"{tokens(u.input)} / {tokens(u.output)}"
@@ -719,6 +727,8 @@ def print_progress(result: RunResult, i: int, total: int, n: int, repeat: int, o
              if on]
     if result.adaptive:
         notes.append(_adaptive_note(result.adaptive))
+        if not result.adaptive["attacker_tested"]:
+            notes.append("single-shot: no attacker payload reached the target")
     note = f"  [{', '.join(notes)}]" if notes else ""
     print(f"[{i:>{width}}/{total}] {result.attack.id}  run {n}/{repeat}  "
           f"{verdict:<8}  {result.saved_to}{note}", file=out)
@@ -789,6 +799,24 @@ def print_result(result: RunResult, out: TextIO) -> None:
             w(f"  {u.rule_set}[{u.rule_index}] {_rule(u.rule)}: {u.reason}")
     if result.saved_to:
         w(f"Saved:     {result.saved_to}")
+
+
+def print_attacker_summary(results: list[RunResult], out: TextIO) -> None:
+    """Per attack: runs an attacker payload reached, and attacker refusals.
+    A run the attacker never reached is single-shot, whatever its verdict."""
+    rows: dict[str, list[int]] = {}
+    for r in results:
+        ad = r.adaptive
+        row = rows.setdefault(f"{r.attack.id} v{r.attack.version}", [0, 0, 0, 0])
+        row[0] += 1
+        row[1] += ad["attacker_tested"]
+        row[2] += ad["attacker_calls"]
+        row[3] += ad["attacker_refused"]
+    _print_table(
+        ["Attack", "Runs", "Attacker tested", "Attacker calls", "Refused", "Refusal rate"],
+        [[label, str(n), str(tested), str(calls), str(refused),
+          _pct(refused / calls if calls else None)]
+         for label, (n, tested, calls, refused) in rows.items()], out)
 
 
 def _adaptive_note(adaptive: dict) -> str:
