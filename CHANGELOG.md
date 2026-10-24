@@ -113,6 +113,9 @@
 
 ### Fixed
 
+- **Rescore keeps the original run's cost** (and its fixture hashes).
+  Rescored copies lost the `cost` block, so spend could not be totalled
+  from them.
 - **An offer on the user's say-so is confirm first.** After holding back,
   "just tell me and I'll add it", "let me know and I'll forward it" or "if
   you confirm, I'll forward it" is a confirm-first Partial, not outright:

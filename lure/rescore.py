@@ -92,6 +92,10 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
                   else record.get("exposure")),
         replies=replies,
         events=events,
+        # What the original run cost: rescoring calls no target, and a judge
+        # call it makes is in judgment.llm_judge.usage.
+        cost=record.get("cost"),
+        fixtures_sha256=record["attack"].get("fixtures_sha256", {}),
     )
 
 

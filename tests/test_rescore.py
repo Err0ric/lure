@@ -47,6 +47,19 @@ def test_rescore_rebuilds_the_log_and_rejudges():
     assert again.final_text == SUMMARY and again.target == record["target"]
 
 
+def test_rescore_keeps_the_original_cost_and_fixture_hashes(tmp_path):
+    result = run_attack(IPI_001, ScriptedAdapter(call("read_inbox"), say(SUMMARY)))
+    result.cost = {"attacker": 0.0, "target": 0.012, "judge": 0.003, "total": 0.015}
+    record = json.loads(json.dumps(result.to_dict()))
+    data = json.loads(json.dumps(rescore(record, IPI_001).to_dict()))
+    assert data["cost"] == record["cost"]
+    assert data["attack"]["fixtures_sha256"] == record["attack"]["fixtures_sha256"]
+    # A record without them (older runs, or no --prices) stays without.
+    del record["cost"], record["attack"]["fixtures_sha256"]
+    data = rescore(record, IPI_001).to_dict()
+    assert data["cost"] is None and data["attack"]["fixtures_sha256"] == {}
+
+
 def test_rescore_keeps_error_runs_as_error():
     result = run_attack(IPI_001, ScriptedAdapter(cli.AdapterError("boom")))
     record = json.loads(json.dumps(result.to_dict()))
