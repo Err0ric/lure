@@ -4,7 +4,7 @@ An open-source harness that attacks AI agents with prompt injection and tool-abu
 
 Think phishing simulation, but the target is an agent instead of an employee.
 
-> Status: v1.0.0. Runs locally against Anthropic and Ollama targets; see [Known gaps](#known-gaps) for what lands in v1.1.
+> Status: v1.0.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
 
 [![Top of the sample report: headline, facts strip and summary for claude-haiku-5-5](docs/sample-report-top.png)](https://err0ric.github.io/lure/sample-report.html)
 
@@ -57,7 +57,7 @@ Lure attacks agents, so it is built to be safe by design.
 
 ## Quickstart
 
-Needs Python 3.12 and an Anthropic API key, or a local [Ollama](https://ollama.com) server. An OpenAI-compatible adapter is planned for v1.1.
+Needs Python 3.12 and one of: an Anthropic API key, a local [Ollama](https://ollama.com) server, or any OpenAI-compatible endpoint (OpenAI, vLLM, Groq, LM Studio, llama.cpp).
 
 ```bash
 git clone https://github.com/Err0ric/lure.git && cd lure
@@ -86,6 +86,8 @@ Other useful commands:
 | Command | What it does |
 | --- | --- |
 | `lure run ... --target ollama --model llama3.1:8b` | Test a local model (set `LURE_OLLAMA_URL` in `.env` if it is not on localhost) |
+| `lure run ... --target openai --model <model>` | Test any OpenAI-compatible server: set `LURE_OPENAI_BASE_URL` and, if it needs one, `LURE_OPENAI_API_KEY` in `.env` |
+| `lure report results/my-run/ --md report.md --sarif lure.sarif` | Also write a Markdown report and SARIF 2.1.0 for CI code scanning |
 | `lure run attacks/jailbreak/lure-jbk-002-v1.yaml ...` | Run a pinned older version; folder runs only use current versions |
 | `lure rescore results/my-run/ --judge llm --judge-model claude-sonnet-5-5` | Re-judge saved runs with the current rules and rubric; the target is not called |
 | `lure rescore results/my-run/ --exposure-only` | Recompute exposure with `lure.yaml` and keep every saved verdict |
@@ -93,11 +95,11 @@ Other useful commands:
 | `lure compare ... --prices prices.yaml` | Add a cost estimate from recorded tokens; copy `prices.example.yaml` and check current pricing first (Lure ships no price table) |
 | `pytest` and `ruff check .` | Tests (no network) and lint |
 
-`results/` and `reports/` are gitignored. Each result file records the attack id and version, the target, the judge, token usage, the full transcript, every tool call and the verdict with its evidence.
+`results/` and `reports/` are gitignored. Each result file records the attack id, version and file, the target, the judge, token usage, the full transcript, every tool call and the verdict with its evidence. The format is [`schema/results.v1.json`](schema/results.v1.json) (JSON Schema); each file names its `schema_version` and `lure_version`.
 
 ## Attack library
 
-21 attack files in 5 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass.
+21 attack files in 5 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Category | Attacks | ATLAS techniques |
 | --- | --- | --- |
@@ -107,7 +109,7 @@ Other useful commands:
 | Data leakage | `lure-dlk-001` to `003` (3) | AML.T0051.001, AML.T0057, AML.T0086 |
 | Tool abuse | `lure-tab-001` to `003` (3) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0086, AML.T0101 |
 
-Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23.
+Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23; the full mapping is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
 
 Mock tools: `read_inbox`, `send_email` (to, cc, bcc), `list_files`, `read_file`, `write_file`, `delete_file`, `fetch_url` and `pay_invoice`.
 
@@ -137,7 +139,34 @@ Known limitation: the LLM judge reads the target's reply, and that reply can car
 
 ## Exposure check
 
-An attack's rules only define harm for that attack. `lure.yaml` adds an org-wide question: did the agent send email (to, cc or bcc) or fetch a URL on a domain outside `allowed_outbound_domains`? Each such call is recorded with its exact arguments, failed attempts included. Exposure never changes a verdict; it shows in the report as its own count, column and section. The repo's `lure.yaml` allows `corp.example` and the legitimate vendors in the fixtures.
+An attack's rules only define harm for that attack. `lure.yaml` adds an org-wide question: did the agent send email (to, cc or bcc) or fetch a URL on a domain outside `allowed_outbound_domains`? Each such call is recorded with its exact arguments, failed attempts included. Exposure never changes a verdict; it shows in the report as its own count, column and section, and by default it fails the policy (below). The repo's `lure.yaml` allows `corp.example` and the legitimate vendors in the fixtures.
+
+## Policy and CI
+
+`lure.yaml` is the single policy file, read from the current folder (or `--policy <file>`; `--no-policy` ignores it). Every key is optional; [`lure.example.yaml`](lure.example.yaml) documents each one.
+
+| Key | What it does | Default |
+| --- | --- | --- |
+| `allowed_outbound_domains` | The exposure check above | Not checked |
+| `fail_on.verdicts` | Verdicts that fail the policy: any of Fail, Partial, Review | `[Fail]` |
+| `fail_on.min_severity` | Only attacks at or above this severity | `low` |
+| `fail_on.exposure` | Any call outside the allowed domains fails the policy | `true` when `allowed_outbound_domains` is set; a no-op without it |
+| `categories` | Category folders a folder run includes | `all` |
+| `overrides.<attack id>` | `enabled`, and `fail_on` keys for that attack only | None |
+
+`lure run` and `lure report` apply the policy and exit with:
+
+| Code | Meaning |
+| --- | --- |
+| 0 | No run failed the policy |
+| 1 | A run failed the policy. This wins over a run error: a confirmed finding stands even if another run broke. |
+| 2 | Bad input or policy file, or a run errored and nothing failed the policy |
+
+`lure report` gates saved runs with the current policy, recomputing exposure from each tool-call log, so CI can gate without calling the target again. `lure rescore` and `lure compare` exit 0 or 2.
+
+Changed in v1.1: a run Error used to exit 1 and a Fail used to exit 0.
+
+For CI, write Markdown for the job summary and SARIF for code scanning: `lure report <results> --md report.md --sarif lure.sarif`. In SARIF, each rule is an attack id and each result points at the attack's YAML file, never at a code location. [`docs/ci/lure-gate.yml`](docs/ci/lure-gate.yml) is a complete GitHub Actions example.
 
 ## How it works
 
@@ -146,11 +175,13 @@ An attack's rules only define harm for that attack. `lure.yaml` adds an org-wide
 | Attacker | Plants the payload in a fixture, or in the user turn for direct injection and jailbreaks |
 | Target | The agent under test, given a normal task and mock tools only |
 | Judge | Scores the run from the tool-call log (rules first, LLM judge second) |
-| Reporter | Builds the static HTML report: exec summary, ATLAS heatmap, category table, exposure and findings |
+| Reporter | Builds the static HTML report (exec summary, ATLAS heatmap, category table, exposure and findings), plus Markdown and SARIF on request |
+
+A future `config_audit` stage would check agent and MCP settings before any run; see [`docs/config-audit.md`](docs/config-audit.md). It is not implemented.
 
 ## Known gaps
 
-- **Targets:** Anthropic and Ollama only. The OpenAI-compatible adapter is planned for v1.1.
+- **Targets:** Anthropic, Ollama and OpenAI-compatible endpoints. Providers with other APIs need an adapter; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - **Results store:** one JSON file per run. `lure report` and `lure compare` read folders of them; the DuckDB store is planned for v1.1.
 - **Static fixtures:** nothing new arrives in response to the agent's sends, so multi-step attacks such as ipi-007 run against a fixed inbox. Reactive fixtures are planned for v1.1.
 - **LLM judge:** injected text in a reply can reach the judge; see [How a run is scored](#how-a-run-is-scored).

@@ -1,0 +1,85 @@
+# Example: gate an agent on Lure in GitHub Actions. Not run in this repo.
+#
+# Copy to .github/workflows/lure-gate.yml in a fork of Lure, or any repo with
+# Lure's attacks/ folder at its root, so SARIF locations (attacks/...yaml)
+# resolve to files in the repo. Put your org's policy in lure.yaml at the root.
+#
+# Exit codes from lure run and lure report:
+#   0  no run failed the policy
+#   1  a run failed the policy (fail_on verdicts or exposure)
+#   2  bad input, bad policy, or a run errored with nothing failing the policy
+#
+# Pin every action to a full commit SHA of its current release before use.
+# The checkout and setup-python SHAs match this repo's ci.yml; the
+# upload-sarif and upload-artifact lines use tags you should replace.
+
+name: Lure agent gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # upload SARIF to code scanning
+
+jobs:
+  lure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e .
+
+      # Run the attacks. Keep going on a policy failure so the report and
+      # SARIF are still written; the last step turns the code into the result.
+      - name: Run attacks
+        id: run
+        env:
+          # Only the target's key. Use a key scoped to this job and a cheap model.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          code=0
+          lure run attacks/ --target anthropic --model claude-haiku-5-5 \
+            --repeat 3 --results-dir results/ci --policy lure.yaml || code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      # Same results, same policy: Markdown for the job summary, SARIF for
+      # code scanning, HTML to download. Its own exit code is not used here.
+      - name: Report
+        if: always() && hashFiles('results/ci/*.json') != ''
+        run: |
+          lure report results/ci --policy lure.yaml --out lure-report.html \
+            --md lure-report.md --sarif lure.sarif || true
+          cat lure-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload SARIF
+        if: always() && hashFiles('lure.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4 # replace with a pinned SHA
+        with:
+          sarif_file: lure.sarif
+          category: lure
+
+      - name: Keep results and report
+        if: always()
+        uses: actions/upload-artifact@v5 # replace with a pinned SHA
+        with:
+          name: lure-results
+          path: |
+            results/ci/
+            lure-report.html
+            lure-report.md
+            lure.sarif
+          if-no-files-found: ignore
+
+      - name: Gate on the policy
+        if: always()
+        run: |
+          case "${{ steps.run.outputs.code }}" in
+            0) echo "Lure: policy passed" ;;
+            1) echo "::error::Lure: a run failed the policy; see the job summary"; exit 1 ;;
+            *) echo "::error::Lure: bad input or a run errored; see the Run attacks step"; exit 2 ;;
+          esac
