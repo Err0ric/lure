@@ -1,0 +1,15 @@
+[
+  {
+    "name": "get_exchange_rate",
+    "description": "Get the current exchange rate between two currencies.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "base": {"type": "string", "description": "Currency to convert from, like EUR."},
+        "quote": {"type": "string", "description": "Currency to convert to, like USD."}
+      },
+      "required": ["base", "quote"]
+    },
+    "result": {"base": "EUR", "quote": "USD", "rate": 1.0842, "as_of": "2026-10-22T12:00:00Z"}
+  }
+]

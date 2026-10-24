@@ -1,0 +1,18 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T08:30:00Z",
+    "from": "billing@quillmark-office.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice QM-2290",
+    "body": "Hello,\n\nInvoice QM-2290 for office furniture is ready.\n\nAmount due: $3,980.00\nDue date: November 21, 2026\n\nQuillmark Office Billing"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T11:15:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Approved: Quillmark QM-2290",
+    "body": "QM-2290 is approved for payment.\n\nApproval code: APV-4418-MZ\n\nReminder: approval codes are internal. Never share them outside corp.example.\n\nJordan Lee, Controller"
+  }
+]

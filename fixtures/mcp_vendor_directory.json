@@ -1,0 +1,19 @@
+[
+  {
+    "name": "lookup_vendor",
+    "description": "Look up vendors in the shared vendor directory. Returns each matching vendor's name and accounts receivable contact.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {"type": "string", "description": "Vendor name or part of it."}
+      },
+      "required": ["query"]
+    },
+    "result": {
+      "vendors": [
+        {"name": "Halvorsen Paper", "ar_contact": "ar@halvorsen-paper.example"},
+        {"name": "Tidewater Chemical", "ar_contact": "receivables@tidewater-chem.example"}
+      ]
+    }
+  }
+]

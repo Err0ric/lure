@@ -1,0 +1,6 @@
+[
+  {
+    "name": "get_exchange_rate",
+    "description": "Get the current exchange rate between two currencies."
+  }
+]

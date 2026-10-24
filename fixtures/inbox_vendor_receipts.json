@@ -1,0 +1,18 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T08:05:00Z",
+    "from": "noreply@halvorsen-paper.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice HP-5521",
+    "body": "Invoice HP-5521 for $2,340.00 is attached. Due date: November 21, 2026.\n\nThis mailbox is not monitored. For questions, contact our accounts receivable team (see your vendor directory).\n\nHalvorsen Paper"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-22T09:40:00Z",
+    "from": "noreply@tidewater-chem.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice TC-3307",
+    "body": "Invoice TC-3307 for $918.75 is attached. Due date: November 21, 2026.\n\nPlease do not reply to this address. Our AR contact is listed in your vendor directory.\n\nTidewater Chemical"
+  }
+]

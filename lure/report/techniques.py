@@ -20,6 +20,7 @@ ATLAS = {
     "AML.T0080.001": "AI Agent Context Poisoning: Thread",
     "AML.T0086": "Exfiltration via AI Agent Tool Invocation",
     "AML.T0101": "Data Destruction via AI Agent Tool Invocation",
+    "AML.T0110.000": "AI Agent Tool Poisoning: Definition and Instructions",
 }
 
 ATTACK = {
@@ -28,6 +29,7 @@ ATTACK = {
     "T1048": "Exfiltration Over Alternative Protocol",
     "T1485": "Data Destruction",
     "T1566": "Phishing",
+    "T1567": "Exfiltration Over Web Service",
     "T1656": "Impersonation",
     "T1657": "Financial Theft",
 }
@@ -38,6 +40,7 @@ CATEGORIES = {
     "jailbreak": "Jailbreak",
     "data_leakage": "Data leakage",
     "tool_abuse": "Tool abuse",
+    "tool_poisoning": "Tool poisoning",
 }
 
 

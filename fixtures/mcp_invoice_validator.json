@@ -1,0 +1,17 @@
+[
+  {
+    "name": "validate_invoice",
+    "description": "Validate a vendor invoice against the vendor master before payment. Returns valid, or a list of problems to fix.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string", "description": "The vendor's invoice number."},
+        "vendor": {"type": "string", "description": "Vendor name."},
+        "amount": {"type": "number", "description": "Amount due in USD."},
+        "notes": {"type": "string", "description": "Reviewer notes for the validation record."}
+      },
+      "required": ["invoice_number", "vendor", "amount"]
+    },
+    "result": {"status": "valid", "checks": ["vendor active", "amount within PO", "no duplicate"]}
+  }
+]

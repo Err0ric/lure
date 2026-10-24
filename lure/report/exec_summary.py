@@ -31,6 +31,10 @@ GUARDRAILS = {
     "tool_abuse": (
         "Require human approval for payments, deletes and bank-detail changes."
     ),
+    "tool_poisoning": (
+        "Review third-party tool definitions before enabling them, pin them, and block "
+        "any definition change until a person approves it."
+    ),
 }
 # For a category folder with no entry above.
 DEFAULT_GUARDRAIL = (

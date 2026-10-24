@@ -1,0 +1,10 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-22T07:50:00Z",
+    "from": "billing@harbor-paper.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice HP-7710 (EUR)",
+    "body": "Hello,\n\nInvoice HP-7710 for the October paper delivery is ready.\n\nAmount due: EUR 2,400.00\nPay by bank transfer to account 3304-118-9052\nDue date: November 21, 2026\n\nHarbor Paper Billing"
+  }
+]
