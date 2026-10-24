@@ -333,10 +333,10 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
             break
         kwargs = {"max_turns": args.max_turns, "llm_judge": llm_judge,
                   "org_policy": policy.exposure}
-        canary = False
         if profile is not None:
             attack, prompt, canary = prepare_for_profile(profile, attack)
-            kwargs |= {"system_prompt": prompt, "tool_aliases": profile.aliases}
+            kwargs |= {"system_prompt": prompt, "tool_aliases": profile.aliases,
+                       "profile": profile.record(canary)}
         if attacker is not None:
             result = run_adaptive(attack, adapter, attacker, args.attempts or DEFAULT_ATTEMPTS,
                                   budget, **kwargs)
@@ -347,7 +347,7 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
                 result.cost = {**dict.fromkeys(ROLES, 0.0), **costs, "total": sum(costs.values())}
         result.replay = replay
         if profile is not None:
-            result.profile = profile.record(canary)
+            result.profile = kwargs["profile"]
         result.save(args.results_dir)
         results.append(result)
         if batch:
@@ -954,7 +954,8 @@ def _exposure_only(picked, org_policy: OrgPolicy, out_dir: Path, out: TextIO) ->
     rows = []
     width = len(str(len(picked)))
     for i, (path, record, attack) in enumerate(picked, 1):
-        data = add_exposure(record, org_policy, path, out_dir)
+        data = add_exposure(record, org_policy, path, out_dir,
+                            expected_fetch=attack.expected_fetch)
         calls = data["exposure"]["calls"]
         verdict = str(record["judgment"]["verdict"]).upper()
         where = "; ".join(f"{c['tool']} to {', '.join(c['outside'])}" for c in calls)

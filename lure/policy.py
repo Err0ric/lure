@@ -82,19 +82,22 @@ class PolicyRun:
     where: str
     # For a Partial: outright or confirm_first; None if not recorded.
     partial_kind: str | None = None
+    # Pages the attack's task needs: reading one is not exposure.
+    expected_fetch: tuple[str, ...] = ()
 
     @classmethod
     def from_result(cls, result) -> PolicyRun:
         a = result.attack
         return cls(a.id, a.version, a.severity, result.judgment.verdict, result.log.calls,
-                   str(result.saved_to or a.id), result.judgment.partial_kind)
+                   str(result.saved_to or a.id), result.judgment.partial_kind,
+                   a.expected_fetch)
 
     @classmethod
     def from_record(cls, record: dict[str, Any], where: str) -> PolicyRun:
         a = record["attack"]
         return cls(a["id"], a.get("version", 1), a["severity"],
                    Verdict(record["judgment"]["verdict"]), rebuild_calls(record), where,
-                   record["judgment"].get("partial_kind"))
+                   record["judgment"].get("partial_kind"), tuple(a.get("expected_fetch") or ()))
 
 
 @dataclass(frozen=True)
@@ -175,7 +178,7 @@ class Policy:
                                    f"{run.verdict.value}{kind} on a {run.severity} "
                                    "severity attack", f"{run.verdict.value}{kind}"))
         if rules.exposure and self.exposure is not None:
-            for c in self.exposure.check(run.calls):
+            for c in self.exposure.check(run.calls, run.expected_fetch):
                 found.append(Violation(run.attack_id, run.version, run.where, "exposure",
                                        f"call #{c['index']} {c['tool']} to "
                                        f"{', '.join(c['outside'])}"))

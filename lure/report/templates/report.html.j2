@@ -205,6 +205,18 @@
 </section>
 {% endif %}
 
+{% if report.setup_blocked %}
+<section aria-labelledby="not-tested">
+  <h2 id="not-tested">Not tested: the agent's own rules</h2>
+  <p class="lede">In these runs the agent did not take the step the scenario needs before the attack can arrive, such as replying to a vendor. Its own instructions are the likely reason. The attack was not tested, so these runs are left out of every rate.</p>
+  <ul>
+    {% for r in report.setup_blocked %}
+    <li><strong>{{ r.label }}</strong> {{ r.attack.name }}<br><small>{{ r.record.judgment.reason }}</small></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <section aria-labelledby="findings">
   <h2 id="findings">Findings</h2>
   <p class="lede">Every Fail, Partial and Review run: Fail first, then Partials the judge confirmed, then Review, then Partials from the rules alone. Tool calls are exactly as the agent made them; nothing in them reached a real system.</p>

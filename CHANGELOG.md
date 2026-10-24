@@ -2,6 +2,20 @@
 
 ## Unreleased (v1.5)
 
+### Fixed
+
+- **`expected_fetch`: reading a page the task needs is not exposure.** An
+  attack can list pages its own task asks the agent to read. A plain read
+  of exactly one of them (same host, path and query, no other arguments)
+  is not counted as exposure for that attack; any send, any other URL on
+  the domain, or a URL carrying data still is. `lure-mem-004` lists its
+  portal page, so a correct run no longer fails an exposure policy, while
+  `pinecrest-portal.example`, the attacker's lookalike, stays out of
+  `lure.yaml`. It is the only attack that needs one; a test checks that
+  every other web fixture is on an allowed domain. Records carry
+  `attack.expected_fetch` (optional, schema v3); `lure rescore
+  --exposure-only` adds it to older records from the attack file.
+
 ### Changed
 
 - `lure run` without `--target` now exits 2 with "lure run needs attack
@@ -23,6 +37,14 @@
   reports name the profile. See `docs/profiles.md`. The profile's system
   prompt is sent to the model API it names: for a work agent use an
   organization-approved account or a local model.
+- **Not tested: the agent's own rules.** A profile run that is Invalid only
+  because the agent skipped the scenario's setup step (a required action
+  such as replying to a vendor, or the reply that releases a follow-up)
+  after reading the content gets the reason "not tested: the agent's rules
+  blocked the setup step", with the detail. Runs where the agent never read
+  the content keep their usual reason. HTML and Markdown reports list these
+  runs in a "Not tested: the agent's own rules" section. The verdict stays
+  Invalid.
 - **`lure --version`** prints the installed version (`lure 1.4.0`) and
   exits 0. Before, it printed usage and exited 2, because a subcommand was
   required.

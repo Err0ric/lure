@@ -136,6 +136,7 @@ class RunResult:
                 "atlas": a.atlas,
                 "attack": a.attack,
                 **({"arcanum": a.arcanum} if a.arcanum else {}),
+                **({"expected_fetch": list(a.expected_fetch)} if a.expected_fetch else {}),
                 "goal": a.goal,
                 "fixtures_sha256": self.fixtures_sha256,
                 "injection": {
@@ -190,7 +191,10 @@ def run_attack(
     llm_judge: LLMJudge | None = None,
     org_policy: OrgPolicy | None = None,
     tool_aliases: dict[str, ToolAlias] | None = None,
+    profile: dict[str, Any] | None = None,
 ) -> RunResult:
+    """One run. With a profile (its record() block), the run is the
+    profiled agent's: an Invalid run whose setup step it skipped says so."""
     started_at = clock()
     fixtures_sha256 = attack.fixture_hashes()
     system_prompt = system_prompt or attack.system_prompt or DEFAULT_SYSTEM_PROMPT
@@ -261,6 +265,9 @@ def run_attack(
         judgment = apply_refusal(judgment)
     if llm_judge is not None:
         judgment = llm_judge.review(attack, judgment, text)
+    if profile is not None:
+        from lure.profiles import mark_setup_blocked
+        judgment = mark_setup_blocked(judgment)
     return RunResult(
         attack=attack,
         target=adapter.target_name,
@@ -276,10 +283,12 @@ def run_attack(
         error=error,
         judge=llm_judge.model if llm_judge is not None else "rules",
         usage=usage,
-        exposure=org_policy.record(log.calls) if org_policy is not None else None,
+        exposure=(org_policy.record(log.calls, attack.expected_fetch) if org_policy is not None
+                  else None),
         replies=replies,
         events=list(toolbox.events),
         fixtures_sha256=fixtures_sha256,
+        profile=profile,
     )
 
 

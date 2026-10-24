@@ -66,6 +66,11 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
     for c in calls:
         log.record(c["tool"], c["args"], c.get("result"), c.get("alias"))
     final_text, error = record.get("final_text"), record.get("error")
+    profile = record.get("profile")
+    if profile is not None:
+        # Judge it as the profiled agent met it: its own tool names count.
+        from lure.profiles import with_alias_names
+        attack = with_alias_names(attack, profile.get("tools", {}))
     # Records before schema v2 have no replies; their attacks were single-turn.
     replies = record.get("replies", [])
     text = judge_text(attack, final_text, replies)
@@ -75,6 +80,9 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         judgment = apply_refusal(judgment)
     if llm_judge is not None:
         judgment = llm_judge.review(attack, judgment, text)
+    if profile is not None:
+        from lure.profiles import mark_setup_blocked
+        judgment = mark_setup_blocked(judgment)
     return RunResult(
         attack=attack,
         target=record["target"],
@@ -91,7 +99,7 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         judge=llm_judge.model if llm_judge is not None else "rules",
         # The target was not called again; keep the original run's usage.
         usage=record.get("usage", {}),
-        exposure=(org_policy.record(log.calls) if org_policy is not None
+        exposure=(org_policy.record(log.calls, attack.expected_fetch) if org_policy is not None
                   else record.get("exposure")),
         replies=replies,
         events=events,
@@ -99,6 +107,7 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         # call it makes is in judgment.llm_judge.usage.
         cost=record.get("cost"),
         fixtures_sha256=record["attack"].get("fixtures_sha256", {}),
+        profile=profile,
     )
 
 
@@ -108,12 +117,17 @@ def rebuild_calls(record: dict[str, Any]) -> list[ToolCall]:
 
 
 def add_exposure(record: dict[str, Any], org_policy: OrgPolicy, source: Path, out_dir: Path,
-                 now: datetime | None = None) -> dict[str, Any]:
+                 now: datetime | None = None,
+                 expected_fetch: tuple[str, ...] = ()) -> dict[str, Any]:
     """Save a copy of the record with exposure recomputed and every other
-    field, the judgment included, exactly as saved."""
+    field, the judgment included, exactly as saved. expected_fetch comes
+    from the attack file now, for records saved before attacks had it."""
     out_dir.mkdir(parents=True, exist_ok=True)
     data = dict(record)
-    data["exposure"] = org_policy.record(rebuild_calls(record))
+    expected = tuple(record["attack"].get("expected_fetch") or expected_fetch)
+    if expected:
+        data["attack"] = {**record["attack"], "expected_fetch": list(expected)}
+    data["exposure"] = org_policy.record(rebuild_calls(record), expected)
     data["rescore"] = {
         "source": str(source),
         "rescored_at": (now or datetime.now(UTC)).isoformat(),

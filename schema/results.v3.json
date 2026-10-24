@@ -353,6 +353,11 @@
             "pattern": "^AML\\.T\\d{4}(\\.\\d{3})?$"
           }
         },
+        "expected_fetch": {
+          "description": "Web pages the attack's task needs. A plain read of exactly one of them is not counted as exposure for this attack.",
+          "type": "array",
+          "items": {"type": "string"}
+        },
         "arcanum": {
           "description": "Arcanum Prompt Injection Taxonomy v1.6.1 codes by pillar, for this run's payload (variant codes included). Missing for pinned attack versions and records before Lure 1.4.",
           "type": "object",

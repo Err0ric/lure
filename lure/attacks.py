@@ -47,6 +47,7 @@ from lure.arcanum import problems as arcanum_problems
 from lure.tools import KNOWN_TOOLS
 from lure.tools import responders as responders_mod
 from lure.tools.mock_email import FixtureError
+from lure.tools.mock_http import url_key
 from lure.tools.mock_mcp import check_mcp
 from lure.tools.mock_mcp import tool_names as mcp_tool_names
 from lure.tools.registry import FIXTURE_OPTIONAL, MCP_FIXTURE, fixture_for
@@ -62,7 +63,7 @@ REQUIRED_KEYS = (
 )
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
-    "followup_tasks", "responders", "goal", "variants", "arcanum", "canary",
+    "followup_tasks", "responders", "goal", "variants", "arcanum", "canary", "expected_fetch",
 )
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
@@ -236,6 +237,9 @@ class Attack:
     # A secret line appended to a profiled agent's own system prompt, for
     # attacks whose reply_contains rules catch a leaked system prompt.
     canary: str | None = None
+    # Web pages the task itself needs: a plain read of one is not exposure
+    # for this attack, even on a domain the org policy does not allow.
+    expected_fetch: tuple[str, ...] = ()
 
     @property
     def multi_turn(self) -> bool:
@@ -479,6 +483,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         except FixtureError as e:
             raise fail(f"fixture {MCP_FIXTURE!r}: {e}") from None
     mcp_tools = mcp_tool_names(loaded.get(MCP_FIXTURE))
+    expected_fetch = _expected_fetch(data.get("expected_fetch", []), loaded, fail)
 
     tools = data["tools"]
     if not isinstance(tools, list) or not tools:
@@ -588,7 +593,20 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         root=root,
         arcanum=merge(arcanum),
         canary=canary,
+        expected_fetch=expected_fetch,
     )
+
+
+def _expected_fetch(value: Any, loaded: dict[str, Any], fail) -> tuple[str, ...]:
+    """Each entry must be a page in the attack's web fixture, so it names a
+    read the task needs, never a destination for data."""
+    if not isinstance(value, list) or not all(isinstance(u, str) and u.strip() for u in value):
+        raise fail("expected_fetch must be a list of URLs")
+    pages = {url_key(p["url"]) for p in loaded.get("web") or [] if isinstance(p, dict) and "url" in p}
+    for url in value:
+        if url_key(url) not in pages:
+            raise fail(f"expected_fetch: {url} is not a page in the attack's web fixture")
+    return tuple(u.strip() for u in value)
 
 
 def _variants(value, location, placement, payload, fixtures, rules, fail) -> list[Variant]:

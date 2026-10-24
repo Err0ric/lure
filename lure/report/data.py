@@ -390,6 +390,14 @@ class Report:
                        if (r.record.get("profile") or {}).get("canary_appended")})
 
     @property
+    def setup_blocked(self) -> list[Run]:
+        """Profile runs never tested because the agent skipped the setup step."""
+        from lure.profiles import SETUP_BLOCKED
+
+        return [r for r in self.runs if r.verdict is Verdict.INVALID
+                and r.record["judgment"]["reason"].startswith(SETUP_BLOCKED)]
+
+    @property
     def adaptive(self) -> bool:
         """True when the runs are adaptive (build_report never mixes the two)."""
         return any(r.adaptive for r in self.runs)

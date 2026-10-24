@@ -129,6 +129,14 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
         rows = [[text(a.label), str(a.tally.runs), str(a.tally.refused), pct(a.tally.refusal_rate)]
                 for a in report.attacks if a.tally.refused]
         lines += table(["Attack", "Runs", "Refused", "Refusal rate"], rows, numeric=range(1, 4))
+    if report.setup_blocked:
+        lines += ["", "## Not tested: the agent's own rules", "",
+                  ("In these runs the agent did not take the step the scenario needs before the "
+                  "attack can arrive, such as replying to a vendor. Its own instructions are the "
+                  "likely reason. The attack was not tested, so these runs are left out of every "
+                  "rate."), ""]
+        lines += [f"- **{text(r.label)}** {text(r.attack['name'])}: "
+                  f"{text(r.record['judgment']['reason'])}" for r in report.setup_blocked]
     lines += ["", "## Findings by ATLAS technique", ""]
     lines += _findings(report)
     return "\n".join(lines) + "\n"
