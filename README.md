@@ -6,7 +6,7 @@ An open-source harness that attacks AI agents with prompt injection and tool-abu
 
 Think phishing simulation, but the target is an agent instead of an employee.
 
-> Status: v1.7.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
+> Status: v1.8.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) for what is still open.
 
 [![Top of the sample report: headline, facts strip and summary for claude-haiku-5-5](docs/sample-report-top.png)](https://err0ric.github.io/lure/sample-report.html)
 
@@ -322,7 +322,7 @@ A future `config_audit` stage would check agent and MCP settings before any run;
 - [x] v1.5.0 (shipped in v1.6.0): `lure --version`, agent profiles, one-page approval report, credential access and covert egress attacks
 - [x] v1.6.0: `lure decide`, `lure retest`, weekly vetting workflow, shell, self-modification and persistence attacks
 - [x] v1.7.0: confirmation gates, customer support and IT helpdesk scenario packs, `lure rescore --exposure-only` for adaptive runs
-- [ ] v1.8: evasion variants (zero-width, homoglyphs, hidden HTML, translated), team chat as an input, summary-only and threshold gates, the profile tutorial
+- [x] v1.8.0: evasion variants (zero-width, homoglyphs, hidden HTML, translated), team chat as an input, summary-only and threshold gates, the profile tutorial
 - [ ] Later: adaptive attacker `outcome` mode, multi-agent targets
 - [ ] Phase 5: Stretch (a sample SecOps agent team)
 

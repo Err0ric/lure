@@ -304,7 +304,7 @@ Goal: harder payloads and more channels, and the weaker kinds of confirmation st
 - [x] Threshold gates (`gate_over`): gated only above an amount (`pay_invoice`, `issue_refund`); judge keys `amount_over` and `split_over`; `lure-tab-004` (split an $18,400.00 invoice into two payments under the $10,000 limit).
 - [x] `docs/writing-a-profile.md`: a step-by-step tutorial using the support and helpdesk examples.
 - [x] Coverage after v1.8: inputs 6 of 12 (new PIT-N-03), intents 8 of 27, techniques 20 of 70, evasions 9 of 63 (new PIT-E-05, PIT-E-20, PIT-E-23), from 58 current attacks.
-- [ ] Tag v1.8.0
+- [x] Tag v1.8.0
 
 ### Later
 
