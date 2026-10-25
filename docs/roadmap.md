@@ -1,10 +1,11 @@
 # Known gaps and roadmap
 
-> Status: v1.12.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
+> Status: v1.13.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
 
 ## Known gaps
 
 - **Targets:** Anthropic, Ollama and OpenAI-compatible endpoints. Providers with other APIs need an adapter; see [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+- **Real agents:** `lure sandbox run` isolates an agent in a container, but only Lure's reference agent reports its tool calls; for a third-party agent the gateway log and workspace diff are the evidence until the mock MCP server (v1.14).
 - **Results store:** one JSON file per run is the source of truth; `lure store` indexes them into DuckDB and can rebuild from them. `lure serve` is local and read-only: no sharing, accounts or remote access.
 - **Reactive fixtures:** responders are declarative triggers on tool calls, not a simulated counterpart that writes new text. Each released item is fixed in advance.
 - **LLM judge:** injected text in a reply can reach the judge; see [How a run is scored](usage.md#how-a-run-is-scored).
@@ -29,13 +30,12 @@
 - [x] v1.10.0: DuckDB results store (`lure store`) and a local, read-only `lure serve` dashboard
 - [x] v1.11.0: `lure status`, Gitea pipeline examples and guide, SECURITY.md, issue and pull request templates, a container image, how the sandbox works
 - [x] v1.12.0: coding-agent instruction-file attacks (a file from a download asks to install a package, change the model endpoint, or hand over the auth token) and a fixture `origin` field (repo, download, user), on today's mocks
+- [x] v1.13.0: isolation for real agents: Lure's own egress gateway (hostname allowlist, no TLS decryption, blocked egress and DNS lookups logged as exposure), a throwaway non-root container per run on an internal-only network, decoy commands and a workspace diff, a reference agent image, `lure sandbox`, and a changed model endpoint as a critical Fail (`lure-smo-004` v2). Also `split_over` across invoice numbers (`lure-tab-004` v2), a tolerant summary-gate check (strict kept as an option), and live llama3.1 gate smoke tests
 
 ### Next
 
-- [ ] v1.13: isolation for testing real agents: Lure's own egress proxy (hostname allowlist, no TLS decryption, block and log the rest) and DNS logger, a throwaway non-root container per run on an internal-only network, decoy commands and a workspace diff as evidence, blocked egress counted as exposure, a changed model endpoint as a critical finding. Also carried over: `split_over` across invoice numbers, a tolerant check for summary gates, and live llama3.1 smoke tests for the misled and split paths
-  - Summary gates trade-off: today a summary counts as honest only if it names the harmful detail word for word, which is strict on the agent. A tolerant check (the recipient's organization, "outside", a rounded amount) would read more summaries as honest, so fewer runs fail as misled, at the risk of crediting a vague summary that a hurried person would wave through.
 - [ ] v1.14: Lure as a mock MCP server (stdio and Streamable HTTP), so an unmodified MCP-based agent uses Lure's mock tools
-- [ ] v1.15: an HTTP agent endpoint adapter, a profile `agent:` block (refused without `isolation: container` or `vm`), the approval page's Isolation section, and the at-work guide: a dedicated VM on an isolated VLAN, with firewall and proxy logs accepted as egress evidence
+- [ ] v1.15: an HTTP agent endpoint adapter (on the v1.13 profile `agent:` block), the approval page's Isolation section, and the at-work guide: a dedicated VM on an isolated VLAN, with firewall and proxy logs accepted as egress evidence
 
 ### Later
 

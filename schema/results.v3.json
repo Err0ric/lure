@@ -306,11 +306,63 @@
             "type": "string"
           }
         },
+        "summary_check": {
+          "description": "For each summary-gated tool: how closely the summary must name the harm, tolerant (the default) or strict. Optional: missing before Lure 1.13 and when no tool shows a summary.",
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "tolerant",
+              "strict"
+            ]
+          }
+        },
         "gate_over": {
           "description": "Gated tools that ask only above an amount: the agent's tool name -> the limit. Optional.",
           "type": "object",
           "additionalProperties": {
             "type": "number"
+          }
+        },
+        "isolation": {
+          "description": "How a real agent (the profile's agent: block) is isolated: container (lure sandbox run) or vm. Optional: missing for profiles without an agent.",
+          "enum": [
+            "container",
+            "vm"
+          ]
+        },
+        "agent": {
+          "description": "The real agent the profile describes: image, provider, the model host the gateway allows, inherited environment variable names, extra allowed hosts. Optional.",
+          "type": "object",
+          "required": [
+            "image",
+            "provider",
+            "model_host",
+            "env",
+            "allow"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "image": {
+              "type": "string"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "model_host": {
+              "type": "string"
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "allow": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         }
       }
@@ -342,6 +394,121 @@
           }
         }
       ]
+    },
+    "sandbox": {
+      "description": "A container run's isolation and evidence (lure sandbox run). Missing for mock-tool runs.",
+      "type": "object",
+      "required": [
+        "isolation",
+        "agent_image",
+        "gateway_image",
+        "allow",
+        "enforced",
+        "tool_calls_source",
+        "egress_allowed",
+        "decoys",
+        "workspace",
+        "model_endpoint",
+        "teardown"
+      ],
+      "properties": {
+        "isolation": {
+          "const": "container"
+        },
+        "agent_image": {
+          "type": "string"
+        },
+        "gateway_image": {
+          "type": "string"
+        },
+        "allow": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enforced": {
+          "description": "The agent container's settings as docker inspect reported them.",
+          "type": "object"
+        },
+        "tool_calls_source": {
+          "description": "agent: tool_calls were reported by the agent itself (Lure's reference agent), not observed by Lure.",
+          "const": "agent"
+        },
+        "agent_exit_code": {
+          "type": "integer"
+        },
+        "model_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "egress_allowed": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "decoys": {
+          "description": "Decoy command calls (npm, pip, curl, wget, git), from a log inside the agent's container.",
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "workspace": {
+          "type": "object",
+          "required": [
+            "added",
+            "removed",
+            "changed"
+          ],
+          "properties": {
+            "added": {
+              "type": "array"
+            },
+            "removed": {
+              "type": "array"
+            },
+            "changed": {
+              "type": "array"
+            }
+          }
+        },
+        "model_endpoint": {
+          "description": "The agent's model URL if it changed during the run, with critical: true. null otherwise.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "to",
+                "host",
+                "critical",
+                "blocked"
+              ]
+            }
+          ]
+        },
+        "teardown": {
+          "type": "object",
+          "required": [
+            "removed",
+            "leftover"
+          ]
+        }
+      },
+      "additionalProperties": false
     }
   },
   "$defs": {
@@ -630,6 +797,82 @@
                 "type": "boolean"
               }
             }
+          }
+        },
+        "egress_blocked": {
+          "description": "Connections the sandbox gateway refused (lure sandbox run): host, port, how the gateway read the name (connect, http, sni, host) and why. Optional: only container runs have it.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "host",
+              "port",
+              "via",
+              "allowed"
+            ],
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "host": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "path": {
+                "description": "The request path, for plain HTTP only (TLS is never decrypted).",
+                "type": "string"
+              },
+              "via": {
+                "enum": [
+                  "connect",
+                  "http",
+                  "sni",
+                  "host"
+                ]
+              },
+              "allowed": {
+                "const": false
+              },
+              "reason": {
+                "type": "string"
+              },
+              "error": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "dns_lookups": {
+          "description": "Every name the agent's container looked up through the sandbox gateway, and whether it was answered (allowed) or got NXDOMAIN. Optional: only container runs have it.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "type",
+              "allowed"
+            ],
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "allowed": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
           }
         }
       }

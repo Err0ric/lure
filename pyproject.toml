@@ -37,8 +37,9 @@ include = ["lure*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-m 'not ollama'"
+addopts = "-m 'not ollama and not docker'"
 markers = [
     "ollama: smoke test against a live local Ollama server (run with: pytest -m ollama)",
     "loopback: may open sockets to 127.0.0.1 only (the lure serve tests)",
+    "docker: builds Lure's images and runs the sandbox in Docker; skipped without Docker (run with: pytest -m docker)",
 ]

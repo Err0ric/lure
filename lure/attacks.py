@@ -115,6 +115,9 @@ RULE_KEYS = {
     "split_over": "split",
     "asked_user_before": "tool",
     "flagged_as_suspicious": "bool",
+    # Decided from the sandbox gateway's log (lure.sandbox): never matches
+    # in a mock-tool run.
+    "egress_to": "domains",
 }
 
 ID_RE = re.compile(r"^lure-[a-z]+-\d{3}$")
@@ -1136,9 +1139,9 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
             if kind == "split" and (
                     not isinstance(v, dict) or set(v) != {"amount", "by"}
                     or isinstance(v["amount"], bool) or not isinstance(v["amount"], (int, float))
-                    or v["amount"] <= 0 or not isinstance(v["by"], str) or not v["by"]):
-                raise fail(f"{where} {k} must be {{amount: N, by: argument}}, such as "
-                           "{amount: 10000, by: invoice}")
+                    or v["amount"] <= 0 or not _split_by(v["by"])):
+                raise fail(f"{where} {k} must be {{amount: N, by: argument or [arguments]}}, "
+                           "such as {amount: 10000, by: [invoice, account]}")
         if "split_over" in rule and "tool" not in rule:
             raise fail(f"{where} split_over needs a tool")
         for k in ("to_domain_not_in", "body_contains", "args_contain", "args_not_contain",
@@ -1146,6 +1149,13 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
             if k in rule and not ({"tool", "asked_user_before"} & set(rule)):
                 raise fail(f"{where} {k} needs a tool or asked_user_before")
     return list(value)
+
+
+def _split_by(by: Any) -> bool:
+    """split_over's by: one argument name, or a non-empty list of them."""
+    names = [by] if isinstance(by, str) else by
+    return (isinstance(names, list) and bool(names)
+            and all(isinstance(n, str) and n for n in names))
 
 
 URL_SPEC_KEYS = ("domain_not_in", "carries")
@@ -1277,10 +1287,13 @@ def _strings(value: Any):
             yield from _strings(v)
 
 
+DOMAIN_LIST_KEYS = ("to_domain_not_in", "to_domain_in", "domain_not_in", "egress_to")
+
+
 def _domain_lists(value: Any):
     if isinstance(value, dict):
         for k, v in value.items():
-            if k in ("to_domain_not_in", "to_domain_in", "domain_not_in") and isinstance(v, list):
+            if k in DOMAIN_LIST_KEYS and isinstance(v, list):
                 yield [d for d in v if isinstance(d, str)]
             else:
                 yield from _domain_lists(v)

@@ -19,6 +19,14 @@ not do is skipped with the reason.
 A tool marked `gated: true` stops for a person's confirmation before each
 call (see lure.gate); `confirmer` picks the stand-in for that person:
 careful (the default) or deny_all.
+
+An `agent:` block describes a real agent that runs as code: its container
+image, how its model is reached, and which environment variables it may
+inherit (a capped test key, by name only). Running real agent code needs
+OS and network isolation, so a profile with an agent block must also say
+`isolation: container` (Lure's sandbox, lure.sandbox) or `vm` (a VM you
+run; Lure cannot run it itself). Lure refuses the profile otherwise. The
+model URL's host is the one destination the sandbox gateway allows.
 """
 
 from __future__ import annotations
@@ -33,14 +41,27 @@ import yaml
 
 from lure.adapters import TARGETS
 from lure.attacks import PRIVATE_KEY_RE, SCENARIOS, SECRET_RE, Attack
-from lure.gate import CAREFUL, CONFIRMERS, SHOWS, Gate
+from lure.gate import CAREFUL, CONFIRMERS, SHOWS, STRICT, SUMMARY_CHECKS, TOLERANT, Gate
 from lure.judge.rules import Judgment, Verdict
 from lure.tools import AMOUNT_TOOLS, GATABLE_TOOLS, KNOWN_TOOLS
 from lure.tools.registry import ToolAlias
 
 REQUIRED_KEYS = ("name", "target", "tools")
 OPTIONAL_KEYS = ("owner", "role", "model", "system_prompt", "system_prompt_file",
-                 "third_party_tools", "policy", "suites", "renders", "confirmer", "scenarios")
+                 "third_party_tools", "policy", "suites", "renders", "confirmer", "scenarios",
+                 "agent", "isolation")
+ISOLATIONS = ("container", "vm")
+AGENT_KEYS = ("image", "provider", "model_url")
+AGENT_OPTIONAL = ("command", "env", "allow", "settings_file", "model_url_key", "limits")
+AGENT_PROVIDERS = ("anthropic", "ollama")
+LIMIT_KEYS = ("memory", "cpus", "pids", "workspace")
+ENV_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+HOST_PORT_RE = re.compile(r"^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?(/[a-z0-9._~/-]*)?$")
+# Paths the gateway allows on a provider's plain-HTTP model host. Ollama's
+# API is unauthenticated and can pull, create and delete models, so the
+# agent gets only its chat endpoint.
+MODEL_PATHS = {"ollama": "/api/chat"}
+IMAGE_RE = re.compile(r"^[a-z0-9][a-z0-9._/:@-]{0,200}$")
 RENDER_KEYS = ("images", "link_previews")
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 # What model APIs accept as a tool name.
@@ -70,6 +91,48 @@ class ProfileTool:
     gate_shows: str = "arguments"
     # Ask only for calls above this amount (pay_invoice, issue_refund).
     gate_over: float | None = None
+    # How closely a summary must name the harm: tolerant or strict (lure.gate).
+    summary_check: str = TOLERANT
+
+
+@dataclass(frozen=True)
+class AgentSpec:
+    """A real agent that runs as code in the sandbox (lure sandbox run)."""
+
+    image: str
+    provider: str
+    model_url: str
+    command: tuple[str, ...] = ("/usr/local/bin/python3", "/opt/lure/agent.py")
+    # Environment variable names the agent inherits from Lure's, never values.
+    env: tuple[str, ...] = ()
+    # More host[:port] the gateway allows, beyond the model URL's host.
+    allow: tuple[str, ...] = ()
+    # Where the agent keeps its model URL in its workspace, for the record.
+    settings_file: str = ".agent/settings.json"
+    model_url_key: str = "model_base_url"
+    limits: tuple[tuple[str, str], ...] = ()
+
+    @property
+    def model_host(self) -> str:
+        """host:port of the model URL, as the gateway allows it."""
+        from urllib.parse import urlsplit
+        parts = urlsplit(self.model_url)
+        port = parts.port or (443 if parts.scheme == "https" else 80)
+        return f"{(parts.hostname or '').lower()}:{port}"
+
+    @property
+    def model_allow(self) -> str:
+        """The gateway allowlist entry for the model: host:port, plus the
+        chat path for a provider whose API is plain HTTP (Ollama)."""
+        from urllib.parse import urlsplit
+        path = MODEL_PATHS.get(self.provider)
+        if path is None or urlsplit(self.model_url).scheme != "http":
+            return self.model_host
+        return self.model_host + path
+
+    def record(self) -> dict[str, Any]:
+        return {"image": self.image, "provider": self.provider, "model_host": self.model_host,
+                "env": list(self.env), "allow": list(self.allow)}
 
 
 @dataclass(frozen=True)
@@ -90,6 +153,9 @@ class Profile:
     # images and link_previews: True, False, or None when not set (assumed True).
     renders: tuple[tuple[str, bool | None], ...] = (("images", None), ("link_previews", None))
     confirmer: str = CAREFUL
+    # A real agent run as code (lure sandbox run), and how it is isolated.
+    agent: AgentSpec | None = None
+    isolation: str | None = None
 
     def rendering(self, key: str) -> bool | None:
         return dict(self.renders)[key]
@@ -101,7 +167,9 @@ class Profile:
         summary = frozenset(t.maps_to for t in self.tools if t.gated and t.gate_shows == "summary")
         limits = tuple((t.maps_to, t.gate_over) for t in self.tools
                        if t.gated and t.gate_over is not None)
-        return Gate(gated, self.confirmer, summary, limits) if gated else None
+        strict = frozenset(t.maps_to for t in self.tools if t.gated and t.gate_shows == "summary"
+                           and t.summary_check == STRICT)
+        return Gate(gated, self.confirmer, summary, limits, strict) if gated else None
 
     @property
     def aliases(self) -> dict[str, ToolAlias]:
@@ -119,9 +187,14 @@ class Profile:
             summary = [t.name for t in self.tools if t.gated and t.gate_shows == "summary"]
             if summary:
                 found["summary_gated"] = summary
+                found["summary_check"] = {t.name: t.summary_check for t in self.tools
+                                          if t.gated and t.gate_shows == "summary"}
             limits = {t.name: t.gate_over for t in self.tools if t.gated and t.gate_over}
             if limits:
                 found["gate_over"] = limits
+        if self.agent is not None:
+            found["isolation"] = self.isolation
+            found["agent"] = self.agent.record()
         return found
 
 
@@ -214,13 +287,74 @@ def load_profile(path: str | Path) -> Profile:
     if "confirmer" in data and not any(t.gated for t in tools):
         raise fail("confirmer is set, but no tool is gated: mark a tool gated: true")
 
+    agent, isolation = _agent(data, fail)
     return Profile(name=name, path=path, sha256=digest.hexdigest(), target=data["target"],
                    system_prompt=prompt.strip(), tools=tools, model=data.get("model"),
                    owner=data.get("owner"), role=data.get("role"),
                    third_party_tools=third_party, policy=policy,
                    suites=tuple(suites) if suites else None,
                    renders=tuple((k, renders.get(k)) for k in RENDER_KEYS),
-                   confirmer=confirmer, scenarios=tuple(scenarios) if scenarios else None)
+                   confirmer=confirmer, scenarios=tuple(scenarios) if scenarios else None,
+                   agent=agent, isolation=isolation)
+
+
+def _agent(data: dict[str, Any], fail) -> tuple[AgentSpec | None, str | None]:
+    """The agent block and the isolation it runs under. A real agent's code
+    runs, so Lure refuses one without isolation: container or vm."""
+    isolation = data.get("isolation")
+    if "agent" not in data:
+        if isolation is not None:
+            raise fail("isolation applies to a real agent: add an agent: block, or remove it")
+        return None, None
+    if isolation not in ISOLATIONS:
+        raise fail("a profile with an agent: block runs real agent code, so it needs "
+                   "isolation: container or isolation: vm; Lure refuses to run it without one")
+    block = data["agent"]
+    if not isinstance(block, dict):
+        raise fail("agent must be a mapping")
+    missing = [k for k in AGENT_KEYS if k not in block]
+    unknown = sorted(set(block) - set(AGENT_KEYS) - set(AGENT_OPTIONAL))
+    if missing or unknown:
+        raise fail(f"agent: missing keys {missing}" if missing else f"agent: unknown keys {unknown}")
+    image = block["image"]
+    if not isinstance(image, str) or not IMAGE_RE.match(image):
+        raise fail("agent.image must be a container image reference")
+    if block["provider"] not in AGENT_PROVIDERS:
+        raise fail(f"agent.provider must be one of {', '.join(AGENT_PROVIDERS)}")
+    from urllib.parse import urlsplit
+    url = block["model_url"]
+    parts = urlsplit(url) if isinstance(url, str) else None
+    if parts is None or parts.scheme not in ("http", "https") or not parts.hostname:
+        raise fail("agent.model_url must be an http:// or https:// URL")
+    if parts.username or parts.password or parts.query:
+        raise fail("agent.model_url must not carry credentials or a query")
+    command = block.get("command", list(AgentSpec.command))
+    if not (isinstance(command, list) and command
+            and all(isinstance(c, str) and c for c in command)):
+        raise fail("agent.command must be a non-empty list of strings")
+    env = block.get("env", [])
+    if not (isinstance(env, list) and all(isinstance(e, str) and ENV_NAME_RE.match(e)
+                                          for e in env)):
+        raise fail("agent.env must be a list of environment variable names (never values)")
+    allow = block.get("allow", [])
+    if not (isinstance(allow, list) and all(isinstance(a, str) and HOST_PORT_RE.match(a.lower())
+                                            for a in allow)):
+        raise fail("agent.allow must be a list of host, host:port or host:port/path")
+    for key in ("settings_file", "model_url_key"):
+        if key in block and (not isinstance(block[key], str) or not block[key].strip()
+                             or block[key].startswith("/") or ".." in block[key].split("/")):
+            raise fail(f"agent.{key} must be a relative name inside the workspace")
+    limits = block.get("limits", {})
+    if not (isinstance(limits, dict) and set(limits) <= set(LIMIT_KEYS)
+            and all(isinstance(v, (str, int)) and not isinstance(v, bool)
+                    for v in limits.values())):
+        raise fail(f"agent.limits may set {', '.join(LIMIT_KEYS)}")
+    return AgentSpec(image=image, provider=block["provider"], model_url=url.rstrip("/"),
+                     command=tuple(command), env=tuple(env),
+                     allow=tuple(a.lower() for a in allow),
+                     settings_file=block.get("settings_file", AgentSpec.settings_file),
+                     model_url_key=block.get("model_url_key", AgentSpec.model_url_key),
+                     limits=tuple((k, str(v)) for k, v in limits.items())), isolation
 
 
 def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
@@ -230,10 +364,10 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
     for i, item in enumerate(value):
         where = f"tools[{i}]"
         if not isinstance(item, dict) or set(item) - {"essential", "gated", "gate_shows",
-                                                      "gate_over"} != {
+                                                      "gate_over", "summary_check"} != {
                 "name", "description", "maps_to"}:
             raise fail(f"{where} needs name, description and maps_to (and optionally essential, "
-                       "gated, gate_shows and gate_over)")
+                       "gated, gate_shows, gate_over and summary_check)")
         name, description, maps_to = item["name"], item["description"], item["maps_to"]
         essential, gated = item.get("essential", False), item.get("gated", False)
         if not isinstance(essential, bool):
@@ -245,6 +379,11 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
             raise fail(f"{where}: gate_shows must be one of {', '.join(SHOWS)}")
         if "gate_shows" in item and not gated:
             raise fail(f"{where}: gate_shows needs gated: true")
+        check = item.get("summary_check", TOLERANT)
+        if check not in SUMMARY_CHECKS:
+            raise fail(f"{where}: summary_check must be one of {', '.join(SUMMARY_CHECKS)}")
+        if "summary_check" in item and shows != "summary":
+            raise fail(f"{where}: summary_check needs gate_shows: summary")
         over = item.get("gate_over")
         if over is not None:
             if not gated:
@@ -275,7 +414,7 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
         names.add(name)
         mapped.add(maps_to)
         tools.append(ProfileTool(name, " ".join(description.split()), maps_to, essential, gated,
-                                 shows, float(over) if over is not None else None))
+                                 shows, float(over) if over is not None else None, check))
     return tuple(tools)
 
 

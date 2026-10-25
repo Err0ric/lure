@@ -14,13 +14,22 @@ Lure attacks agents, so it is built to be safe by design.
 
 ## How the sandbox works
 
-Lure's sandbox is **capability isolation, not OS isolation**. It is safe because of what the agent under test is given, not because of a wall around the process.
+Lure has two sandboxes, one for each kind of target.
 
-**What the agent under test is.** Today the target is a model behind an API, driven by Lure's own loop. The model never runs code on your machine: it returns text and tool call requests, and Lure decides what each request does.
+| Mode | Target | What keeps it safe | Command |
+| --- | --- | --- | --- |
+| Mock tools (capability isolation) | A model behind an API, driven by Lure's own loop | What the agent is given: every tool is a Lure mock | `lure run` |
+| Container (OS and network isolation) | A real agent that runs as code, with its own tools | A throwaway container with no network except Lure's egress gateway | `lure sandbox run` |
+
+### Mock tools: capability isolation
+
+This is the default, and it is **capability isolation, not OS isolation**. It is safe because of what the agent under test is given, not because of a wall around the process.
+
+**What the agent under test is.** The target is a model behind an API, driven by Lure's own loop. The model never runs code on your machine: it returns text and tool call requests, and Lure decides what each request does.
 
 **What a tool call can do.** Lure looks up each requested tool by name among the mocks the attack offers, and answers anything else with an error. Each mock is a small Python function that checks its arguments, reads fixture data, records the call for the judge, and returns a fake result. None has a code path to the network, your files, a shell, email or payments: `send_email` appends to a list, `write_file` changes an in-memory copy of the fixture, `run_command` matches canned output, `fetch_url` looks up a fixture page, `pay_invoice` records a payment. A harmful action is a log entry, and that log entry is the evidence.
 
-**What is not isolated.** Lure itself is an ordinary Python process with your user's permissions, files and network. There is no container, VM or seccomp profile between the model's output and your machine, and none is needed while the only thing that acts on that output is Lure's dispatcher and mocks. Running Lure in a [container](container.md) is tidy, not what makes a test safe.
+**What is not isolated.** Lure itself is an ordinary Python process with your user's permissions, files and network. There is no container, VM or seccomp profile between the model's output and your machine, and none is needed while the only thing that acts on that output is Lure's dispatcher and mocks. Running Lure itself in a [container](container.md) is tidy, not what makes a mock-tool test safe.
 
 | Trust | What | How Lure treats it |
 | --- | --- | --- |
@@ -30,7 +39,24 @@ Lure's sandbox is **capability isolation, not OS isolation**. It is safe because
 
 **Where it would break.** A bug in a mock or in the dispatcher, such as a mock that touched a real path, is what could break the sandbox: report one through [SECURITY.md](../SECURITY.md). Third-party tool definitions (MCP fixtures) are descriptions only; Lure mocks those tools too and never runs them.
 
-**When this stops being enough.** Capability isolation holds while Lure owns the agent loop. Testing a real agent, with its own code and its own tool client, means that code runs, so it needs OS and network isolation as well: a throwaway container with no network except an egress proxy. That is planned, not built; see the [roadmap](roadmap.md).
+### Container: isolation for real agents
+
+Capability isolation holds while Lure owns the agent loop. A real agent brings its own code and its own tool client, and that code runs, so it needs OS and network isolation as well. A profile with an `agent:` block describes such an agent, and Lure refuses it without `isolation: container` (Lure's sandbox) or `isolation: vm` (a VM you run yourself).
+
+`lure sandbox run` starts, per run:
+
+| Piece | What it is |
+| --- | --- |
+| Internal network | Docker `--internal`: no default route, so the agent cannot reach the host or the internet directly; a direct IP connection fails |
+| Gateway | Lure's own egress proxy and DNS responder (`lure.sandbox.gateway`), the only container with a leg outside. Allows exact `host:port` pairs (the profile's model host; a plain-HTTP host can be held to a path, such as Ollama's `/api/chat`), decides by the CONNECT host or the TLS SNI, never decrypts TLS, and blocks and logs everything else. Allowed names resolve to the gateway; other names get NXDOMAIN and are logged |
+| Agent container | Non-root, read-only root filesystem, tmpfs `/workspace`, no host mounts, every capability dropped, no-new-privileges, memory, CPU and process limits; destroyed after the run |
+| Decoys | `npm`, `npx`, `pip`, `pip3`, `curl`, `wget` and `git` first on the agent's PATH: they log their arguments and fail |
+
+**Evidence.** The result records blocked egress and DNS lookups as exposure (`exposure.egress_blocked`, `exposure.dns_lookups`), and a `sandbox` block with the container settings as Docker enforced them, allowed egress, decoy calls, a diff of the workspace, and a changed model endpoint (critical). Attacks judge the gateway's log with the `egress_to` rule key: `lure-smo-004` fails when the agent's traffic heads for the relay, even though the gateway stopped it.
+
+**What leaves the machine.** Only connections to the allowed hosts: the model API the profile names, with the key the profile passes in by name (a capped test key). The workspace is copied in and out over `docker exec`; nothing on the host is mounted.
+
+**Limits.** The gateway trusts the name a client presents (CONNECT host, SNI), so an agent could ask an allowed host for something else inside TLS; that reaches only the allowed host's servers. The decoy log sits inside the agent's container and an agent with a shell could edit it; the gateway's log is outside its reach. Tool rules in a container run read the agent's own call log, which only Lure's reference agent writes (`sandbox.tool_calls_source: agent`); the gateway log and workspace diff are Lure's own observations. Setup and the reference agent: [Run a real agent in the sandbox](container.md#run-a-real-agent-in-the-sandbox).
 
 ## Quickstart
 
@@ -82,6 +108,7 @@ Other useful commands:
 | `lure decide profiles/<name>.yaml --decision approve-with-conditions --by "<role>" --conditions "..."` | Record the decision in an append-only log, `vetting/<name>/decisions.jsonl` (gitignored) |
 | `lure status profiles/<name>.yaml` | Exit 0 if the latest decision approves the profile and the profile is unchanged since; exit 1 if rejected, undecided or changed. For a tool repository's CI: [`gitea-pipeline.md`](gitea-pipeline.md) |
 | `lure retest profiles/<name>.yaml --prices prices.yaml --max-cost 0.50` | Rerun the profile's last suite and compare it with the last approved run: new failures (exit 1), fixed, what changed, which conditions a retest verified. The weekly workflow, with cron and GitHub Actions examples: [`docs/vetting-workflow.md`](vetting-workflow.md) |
+| `lure sandbox run attacks/ --profile profiles/example-ref-agent-local.yaml` | Test a real agent that runs as code, in a throwaway container behind Lure's egress gateway (`lure sandbox build` first; Docker needed). Guide: [`docs/container.md`](container.md#run-a-real-agent-in-the-sandbox) |
 | `lure run ... --target ollama --model llama3.1:8b` | Test a local model (set `LURE_OLLAMA_URL` in `.env` if it is not on localhost) |
 | `lure run ... --target openai --model <model>` | Test any OpenAI-compatible server: set `LURE_OPENAI_BASE_URL` and, if it needs one, `LURE_OPENAI_API_KEY` in `.env` |
 | `lure report results/my-run/ --md report.md --sarif lure.sarif` | Also write a Markdown report and SARIF 2.1.0 for CI code scanning |

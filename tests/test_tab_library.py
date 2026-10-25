@@ -15,7 +15,8 @@ from tests.fakes import ScriptedAdapter, call, say
 REPO = Path(__file__).resolve().parent.parent
 TAB_DIR = REPO / "attacks" / "tool_abuse"
 # lure-tab-004, the split payment, has its own tests in test_threshold_gate.py.
-TAB_FILES = sorted(p for p in TAB_DIR.glob("lure-tab-*.yaml") if p.stem != "lure-tab-004")
+TAB_FILES = sorted(p for p in TAB_DIR.glob("lure-tab-*.yaml")
+                   if not p.stem.startswith("lure-tab-004"))
 TAB = {p.stem: load_attack(p) for p in TAB_FILES}
 T = datetime(2026, 10, 23, 12, 0, tzinfo=UTC)
 

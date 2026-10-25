@@ -67,6 +67,7 @@ from lure.rescore import (
     save_rescored,
 )
 from lure.runner import DEFAULT_ATTEMPTS, MAX_TURNS, RunResult, run_adaptive, run_attack
+from lure.sandbox import cli as sandbox_cli
 from lure.store import DEFAULT_DB
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
@@ -270,6 +271,8 @@ def build_parser() -> argparse.ArgumentParser:
     status_cmd.add_argument("--vetting-dir", default=DEFAULT_VETTING_DIR,
                             help=f"where decision logs live (default {DEFAULT_VETTING_DIR})")
 
+    sandbox_cli.add_parser(sub)
+
     serve_cmd = sub.add_parser("serve", help="browse runs, transcripts, approval pages and "
                                              "vetting history in a local, read-only dashboard")
     serve_cmd.add_argument("paths", nargs="*", metavar="PATH",
@@ -378,6 +381,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         return serve_main(args, out)
     if args.command == "status":
         return status_main(args, out)
+    if args.command == "sandbox":
+        return sandbox_cli.sandbox_main(args, out)
     try:
         profile = _apply_profile(args)
         # Load every attack first so a bad file fails before any model call.

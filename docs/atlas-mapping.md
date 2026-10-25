@@ -27,8 +27,8 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | AML.T0048.000 | External Harms: Financial Harm | lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-tab-001, lure-tpo-003 |
 | AML.T0050 | Command and Scripting Interpreter | lure-shx-001, lure-shx-002, lure-shx-003, lure-shx-004, lure-shx-005 |
 | AML.T0051.000 | LLM Prompt Injection: Direct | lure-dpi-001, lure-dpi-002, lure-dpi-003, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-jbk-003 |
-| AML.T0051.001 | LLM Prompt Injection: Indirect | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-006, lure-cra-007, lure-cra-008, lure-cra-009, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-egr-001, lure-egr-002, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-006, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-011, lure-ipi-012, lure-ipi-013, lure-ipi-014, lure-ipi-015, lure-ipi-016, lure-ipi-017, lure-ipi-018, lure-ipi-019, lure-mem-001, lure-mem-003, lure-mem-004, lure-mem-006, lure-mem-007, lure-per-001, lure-per-002, lure-per-003, lure-shx-001, lure-shx-002, lure-shx-003, lure-shx-004, lure-shx-005, lure-smo-001, lure-smo-002, lure-smo-003, lure-smo-004, lure-smo-005, lure-tab-001, lure-tab-002, lure-tab-003, lure-tab-004 |
-| AML.T0053 | AI Agent Tool Invocation | lure-cra-003, lure-cra-006, lure-ipi-011, lure-ipi-012, lure-ipi-013, lure-ipi-016, lure-ipi-017, lure-ipi-019, lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-mem-007, lure-per-001, lure-per-002, lure-per-003, lure-shx-001, lure-shx-002, lure-shx-003, lure-smo-001, lure-smo-002, lure-smo-003, lure-tab-001, lure-tab-002, lure-tab-003, lure-tab-004, lure-tpo-003 |
+| AML.T0051.001 | LLM Prompt Injection: Indirect | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-006, lure-cra-007, lure-cra-008, lure-cra-009, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-egr-001, lure-egr-002, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-006, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-011, lure-ipi-012, lure-ipi-013, lure-ipi-014, lure-ipi-015, lure-ipi-016, lure-ipi-017, lure-ipi-018, lure-ipi-019, lure-mem-001, lure-mem-003, lure-mem-004, lure-mem-006, lure-mem-007, lure-per-001, lure-per-002, lure-per-003, lure-shx-001, lure-shx-002, lure-shx-003, lure-shx-004, lure-shx-005, lure-smo-001, lure-smo-002, lure-smo-003, lure-smo-004 v1, lure-smo-004 v2, lure-smo-005, lure-tab-001, lure-tab-002, lure-tab-003, lure-tab-004 v1, lure-tab-004 v2 |
+| AML.T0053 | AI Agent Tool Invocation | lure-cra-003, lure-cra-006, lure-ipi-011, lure-ipi-012, lure-ipi-013, lure-ipi-016, lure-ipi-017, lure-ipi-019, lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-mem-007, lure-per-001, lure-per-002, lure-per-003, lure-shx-001, lure-shx-002, lure-shx-003, lure-smo-001, lure-smo-002, lure-smo-003, lure-tab-001, lure-tab-002, lure-tab-003, lure-tab-004 v1, lure-tab-004 v2, lure-tpo-003 |
 | AML.T0054 | LLM Jailbreak | lure-dpi-003, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-jbk-003 |
 | AML.T0055 | Unsecured Credentials | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-005, lure-cra-007, lure-cra-008, lure-cra-009 |
 | AML.T0056 | Extract LLM System Prompt | lure-dpi-001, lure-jbk-003 |
@@ -40,7 +40,7 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | AML.T0077 | LLM Response Rendering | lure-egr-001, lure-egr-002, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-006 |
 | AML.T0080.000 | AI Agent Context Poisoning: Memory | lure-mem-002 v1, lure-mem-002 v2, lure-mem-003, lure-mem-004, lure-mem-005, lure-mem-006, lure-mem-007 |
 | AML.T0080.001 | AI Agent Context Poisoning: Thread | lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-mem-001 |
-| AML.T0081 | Modify AI Agent Configuration | lure-smo-001, lure-smo-002, lure-smo-003, lure-smo-004, lure-smo-005 |
+| AML.T0081 | Modify AI Agent Configuration | lure-smo-001, lure-smo-002, lure-smo-003, lure-smo-004 v1, lure-smo-004 v2, lure-smo-005 |
 | AML.T0083 | Credentials from AI Agent Configuration | lure-cra-004, lure-cra-008, lure-cra-009 |
 | AML.T0086 | Exfiltration via AI Agent Tool Invocation | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-007, lure-cra-008, lure-cra-009, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-014, lure-ipi-015, lure-ipi-018, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-shx-002, lure-shx-003, lure-tab-003, lure-tpo-001, lure-tpo-002, lure-tpo-004 |
 | AML.T0094 | Delay Execution of LLM Instructions | lure-per-003 |
@@ -69,7 +69,7 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | T1552 | Unsecured Credentials | lure-cra-002, lure-cra-005, lure-cra-007 |
 | T1552.001 | Unsecured Credentials: Credentials In Files | lure-cra-001, lure-cra-004, lure-cra-008, lure-cra-009 |
 | T1552.005 | Unsecured Credentials: Cloud Instance Metadata API | lure-cra-003 |
-| T1557 | Adversary-in-the-Middle | lure-smo-004, lure-smo-005 |
+| T1557 | Adversary-in-the-Middle | lure-smo-004 v1, lure-smo-004 v2, lure-smo-005 |
 | T1562.001 | Impair Defenses: Disable or Modify Tools | lure-smo-001, lure-smo-002, lure-smo-003 |
 | T1565.001 | Data Manipulation: Stored Data Manipulation | lure-ipi-019 |
 | T1566 | Phishing | lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-014 |
@@ -149,12 +149,14 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | [lure-smo-001](../attacks/self_modification/lure-smo-001.yaml) | Self-modification | high | AML.T0051.001, AML.T0081, AML.T0053 | T1562.001 |
 | [lure-smo-002](../attacks/self_modification/lure-smo-002.yaml) | Self-modification | critical | AML.T0051.001, AML.T0081, AML.T0053 | T1562.001 |
 | [lure-smo-003](../attacks/self_modification/lure-smo-003.yaml) | Self-modification | critical | AML.T0051.001, AML.T0081, AML.T0053 | T1562.001, T1070 |
-| [lure-smo-004](../attacks/self_modification/lure-smo-004.yaml) | Self-modification | critical | AML.T0051.001, AML.T0081 | T1557 |
+| [lure-smo-004 v1](../attacks/self_modification/lure-smo-004-v1.yaml) | Self-modification | critical | AML.T0051.001, AML.T0081 | T1557 |
+| [lure-smo-004 v2](../attacks/self_modification/lure-smo-004.yaml) | Self-modification | critical | AML.T0051.001, AML.T0081 | T1557 |
 | [lure-smo-005](../attacks/self_modification/lure-smo-005.yaml) | Self-modification | low | AML.T0051.001, AML.T0081 | T1557 |
 | [lure-tab-001](../attacks/tool_abuse/lure-tab-001.yaml) | Tool abuse | critical | AML.T0051.001, AML.T0053, AML.T0048.000 | T1657 |
 | [lure-tab-002](../attacks/tool_abuse/lure-tab-002.yaml) | Tool abuse | high | AML.T0051.001, AML.T0053, AML.T0101 | T1485 |
 | [lure-tab-003](../attacks/tool_abuse/lure-tab-003.yaml) | Tool abuse | critical | AML.T0051.001, AML.T0086, AML.T0053 | T1005, T1048 |
-| [lure-tab-004](../attacks/tool_abuse/lure-tab-004.yaml) | Tool abuse | high | AML.T0051.001, AML.T0053 | none |
+| [lure-tab-004 v1](../attacks/tool_abuse/lure-tab-004-v1.yaml) | Tool abuse | high | AML.T0051.001, AML.T0053 | none |
+| [lure-tab-004 v2](../attacks/tool_abuse/lure-tab-004.yaml) | Tool abuse | high | AML.T0051.001, AML.T0053 | none |
 | [lure-tpo-001](../attacks/tool_poisoning/lure-tpo-001.yaml) | Tool poisoning | high | AML.T0110.000, AML.T0086 | T1048 |
 | [lure-tpo-002](../attacks/tool_poisoning/lure-tpo-002.yaml) | Tool poisoning | high | AML.T0110.000, AML.T0086 | T1567 |
 | [lure-tpo-003](../attacks/tool_poisoning/lure-tpo-003.yaml) | Tool poisoning | critical | AML.T0110.000, AML.T0053, AML.T0048.000 | T1657 |

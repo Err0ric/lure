@@ -120,6 +120,9 @@ class RunResult:
     replay: dict[str, Any] | None = None
     # The profile the run used (lure run --profile); None otherwise.
     profile: dict[str, Any] | None = None
+    # A container run's isolation and evidence (lure sandbox run); None for
+    # a mock-tool run.
+    sandbox: dict[str, Any] | None = None
     saved_to: Path | None = field(default=None, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -171,6 +174,7 @@ class RunResult:
             "cost": self.cost,
             "replay": self.replay,
             **({"profile": self.profile} if self.profile is not None else {}),
+            **({"sandbox": self.sandbox} if self.sandbox is not None else {}),
         }
 
     def save(self, results_dir: str | Path) -> Path:

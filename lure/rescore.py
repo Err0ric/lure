@@ -67,7 +67,10 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
     stamps = iter(datetime.fromisoformat(c["timestamp"]) for c in calls)
     log = ToolCallLog(clock=lambda: next(stamps))
     for c in calls:
-        log.record(c["tool"], c["args"], c.get("result"), c.get("alias"))
+        # Keep each call's gate outcome: a call the person declined at a
+        # gate did not run, which the judge must still know.
+        log.record(c["tool"], c["args"], c.get("result"), c.get("alias"), c.get("gate"),
+                   c.get("gate_summary"))
     final_text, error = record.get("final_text"), record.get("error")
     profile = record.get("profile")
     if profile is not None:

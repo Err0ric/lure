@@ -23,7 +23,7 @@ Think phishing simulation, but the target is an agent instead of an employee.
 - **Fake data only.** Every domain is under `.example` and every secret is a `LURE-FAKE-` canary; people and accounts are invented.
 - **Model APIs are the only network calls.** Keys stay in `.env`, which is never committed. Full table: [`docs/usage.md`](docs/usage.md#safety-model).
 
-This is capability isolation through mock tools, not OS isolation: Lure owns the agent loop, and no tool it offers can reach a real system. [How the sandbox works](docs/usage.md#how-the-sandbox-works).
+This is capability isolation through mock tools, not OS isolation: Lure owns the agent loop, and no tool it offers can reach a real system. A real agent that runs as code goes in a throwaway container behind Lure's egress gateway instead (`lure sandbox run`). [How the sandbox works](docs/usage.md#how-the-sandbox-works).
 
 ## Quickstart
 

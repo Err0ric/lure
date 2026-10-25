@@ -4,7 +4,8 @@
 #
 # The base image is pinned to the digest of its multi-arch index
 # (python:3.12-slim-trixie, Python 3.12.15, linux/amd64 and linux/arm64,
-# checked 2026-10-25). Update the two FROM lines together.
+# checked 2026-10-25). Update the two FROM lines together, and the one in
+# docker/agent.Dockerfile (the sandbox reference agent).
 
 FROM python:3.12-slim-trixie@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 AS build
 WORKDIR /src

@@ -126,3 +126,53 @@ def test_the_container_guide_commands_are_ones_the_cli_accepts():
             parser.parse_args(words[image + 1:])
             found += 1
     assert found >= 5
+
+
+AGENT_DOCKERFILE = REPO / "docker" / "agent.Dockerfile"
+
+
+def _agent_instructions():
+    text = re.sub(r"\\\n\s*", " ", AGENT_DOCKERFILE.read_text(encoding="utf-8"))
+    return [line.strip() for line in text.splitlines()
+            if line.strip() and not line.strip().startswith("#")]
+
+
+def test_the_reference_agent_image_uses_the_same_pinned_base():
+    froms = [i for i in _instructions() + _agent_instructions() if i.startswith("FROM ")]
+    assert len(froms) == 3 and all(FROM_RE.match(f) for f in froms)
+    assert len({f.split("@")[1].split()[0] for f in froms}) == 1
+
+
+def test_the_reference_agent_image_is_ours_non_root_and_without_pip():
+    lines = _agent_instructions()
+    copies = [i for i in lines if i.startswith(("COPY ", "ADD "))]
+    # Only Lure's own reference agent and decoy, nothing fetched.
+    assert copies == [("COPY lure/sandbox/refagent/agent.py lure/sandbox/refagent/decoy.py "
+                      "/opt/lure/")]
+    users = [i for i in lines if i.startswith("USER ")]
+    assert users and users[-1] == "USER 10001:10001"
+    assert lines.index(users[-1]) > max(i for i, line in enumerate(lines)
+                                        if line.startswith("RUN "))
+    run = " ".join(i for i in lines if i.startswith("RUN "))
+    assert "pip uninstall -y -q pip" in run
+    for decoy in ("npm", "npx", "pip", "pip3", "curl", "wget", "git"):
+        assert decoy in run
+    assert "ENV PATH=/opt/lure/decoys:" in " ".join(lines)
+    assert not any(SECRET_NAME_RE.search(i) for i in lines if i.startswith(("ENV ", "ARG ")))
+
+
+def test_the_sandbox_guide_commands_are_ones_the_cli_accepts():
+    import shlex
+
+    from lure.cli import build_parser
+
+    guide = (REPO / "docs" / "container.md").read_text(encoding="utf-8")
+    parser = build_parser()
+    found = 0
+    for block in re.findall(r"```bash\n(.*?)```", guide, re.DOTALL):
+        for command in re.sub(r"\\\n\s*", " ", block).splitlines():
+            command = command.split("#")[0].strip()
+            if command.startswith("lure sandbox"):
+                parser.parse_args(shlex.split(command)[1:])
+                found += 1
+    assert found == 4
