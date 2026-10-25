@@ -204,7 +204,8 @@ def run_attack(
     system_prompt = system_prompt or attack.system_prompt or DEFAULT_SYSTEM_PROMPT
     tasks = [attack.planted_task(), *attack.followup_tasks]
     log = ToolCallLog(clock=clock)
-    gated = ({"gated": gate.tools, "confirm": gate.confirm_for(attack)}
+    gated = ({"gated": gate.tools, "confirm": gate.confirm_for(attack),
+              "summary_tools": gate.summary_tools, "thresholds": gate.limits}
              if gate is not None else {})
     toolbox = build_toolbox(attack.tools, attack.planted_fixtures(), log, attack.responders,
                             tool_aliases, **gated)

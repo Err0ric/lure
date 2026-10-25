@@ -478,7 +478,8 @@ def write_manifest(profile: Profile, args, policy: Policy, results: list, skippe
                     "owner": profile.owner, "role": profile.role,
                     "tools": [{"name": t.name, "description": t.description,
                                "maps_to": t.maps_to, "essential": t.essential,
-                               "gated": t.gated}
+                               "gated": t.gated, "gate_shows": t.gate_shows,
+                               "gate_over": t.gate_over}
                               for t in profile.tools],
                     "third_party_tools": profile.third_party_tools,
                     "renders": dict(profile.renders), "confirmer": profile.confirmer,

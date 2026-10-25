@@ -150,7 +150,9 @@ def render_compare(comp: Comparison, generated: datetime | None = None) -> str:
 
 
 def render_approval(page) -> str:
-    return _env().get_template("approval.html.j2").render(page=page)
+    from lure.report.approval import attestation
+
+    return _env().get_template("approval.html.j2").render(page=page, attestation=attestation)
 
 
 def write_report(report: Report, out: str | Path) -> Path:

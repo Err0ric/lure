@@ -16,10 +16,10 @@ from tests.fakes import ScriptedAdapter, call, say
 
 REPO = Path(__file__).resolve().parent.parent
 # The accounts payable attacks; the support and helpdesk packs are tested in
-# test_pack_library.py.
+# test_pack_library.py, and chat-borne attacks in test_chat_library.py.
 EGR = {p.stem: a
        for p in sorted((REPO / "attacks" / "covert_egress").glob("lure-egr-*.yaml"))
-       if (a := load_attack(p)).scenario == "accounts_payable"}
+       if (a := load_attack(p)).scenario == "accounts_payable" and "read_messages" not in a.tools}
 POLICY = load_policy(REPO / "lure.yaml")
 
 SUMMARY_001 = ("Acme INV-20931 ($4,812.50), Halvorsen HP-2207 ($1,618.25) and Marlow MT-8802 "

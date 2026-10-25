@@ -36,13 +36,20 @@ PILLARS = {
 }
 
 # Codes a variant adds by kind (and encoding): split payloads are Payload
-# Splitting, an alias of PIT-T-24; encodings are their evasions. Buried and
-# rephrased add none.
+# Splitting, an alias of PIT-T-24; encodings and evasions are their evasion
+# codes. Buried and rephrased add none.
 SPLIT_CODES = {"technique": ["PIT-T-24"]}
 ENCODING_CODES = {
     "base64": {"evasion": ["PIT-E-07"]},
     "rot13": {"evasion": ["PIT-E-14"]},
     "hex": {"evasion": ["PIT-E-21"]},
+}
+# The evasion variants (lure/attacks.py EVASIONS, and translated).
+EVASION_CODES = {
+    "invisible": {"evasion": ["PIT-E-23"]},
+    "homoglyph": {"evasion": ["PIT-E-20"]},
+    "hidden": {"evasion": ["PIT-E-27"]},
+    "translated": {"evasion": ["PIT-E-05"]},
 }
 
 

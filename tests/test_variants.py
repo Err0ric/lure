@@ -18,6 +18,7 @@ import yaml
 from lure import cli
 from lure.attacks import (
     BURIED_CHARS,
+    OBFUSCATING_KINDS,
     OBFUSCATION_ATLAS,
     AttackError,
     load_attack,
@@ -46,7 +47,8 @@ TPO_003 = load_attack(ATTACKS / "tool_poisoning" / "lure-tpo-003.yaml")
 DPI_002 = load_attack(ATTACKS / "direct_prompt_injection" / "lure-dpi-002.yaml")
 SCHEMA = json.loads((REPO / "schema" / "results.v3.json").read_text(encoding="utf-8"))
 VALIDATOR = jsonschema.Draft202012Validator(SCHEMA, format_checker=jsonschema.FormatChecker())
-GENERATED = ["encoded-base64", "encoded-rot13", "encoded-hex", "buried"]
+GENERATED = ["encoded-base64", "encoded-rot13", "encoded-hex", "buried", "invisible-zero-width",
+             "homoglyph-cyrillic", "hidden-html-comment", "hidden-span"]
 
 
 def variant(attack, variant_id):
@@ -137,10 +139,10 @@ def test_buried_filler_is_neutral():
         assert word not in text.lower()
 
 
-def test_only_encoded_variants_add_the_obfuscation_technique():
+def test_only_obfuscating_variants_add_the_obfuscation_technique():
     for v in MEM_001.all_variants():
         atlas = MEM_001.with_variant(v).atlas
-        assert (OBFUSCATION_ATLAS in atlas) is (v.kind == "encoded"), v.id
+        assert (OBFUSCATION_ATLAS in atlas) is (v.kind in OBFUSCATING_KINDS), v.id
     assert OBFUSCATION_ATLAS not in MEM_001.atlas
 
 
@@ -181,7 +183,7 @@ def load_with(tmp_path, variants, **extra):
 
 
 @pytest.mark.parametrize("variants, error", [
-    ([{"id": "x", "kind": "buried"}], "buried is generated"),
+    ([{"id": "x", "kind": "buried"}], "buried and the evasions are generated"),
     ([{"id": "Bad_Id", "kind": "rephrased", "payload": "p"}], "must be unique, lowercase"),
     ([{"id": "a", "kind": "rephrased", "payload": "p"},
       {"id": "a", "kind": "rephrased", "payload": "q"}], "must be unique"),
@@ -322,9 +324,10 @@ def test_variants_by_kind_and_id_run_after_the_own_payload(tmp_path, target):
 
 
 def test_variants_all_runs_every_variant(tmp_path, target):
-    target(*TPO_CLEAN["lure-tpo-002"] * 7)
+    # The own payload, 2 YAML variants, 4 encoded or buried and 4 evasions.
+    target(*TPO_CLEAN["lure-tpo-002"] * 11)
     run_cli(tmp_path, "--variants", "all")
-    assert len(saved(tmp_path)) == 7
+    assert len(saved(tmp_path)) == 11
 
 
 def test_unknown_variant_is_an_error(tmp_path, target, capsys):

@@ -6,7 +6,7 @@ KNOWN_TOOLS = frozenset({
     "pay_invoice",
     "search_memory", "save_memory",
     "list_env",
-    "post_message",
+    "post_message", "read_messages",
     "run_command",
     "read_agent_settings", "update_agent_settings",
     "list_tickets", "reply_ticket",
@@ -19,10 +19,14 @@ KNOWN_TOOLS = frozenset({
 READ_TOOLS = {"read_inbox": "inbox", "read_file": "files", "fetch_url": "web",
               "search_memory": "memory", "list_env": "env", "run_command": "shell",
               "read_agent_settings": "agent_settings", "list_tickets": "tickets",
-              "lookup_customer": "customers", "lookup_user": "directory"}
+              "lookup_customer": "customers", "lookup_user": "directory",
+              "read_messages": "chat"}
 # Fixtures whose read tool returns only some items (a search): a read only
 # counts as delivering the payload if its result carries the payload.
-PARTIAL_READ_FIXTURES = frozenset({"memory", "shell", "customers", "directory"})
+PARTIAL_READ_FIXTURES = frozenset({"memory", "shell", "customers", "directory", "chat"})
+# Tools with an amount argument, which a gate can apply to only above a
+# limit (gate_over).
+AMOUNT_TOOLS = frozenset({"pay_invoice", "issue_refund"})
 # Tools a profile can mark gated (a person confirms each call before it
 # runs): the ones that act, not the ones that only read.
 GATABLE_TOOLS = frozenset({

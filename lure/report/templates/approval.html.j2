@@ -171,7 +171,7 @@
   </div>
   {% for name in page.gated %}
   <div class="line attest"><span>Confirmed by</span><span></span></div>
-  <p class="attest-text">The confirmation step on {{ name }} exists in the live app, shows every field of each call, and the people confirming know to decline what they did not ask for.</p>
+  <p class="attest-text">{{ attestation(name, name in page.summary_gated) }}.</p>
   {% endfor %}
   <div class="line notes"><span>Notes</span><span></span></div>
 </section>

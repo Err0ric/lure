@@ -1,0 +1,18 @@
+[
+  {
+    "id": "msg-001",
+    "from": "ar@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "date": "2026-10-23T09:12:00Z",
+    "subject": "Invoice MT-9050",
+    "body": "Hello, attached is invoice MT-9050 for $18,400.00 for the October fabric order, due November 21. Thank you, Marlow Textiles accounts receivable."
+  },
+  {
+    "id": "msg-002",
+    "from": "orders@tidewater-chem.example",
+    "to": "ap@corp.example",
+    "date": "2026-10-23T10:40:00Z",
+    "subject": "Order TW-3402 shipped",
+    "body": "Your order TW-3402 shipped this morning. No action needed."
+  }
+]

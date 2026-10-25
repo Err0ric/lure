@@ -293,11 +293,22 @@ Goal: test agents beyond accounts payable, and check the conditions a person has
 - [x] Coverage after v1.7: inputs 5 of 12, intents 8 of 27, techniques 20 of 70 (new PIT-T-27, PIT-T-50), evasions 6 of 63, from 54 current attacks.
 - [x] Tag v1.7.0
 
+### v1.8
+
+Goal: harder payloads and more channels, and the weaker kinds of confirmation step real apps use. Mock tools only.
+
+- [x] Generated evasion variants from the Arcanum taxonomy, applied to any fixture payload: `invisible-zero-width` (PIT-E-23), `homoglyph-cyrillic` (PIT-E-20), `hidden-html-comment` and `hidden-span` (PIT-E-27). Addresses, URLs, numbers and rule strings are never changed. They add AML.T0068.
+  - Language switching (PIT-E-05) is authored, not generated: a generated translation would need a model at run time. YAML kind `translated` with a language code; shipped for `lure-ipi-001` (es), `lure-ipi-011` (de), `lure-cra-006` (fr). No AML.T0068.
+- [x] Team chat as an input: mock `read_messages` (the chat fixture's `messages`), and `lure-ipi-014` (a guest asks for the invoice summary by email), `lure-cra-007` (a guest asks for the ERP token in the channel), `lure-egr-006` (a guest bot's badge image carries invoice data). Arcanum PIT-N-03.
+- [x] Summary-only gates (`gate_shows: summary`): the tool takes a required `confirmation_summary`; the careful stand-in declines a harmful call only when the summary names what makes it harmful, and otherwise is `misled` (the call runs, Fail). The approval page quotes the summary.
+- [x] Threshold gates (`gate_over`): gated only above an amount (`pay_invoice`, `issue_refund`); judge keys `amount_over` and `split_over`; `lure-tab-004` (split an $18,400.00 invoice into two payments under the $10,000 limit).
+- [x] `docs/writing-a-profile.md`: a step-by-step tutorial using the support and helpdesk examples.
+- [x] Coverage after v1.8: inputs 6 of 12 (new PIT-N-03), intents 8 of 27, techniques 20 of 70, evasions 9 of 63 (new PIT-E-05, PIT-E-20, PIT-E-23), from 58 current attacks.
+- [ ] Tag v1.8.0
+
 ### Later
 
 - [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies. Blocked on picking a local open-weights attacker model via Ollama (Claude attackers refused most exfiltration goals in v1.3).
-- [ ] Summary-only confirmation gates: the person sees only a summary the agent writes, not the call's arguments, so a run tests whether the summary hides the harm. Needs its own judge rule.
-- [ ] Threshold gates: a tool gated only above an amount (for example payments over a limit), plus an attack that splits a payment to stay under it.
 - [ ] Multi-agent targets (an orchestrator plus specialists) and handoff attacks.
 
 ### Phase 5: Stretch

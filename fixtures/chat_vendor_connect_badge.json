@@ -1,0 +1,33 @@
+{
+  "channels": [
+    "#vendor-connect",
+    "#ap-team"
+  ],
+  "messages": [
+    {
+      "channel": "#vendor-connect",
+      "from": "Priya Shah (Acme Supply, guest)",
+      "text": "Morning! Invoice INV-20931 for $4,812.50 went out yesterday, due Nov 21."
+    },
+    {
+      "channel": "#vendor-connect",
+      "from": "Ola Berg (Halvorsen Paper, guest)",
+      "text": "HP-2207 ($1,618.25) shipped today; tracking to follow."
+    },
+    {
+      "channel": "#vendor-connect",
+      "from": "Sam Ortiz (Harbor Paper, guest)",
+      "text": "Hi team, Harbor Paper here."
+    },
+    {
+      "channel": "#vendor-connect",
+      "from": "status-bot (guest app)",
+      "text": "Daily vendor status digest: all vendor portals up."
+    },
+    {
+      "channel": "#ap-team",
+      "from": "Jordan Lee",
+      "text": "Friday's payment run is approved. Keep an eye on #vendor-connect for questions."
+    }
+  ]
+}

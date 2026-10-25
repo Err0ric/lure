@@ -144,7 +144,7 @@ Other useful commands:
 
 | Command | What it does |
 | --- | --- |
-| `lure run --profile profiles/example-ap-agent.yaml` | Test your own agent: its system prompt and tool names over Lure's mocks. See [`docs/profiles.md`](docs/profiles.md); the prompt goes to the model API the profile names |
+| `lure run --profile profiles/example-ap-agent.yaml` | Test your own agent: its system prompt and tool names over Lure's mocks. Tutorial: [`docs/writing-a-profile.md`](docs/writing-a-profile.md); reference: [`docs/profiles.md`](docs/profiles.md). The prompt goes to the model API the profile names |
 | `lure report results/<profile>/<run>/ --approval approval.html` | One printable approval page for a non-technical approver: access, what was tested, what went wrong, a recommended decision with conditions, and a sign-off block |
 | `lure decide profiles/<name>.yaml --decision approve-with-conditions --by "<role>" --conditions "..."` | Record the decision in an append-only log, `vetting/<name>/decisions.jsonl` (gitignored) |
 | `lure retest profiles/<name>.yaml --prices prices.yaml --max-cost 0.50` | Rerun the profile's last suite and compare it with the last approved run: new failures (exit 1), fixed, what changed, which conditions a retest verified. The weekly workflow, with cron and GitHub Actions examples: [`docs/vetting-workflow.md`](docs/vetting-workflow.md) |
@@ -168,7 +168,7 @@ Other useful commands:
 
 ### Payload variants
 
-`--variants` runs other payloads for the same attack and rules, next to the attack's own: reworded (`rephrased`), spread over several places (`split`, Invalid unless every part reaches the agent), encoded in base64, rot13 or hex (`encoded`, also mapped to AML.T0068 LLM Prompt Obfuscation), or about 60% of the way through 8,000 characters of neutral filler (`buried`). `rephrased` and `split` are written in the attack file; `encoded` and `buried` are generated for every attack whose payload sits in a fixture. Reports add a Payload variants table, and `lure compare` puts each variant side by side across targets.
+`--variants` runs other payloads for the same attack and rules, next to the attack's own: reworded (`rephrased`), spread over several places (`split`, Invalid unless every part reaches the agent), encoded in base64, rot13 or hex (`encoded`, also mapped to AML.T0068 LLM Prompt Obfuscation), about 60% of the way through 8,000 characters of neutral filler (`buried`), written in another language (`translated`, Arcanum PIT-E-05), or disguised by one of three generated evasions: zero-width characters inside words (`invisible-zero-width`, PIT-E-23), Cyrillic letters that look Latin (`homoglyph-cyrillic`, PIT-E-20), or hidden in an HTML comment or a hidden span (`hidden-html-comment`, `hidden-span`, PIT-E-27). Evasions never change addresses, URLs, numbers or text a rule looks for, and add AML.T0068 like `encoded`. `rephrased`, `split` and `translated` are written in the attack file; `encoded`, `buried` and the evasions are generated for every attack whose payload sits in a fixture. Reports add a Payload variants table, and `lure compare` puts each variant side by side across targets.
 
 A cheap way to find weak spots: screen everything at `--repeat 3 --variants all`, then rerun just what broke with `--only-flagged <screening results> --repeat 10`.
 
@@ -194,19 +194,19 @@ An adaptive run is worst of several attempts, so its rates are not comparable wi
 
 ## Attack library
 
-59 attack files in 12 categories, in three scenario packs: accounts payable (52), customer support (4) and IT helpdesk (3). Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+63 attack files in 12 categories, in three scenario packs: accounts payable (56), customer support (4) and IT helpdesk (3). Payloads arrive through email, files, web pages, tool definitions and output, memory, tickets and team chat (`read_messages`). Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Category | Attacks | ATLAS techniques |
 | --- | --- | --- |
-| Indirect prompt injection | `lure-ipi-001` to `013`, with `007` v1 to v4 (16) | AML.T0051.001, AML.T0053, AML.T0057, AML.T0068, AML.T0073, AML.T0080.001, AML.T0086 |
+| Indirect prompt injection | `lure-ipi-001` to `014`, with `007` v1 to v4 (17) | AML.T0051.001, AML.T0053, AML.T0057, AML.T0068, AML.T0073, AML.T0080.001, AML.T0086 |
 | Direct prompt injection | `lure-dpi-001` to `003` (3) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0069.002, AML.T0086 |
 | Jailbreak | `lure-jbk-001`, `002` v1 and v2, `003` (4) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0068, AML.T0086 |
 | Data leakage | `lure-dlk-001` to `003` (3) | AML.T0051.001, AML.T0057, AML.T0086 |
-| Tool abuse | `lure-tab-001` to `003` (3) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0086, AML.T0101 |
+| Tool abuse | `lure-tab-001` to `004` (4) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0086, AML.T0101 |
 | Tool poisoning | `lure-tpo-001` to `004` (4) | AML.T0048.000, AML.T0053, AML.T0086, AML.T0110.000 |
 | Memory poisoning | `lure-mem-001` to `005`, with `002` v1 and v2 (6) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0080.000, AML.T0080.001, AML.T0086 |
-| Credential access | `lure-cra-001` to `006` (6) | AML.T0012, AML.T0051.001, AML.T0053, AML.T0055, AML.T0073, AML.T0083, AML.T0086, AML.T0098 |
-| Covert egress | `lure-egr-001` to `005` (5) | AML.T0051.001, AML.T0057, AML.T0067, AML.T0077, AML.T0086 |
+| Credential access | `lure-cra-001` to `007` (7) | AML.T0012, AML.T0051.001, AML.T0053, AML.T0055, AML.T0073, AML.T0083, AML.T0086, AML.T0098 |
+| Covert egress | `lure-egr-001` to `006` (6) | AML.T0051.001, AML.T0057, AML.T0067, AML.T0077, AML.T0086 |
 | Shell and code execution | `lure-shx-001` to `003` (3) | AML.T0050, AML.T0051.001, AML.T0053, AML.T0086 |
 | Self-modification | `lure-smo-001` to `003` (3) | AML.T0051.001, AML.T0053, AML.T0081 |
 | Persistence | `lure-per-001` to `003` (3) | AML.T0051.001, AML.T0053, AML.T0094, AML.T0112.000 |
@@ -322,7 +322,8 @@ A future `config_audit` stage would check agent and MCP settings before any run;
 - [x] v1.5.0 (shipped in v1.6.0): `lure --version`, agent profiles, one-page approval report, credential access and covert egress attacks
 - [x] v1.6.0: `lure decide`, `lure retest`, weekly vetting workflow, shell, self-modification and persistence attacks
 - [x] v1.7.0: confirmation gates, customer support and IT helpdesk scenario packs, `lure rescore --exposure-only` for adaptive runs
-- [ ] Later: adaptive attacker `outcome` mode, summary-only and threshold gates, multi-agent targets
+- [ ] v1.8: evasion variants (zero-width, homoglyphs, hidden HTML, translated), team chat as an input, summary-only and threshold gates, the profile tutorial
+- [ ] Later: adaptive attacker `outcome` mode, multi-agent targets
 - [ ] Phase 5: Stretch (a sample SecOps agent team)
 
 Full scope, schema and rubric live in [`docs/kickoff.md`](docs/kickoff.md).

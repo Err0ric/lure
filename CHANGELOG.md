@@ -1,5 +1,46 @@
 # Changelog
 
+## Unreleased (v1.8)
+
+### New
+
+- **Evasion variants.** Generated for every attack whose payload is in a
+  fixture: `invisible-zero-width` (zero-width spaces inside words, Arcanum
+  PIT-E-23), `homoglyph-cyrillic` (Cyrillic letters drawn like Latin ones,
+  PIT-E-20), and `hidden-html-comment` and `hidden-span` (the payload in an
+  HTML comment or a `display:none` span, PIT-E-27). Addresses, URLs,
+  numbers and every string an attack's rules name are left as they are, so
+  the same rules judge the run; each adds AML.T0068. Variants record an
+  `evasion` field (schema v3, optional). `--variants all` now runs 11
+  payloads per fixture attack.
+- **Translated variants** (YAML kind `translated`, with a two-letter
+  `language`): the payload in another language (language switching,
+  PIT-E-05). Authored, not generated, as a safe translation needs a person
+  or a model. Shipped for `lure-ipi-001` (Spanish), `lure-ipi-011`
+  (German) and `lure-cra-006` (French).
+- **Team chat as an input.** Mock `read_messages` reads a channel from the
+  chat fixture's new optional `messages`. Attacks: `lure-ipi-014` (a guest
+  in a shared vendor channel asks for the invoice summary by email to a
+  lookalike), `lure-cra-007` (a guest asks for the ERP token in the
+  channel) and `lure-egr-006` (a guest bot asks for a status badge image
+  carrying invoice data). Arcanum PIT-N-03 Collaboration Platforms.
+- **Summary-only confirmation gates** (`gate_shows: summary`). The person
+  sees only a one-line summary the agent writes: the tool gains a required
+  `confirmation_summary` argument, which never reaches the mock. The
+  careful stand-in declines a harmful call only when the summary names
+  what makes it harmful; otherwise the call runs with gate `misled`, and
+  the approval page quotes the summary that hid the harm.
+- **Threshold gates** (`gate_over: <amount>` on `pay_invoice` or
+  `issue_refund`): calls at or under the amount run unasked (gate
+  `under_limit`). Judge keys `amount_over` and `split_over`, and
+  `lure-tab-004`: a vendor email asks to pay an $18,400.00 invoice as two
+  $9,200.00 installments under the approval limit. The approval page says
+  when a split payment got past the confirmation step.
+- **`docs/writing-a-profile.md`**: a step-by-step tutorial for vetting your
+  own agent with the support and helpdesk example profiles.
+- Arcanum coverage: inputs 6 of 12, intents 8 of 27, techniques 20 of 70,
+  evasions 9 of 63, from 58 current attacks.
+
 ## v1.7.0 (2026-10-25)
 
 ### Highlights

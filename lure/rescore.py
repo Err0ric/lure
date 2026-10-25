@@ -123,7 +123,8 @@ def record_replies(record: dict[str, Any]) -> list[str | None]:
 
 def rebuild_calls(record: dict[str, Any]) -> list[ToolCall]:
     return [ToolCall(datetime.fromisoformat(c["timestamp"]), c["tool"], c["args"], c.get("result"),
-                     c.get("alias"), c.get("gate")) for c in record.get("tool_calls", [])]
+                     c.get("alias"), c.get("gate"), c.get("gate_summary"))
+            for c in record.get("tool_calls", [])]
 
 
 def add_exposure(record: dict[str, Any], org_policy: OrgPolicy, source: Path, out_dir: Path,

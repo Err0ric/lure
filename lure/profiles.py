@@ -33,9 +33,9 @@ import yaml
 
 from lure.adapters import TARGETS
 from lure.attacks import PRIVATE_KEY_RE, SCENARIOS, SECRET_RE, Attack
-from lure.gate import CAREFUL, CONFIRMERS, Gate
+from lure.gate import CAREFUL, CONFIRMERS, SHOWS, Gate
 from lure.judge.rules import Judgment, Verdict
-from lure.tools import GATABLE_TOOLS, KNOWN_TOOLS
+from lure.tools import AMOUNT_TOOLS, GATABLE_TOOLS, KNOWN_TOOLS
 from lure.tools.registry import ToolAlias
 
 REQUIRED_KEYS = ("name", "target", "tools")
@@ -64,8 +64,12 @@ class ProfileTool:
     # The agent cannot do its job without it: the approval report suggests
     # a confirmation step for it, never removing it.
     essential: bool = False
-    # A person confirms each call before it runs (lure.gate).
+    # A person confirms each call before it runs (lure.gate), seeing every
+    # argument or only the agent's summary.
     gated: bool = False
+    gate_shows: str = "arguments"
+    # Ask only for calls above this amount (pay_invoice, issue_refund).
+    gate_over: float | None = None
 
 
 @dataclass(frozen=True)
@@ -94,7 +98,10 @@ class Profile:
     def gate(self) -> Gate | None:
         """The gated Lure tools and who confirms, or None with no gate."""
         gated = frozenset(t.maps_to for t in self.tools if t.gated)
-        return Gate(gated, self.confirmer) if gated else None
+        summary = frozenset(t.maps_to for t in self.tools if t.gated and t.gate_shows == "summary")
+        limits = tuple((t.maps_to, t.gate_over) for t in self.tools
+                       if t.gated and t.gate_over is not None)
+        return Gate(gated, self.confirmer, summary, limits) if gated else None
 
     @property
     def aliases(self) -> dict[str, ToolAlias]:
@@ -109,6 +116,12 @@ class Profile:
         if self.gate is not None:
             found |= {"gated": [t.name for t in self.tools if t.gated],
                       "confirmer": self.confirmer}
+            summary = [t.name for t in self.tools if t.gated and t.gate_shows == "summary"]
+            if summary:
+                found["summary_gated"] = summary
+            limits = {t.name: t.gate_over for t in self.tools if t.gated and t.gate_over}
+            if limits:
+                found["gate_over"] = limits
         return found
 
 
@@ -216,16 +229,31 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
     tools, names, mapped = [], set(), set()
     for i, item in enumerate(value):
         where = f"tools[{i}]"
-        if not isinstance(item, dict) or set(item) - {"essential", "gated"} != {
+        if not isinstance(item, dict) or set(item) - {"essential", "gated", "gate_shows",
+                                                      "gate_over"} != {
                 "name", "description", "maps_to"}:
-            raise fail(f"{where} needs name, description and maps_to (and optionally essential "
-                       "and gated)")
+            raise fail(f"{where} needs name, description and maps_to (and optionally essential, "
+                       "gated, gate_shows and gate_over)")
         name, description, maps_to = item["name"], item["description"], item["maps_to"]
         essential, gated = item.get("essential", False), item.get("gated", False)
         if not isinstance(essential, bool):
             raise fail(f"{where}: essential must be true or false")
         if not isinstance(gated, bool):
             raise fail(f"{where}: gated must be true or false")
+        shows = item.get("gate_shows", "arguments")
+        if shows not in SHOWS:
+            raise fail(f"{where}: gate_shows must be one of {', '.join(SHOWS)}")
+        if "gate_shows" in item and not gated:
+            raise fail(f"{where}: gate_shows needs gated: true")
+        over = item.get("gate_over")
+        if over is not None:
+            if not gated:
+                raise fail(f"{where}: gate_over needs gated: true")
+            if isinstance(over, bool) or not isinstance(over, (int, float)) or over <= 0:
+                raise fail(f"{where}: gate_over must be an amount above 0")
+            if maps_to not in AMOUNT_TOOLS:
+                raise fail(f"{where}: gate_over works only for tools with an amount: "
+                           f"{', '.join(sorted(AMOUNT_TOOLS))}")
         if not isinstance(name, str) or not TOOL_NAME_RE.match(name):
             raise fail(f"{where}: name must be 1 to 64 letters, digits, _ or -")
         if not isinstance(description, str) or not description.strip():
@@ -246,7 +274,8 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
                        f"{', '.join(sorted(GATABLE_TOOLS))}")
         names.add(name)
         mapped.add(maps_to)
-        tools.append(ProfileTool(name, " ".join(description.split()), maps_to, essential, gated))
+        tools.append(ProfileTool(name, " ".join(description.split()), maps_to, essential, gated,
+                                 shows, float(over) if over is not None else None))
     return tuple(tools)
 
 
