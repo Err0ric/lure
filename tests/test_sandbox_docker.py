@@ -250,3 +250,117 @@ def test_changed_model_endpoint_is_a_blocked_egress_critical_fail():
     assert [c["path"] for c in result.sandbox["workspace"]["changed"]] == [".agent/settings.json"]
     assert result.sandbox["teardown"]["leftover"] == []
     assert seen["sbx"].leftover == []
+
+
+# v1.13.2: the Docker host is not reachable from the internal network.
+# Stub listeners only, never a real service: one process on this machine
+# (high ports) and one container in the Docker host's own network namespace
+# (443 and a high port; on Linux that is the real host, on Docker Desktop
+# its VM). Each answers STUB and logs who connected.
+
+STUB = r'''
+import json, socket, sys, threading, time
+def serve(port):
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind(("0.0.0.0", port))
+        s.listen(16)
+    except OSError as e:
+        print(json.dumps({"port": port, "bind_error": str(e)}), flush=True)
+        return
+    print(json.dumps({"port": port, "listening": True}), flush=True)
+    while True:
+        c, a = s.accept()
+        print(json.dumps({"port": port, "from": a[0]}), flush=True)
+        c.sendall(b"STUB")
+        c.close()
+for p in sys.argv[1:]:
+    threading.Thread(target=serve, args=(int(p),), daemon=True).start()
+time.sleep(3600)
+'''
+HOST_PORTS = (47613, 47615)
+VM_PORTS = (443, 47614)
+
+HOST_PROBE = r'''
+import json, socket, sys
+out = {}
+for name in ("host.docker.internal", "gateway.docker.internal"):
+    try:
+        out["dns " + name] = socket.gethostbyname(name)
+    except OSError as e:
+        out["dns " + name] = "error"
+for ip, port in json.loads(sys.argv[1]):
+    s = socket.socket()
+    s.settimeout(3)
+    try:
+        s.connect((ip, port))
+        out[f"{ip}:{port}"] = "open " + s.recv(8).decode(errors="replace")
+    except OSError as e:
+        out[f"{ip}:{port}"] = "error " + type(e).__name__
+    finally:
+        s.close()
+print(json.dumps(out))
+'''
+
+
+@pytest.fixture
+def host_stubs(tmp_path):
+    import subprocess
+    import sys
+    import time
+    script = tmp_path / "stub.py"
+    script.write_text(STUB)
+    log = (tmp_path / "host.log").open("w")
+    proc = subprocess.Popen([sys.executable, "-I", str(script), *map(str, HOST_PORTS)],
+                            stdout=log, stderr=subprocess.STDOUT)
+    name = "lure-test-hoststub"
+    run_docker(["rm", "-f", name], check=False)
+    run_docker(["run", "-d", "--name", name, "--label", "lure.test=hoststub", "--network", "host",
+                "--read-only", "--cap-drop", "ALL", "--cap-add", "NET_BIND_SERVICE",
+                "--user", "0", "--entrypoint", "python", GATEWAY, "-I", "-c", STUB,
+                *map(str, VM_PORTS)])
+    time.sleep(2)
+    try:
+        yield tmp_path / "host.log", name
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+        log.close()
+        run_docker(["rm", "-f", name], check=False)
+
+
+def _stub_lines(text):
+    return [json.loads(line) for line in text.splitlines() if line.startswith("{")]
+
+
+def test_the_docker_host_is_not_reachable(host_stubs):
+    host_log, vm_stub = host_stubs
+    with sandbox() as sbx:
+        bridge = sbx.subnet.rsplit(".", 1)[0] + ".1"
+        nets = json.loads(run_docker(["inspect", sbx.gateway]).stdout)[0]["NetworkSettings"]
+        outside_gw = nets["Networks"][sbx.external]["Gateway"]
+        # host.docker.internal as the gateway (an ordinary container) sees it.
+        seen = sbx.exec(["python3", "-c", ("import socket; print(socket.gethostbyname("
+                         "'host.docker.internal'))")], container=sbx.gateway, timeout=30)
+        host_ip = seen.stdout.decode().strip() if seen.returncode == 0 else None
+        ips = [ip for ip in (bridge, "172.17.0.1", outside_gw, host_ip) if ip]
+        targets = [[ip, p] for ip in ips for p in (*HOST_PORTS, *VM_PORTS)]
+        done = sbx.exec(["python3", "-c", HOST_PROBE, json.dumps(targets)], timeout=300)
+        assert done.returncode == 0, done.stderr.decode()
+        out = json.loads(done.stdout)
+        enforced = sbx.enforced()
+    vm_log = run_docker(["logs", vm_stub]).stdout.decode()
+    host_lines, vm_lines = _stub_lines(host_log.read_text()), _stub_lines(vm_log)
+    # The stubs really listened, so a miss means the sandbox held.
+    assert any(e.get("listening") for e in host_lines), host_lines
+    assert any(e.get("listening") and e["port"] == 443 for e in vm_lines), vm_lines
+    opened = {k: v for k, v in out.items() if v.startswith("open")}
+    assert opened == {}, opened
+    assert out["dns host.docker.internal"] == "error"
+    assert out["dns gateway.docker.internal"] == "error"
+    assert not [e for e in host_lines + vm_lines if "from" in e
+                and e["from"].startswith(sbx.subnet.rsplit(".", 1)[0] + ".")]
+    assert enforced["host_isolation"] in (
+        "com.docker.network.bridge.gateway_mode_ipv4=isolated",
+        "com.docker.network.bridge.inhibit_ipv4=true")

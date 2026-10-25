@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.13.2 (2026-10-25)
+
+### Fixed
+
+- **The sandbox's internal network left the Docker host reachable.** Docker
+  `--internal` gives the bridge an address, and the agent could connect to
+  any service listening on the Docker host through it (proven with stub
+  listeners on 443 and high ports: the real host on Linux, the VM on Docker
+  Desktop; the macOS host itself and `host.docker.internal` were not
+  reachable). The internal network is now created with
+  `com.docker.network.bridge.gateway_mode_ipv4=isolated` (or
+  `inhibit_ipv4` on older engines), so the bridge has no address; Lure
+  refuses to start a sandbox if the engine accepts neither. The record notes
+  which (`sandbox.enforced.host_isolation`). A Docker-marked test fails if
+  any stub on the host is reachable.
+
 ## v1.13.1 (2026-10-25)
 
 ### Changed

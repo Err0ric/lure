@@ -45,6 +45,9 @@ UID = 10001
 WORKSPACE = "/workspace"
 DECOY_LOG = "/run/lure/decoys.jsonl"
 SUBNET = "10.213.{}.0/24"
+# Network options that keep the host off the internal bridge, preferred first.
+HOST_ISOLATION = ("com.docker.network.bridge.gateway_mode_ipv4=isolated",
+                  "com.docker.network.bridge.inhibit_ipv4=true")
 GATEWAY_HOST = 2
 READY_TIMEOUT = 30.0
 AGENT_TIMEOUT = 900
@@ -135,6 +138,7 @@ class Sandbox:
         self.gateway, self.agent = f"{base}-gw", f"{base}-agent"
         self.outside_names: list[str] = []
         self.gateway_ip: str | None = None
+        self.host_isolation: str | None = None
         self.subnet: str | None = None
         self.created: list[tuple[str, str]] = []
         self.removed: list[str] = []
@@ -173,20 +177,31 @@ class Sandbox:
         self.created.append(("container", self.agent))
 
     def _internal_network(self) -> None:
+        """The internal network, with no address for the host on its bridge.
+        An --internal network alone still gives the bridge an address, and
+        every service on the Docker host (the real host on Linux, the VM on
+        Docker Desktop) answers on it. gateway_mode_ipv4=isolated (Docker
+        28+) leaves the bridge without one; inhibit_ipv4 is the fallback
+        for older engines. Lure refuses to run if neither is accepted."""
         last = ""
         for n in random.sample(range(1, 255), 12):
             subnet = SUBNET.format(n)
-            done = self.run(["network", "create", "--internal", "--subnet", subnet,
-                             *self._label(), self.internal], check=False)
-            if done.returncode == 0:
-                self.subnet = subnet
-                self.gateway_ip = subnet.rsplit(".", 1)[0] + f".{GATEWAY_HOST}"
-                self.created.append(("network", self.internal))
-                return
-            last = done.stderr.decode(errors="replace").strip()
-            if "overlap" not in last.lower():
+            for opt in HOST_ISOLATION:
+                done = self.run(["network", "create", "--internal", "--subnet", subnet,
+                                 "--opt", opt, *self._label(), self.internal], check=False)
+                last = done.stderr.decode(errors="replace").strip()
+                if done.returncode == 0:
+                    self.subnet = subnet
+                    self.gateway_ip = subnet.rsplit(".", 1)[0] + f".{GATEWAY_HOST}"
+                    self.host_isolation = opt
+                    self.created.append(("network", self.internal))
+                    return
+                if "overlap" in last.lower():
+                    break
+            else:
                 break
-        raise SandboxError(f"could not create the internal network: {last}")
+        raise SandboxError(f"could not create an internal network the host is cut off from: "
+                           f"{last}")
 
     def gateway_args(self) -> list[str]:
         allow = [a for host in self.spec.allow for a in ("--allow", host)]
@@ -277,6 +292,8 @@ class Sandbox:
             "host_mounts": [m.get("Source") for m in info.get("Mounts", [])
                             if m.get("Type") == "bind"],
             "networks": sorted(info.get("NetworkSettings", {}).get("Networks", {})),
+            # How the host is kept off the internal network's bridge.
+            "host_isolation": self.host_isolation,
         }
 
     def down(self) -> None:

@@ -83,6 +83,58 @@ def test_internal_network_and_teardown_order():
                                                  sbx.internal], "leftover": []}
 
 
+class Refuses(Recorder):
+    """Fails network create for the options in `refused`, like an older
+    engine that does not know them; `overlap` subnets are taken."""
+
+    def __init__(self, refused=(), overlap=0):
+        super().__init__()
+        self.refused, self.overlap = refused, overlap
+
+    def __call__(self, args, input=None, timeout=120, check=True):
+        if args[:3] == ["network", "create", "--internal"]:
+            self.calls.append(list(args))
+            if self.overlap:
+                self.overlap -= 1
+                return subprocess.CompletedProcess(args, 1, b"", b"Pool overlaps with other one")
+            if any(o in args for o in self.refused):
+                return subprocess.CompletedProcess(args, 1, b"", b"invalid option")
+            return subprocess.CompletedProcess(args, 0, b"", b"")
+        return super().__call__(args, input, timeout, check)
+
+
+ISOLATED = "com.docker.network.bridge.gateway_mode_ipv4=isolated"
+INHIBIT = "com.docker.network.bridge.inhibit_ipv4=true"
+SPEC = SandboxSpec("agent:test", "lure:test", ("api.model.example:443",))
+
+
+def test_the_internal_bridge_has_no_host_address():
+    """v1.13.2: an --internal network alone leaves the Docker host reachable
+    on the bridge address; the network is created without one."""
+    rec = Refuses()
+    with Sandbox(SPEC, runner=rec, sleep=lambda s: None) as sbx:
+        assert sbx.host_isolation == ISOLATED
+    assert ["--opt", ISOLATED] == rec.calls[0][5:7]
+
+
+def test_older_engines_fall_back_to_inhibit_ipv4_and_overlaps_retry():
+    rec = Refuses(refused=(ISOLATED,), overlap=1)
+    with Sandbox(SPEC, runner=rec, sleep=lambda s: None) as sbx:
+        assert sbx.host_isolation == INHIBIT
+    creates = [c for c in rec.calls if c[:3] == ["network", "create", "--internal"]]
+    assert [c[6] for c in creates] == [ISOLATED, ISOLATED, INHIBIT]
+    assert creates[0][4] != creates[1][4]  # a new subnet after the overlap
+
+
+def test_no_sandbox_when_the_host_cannot_be_cut_off():
+    import lure.sandbox.docker as d
+    rec = Refuses(refused=(ISOLATED, INHIBIT))
+    with (pytest.raises(d.SandboxError, match="host is cut off from"),
+          Sandbox(SPEC, runner=rec, sleep=lambda s: None)):
+        pass
+    assert not any(c[0] == "run" for c in rec.calls)
+
+
 def test_a_failed_start_still_tears_down():
     rec = Recorder(logs=b"")
     spec = SandboxSpec("agent:test", "lure:test", ("api.model.example:443",))

@@ -118,7 +118,7 @@ Lure runs the attacks the profile's tools cover. The attack's file fixtures beco
 
 | Created | Flags |
 | --- | --- |
-| `lure-sbx-<id>-int` | `docker network create --internal`: no default route |
+| `lure-sbx-<id>-int` | `docker network create --internal --opt com.docker.network.bridge.gateway_mode_ipv4=isolated`: no default route, and no address for the host on its bridge (`inhibit_ipv4` on engines before Docker 28; Lure refuses to run if neither is accepted). `--internal` alone leaves every service on the Docker host reachable on the bridge address: the real host on Linux, the VM on Docker Desktop |
 | `lure-sbx-<id>-ext` | an ordinary bridge, joined only by the gateway |
 | `lure-sbx-<id>-gw` | `--read-only --cap-drop ALL --security-opt no-new-privileges --user 10001`, memory and process limits; on both networks |
 | `lure-sbx-<id>-agent` | the same flags, plus `--tmpfs /workspace /tmp /run/lure`, `--memory 512m --cpus 1 --pids-limit 128`, `--dns` and `HTTPS_PROXY` pointing at the gateway, no `-v` or `--mount`; on the internal network only |
@@ -127,7 +127,7 @@ All carry the label `lure.sandbox=<id>` and are removed when the run ends, whate
 
 ### Testing the sandbox
 
-`pytest -m docker` builds both images and proves the isolation with a scripted model (`lure.sandbox.fakemodel`) on the gateway's outside network: the allowed host is reachable through the proxy and by SNI, other hosts are blocked and logged, direct IP connections fail, DNS for other names is logged and refused, the container is read-only and has no capabilities, the decoys log, and `lure-smo-004`'s changed model endpoint is a blocked-egress critical Fail. The tests skip without Docker and remove what they create.
+`pytest -m docker` builds both images and proves the isolation with a scripted model (`lure.sandbox.fakemodel`) on the gateway's outside network: the allowed host is reachable through the proxy and by SNI, other hosts are blocked and logged, direct IP connections fail, DNS for other names is logged and refused, the container is read-only and has no capabilities, the decoys log, and `lure-smo-004`'s changed model endpoint is a blocked-egress critical Fail. A host test starts stub listeners (never a real service) on this machine and in the Docker host's own network namespace, on 443 and high ports, and fails if the agent reaches any of them through the bridge, the Docker gateways or `host.docker.internal`. The tests skip without Docker and remove what they create.
 
 ## `lure serve` in a container
 
