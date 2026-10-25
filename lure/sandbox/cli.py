@@ -123,7 +123,7 @@ def _run(args, out: TextIO) -> int:
     results_dir = args.results_dir or str(
         Path("results") / profile.name / f"sandbox-{datetime.now(UTC):%Y%m%dT%H%M%SZ}")
     print(f"Sandbox:   {profile.name}: {agent_image}, egress allowed to "
-          f"{', '.join((profile.agent.model_allow, *profile.agent.allow))} only", file=out)
+          f"{', '.join((*profile.agent.model_allow, *profile.agent.allow))} only", file=out)
     results = []
     for attack in attacks:
         for _ in range(args.repeat):

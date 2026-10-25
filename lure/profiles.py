@@ -62,9 +62,9 @@ LURE_KEYS = ("ANTHROPIC_API_KEY", "LURE_OPENAI_API_KEY")
 ENV_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
 HOST_PORT_RE = re.compile(r"^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?(/[a-z0-9._~/-]*)?$")
 # Paths the gateway allows on a provider's plain-HTTP model host. Ollama's
-# API is unauthenticated and can pull, create and delete models, so the
-# agent gets only its chat endpoint.
-MODEL_PATHS = {"ollama": "/api/chat"}
+# API is unauthenticated and can pull, push, create, copy and delete models,
+# so the agent gets only its generate and chat endpoints.
+MODEL_PATHS = {"ollama": ("/api/chat", "/api/generate")}
 IMAGE_RE = re.compile(r"^[a-z0-9][a-z0-9._/:@-]{0,200}$")
 RENDER_KEYS = ("images", "link_previews")
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
@@ -125,14 +125,15 @@ class AgentSpec:
         return f"{(parts.hostname or '').lower()}:{port}"
 
     @property
-    def model_allow(self) -> str:
-        """The gateway allowlist entry for the model: host:port, plus the
-        chat path for a provider whose API is plain HTTP (Ollama)."""
+    def model_allow(self) -> tuple[str, ...]:
+        """The gateway allowlist entries for the model: host:port, or for a
+        provider whose API is plain HTTP (Ollama) one host:port/path entry
+        per allowed endpoint."""
         from urllib.parse import urlsplit
-        path = MODEL_PATHS.get(self.provider)
-        if path is None or urlsplit(self.model_url).scheme != "http":
-            return self.model_host
-        return self.model_host + path
+        paths = MODEL_PATHS.get(self.provider)
+        if paths is None or urlsplit(self.model_url).scheme != "http":
+            return (self.model_host,)
+        return tuple(self.model_host + path for path in paths)
 
     def record(self) -> dict[str, Any]:
         return {"image": self.image, "provider": self.provider, "model_host": self.model_host,

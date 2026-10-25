@@ -175,8 +175,9 @@ def test_example_reference_profiles_load():
     assert PROFILE.agent.model_host == "api.anthropic.com:443"
     assert LOCAL.agent.model_host == "host.docker.internal:11434"
     # Ollama's API can pull and delete models: the agent gets only its chat path.
-    assert LOCAL.agent.model_allow == "host.docker.internal:11434/api/chat"
-    assert PROFILE.agent.model_allow == "api.anthropic.com:443"
+    assert LOCAL.agent.model_allow == ("host.docker.internal:11434/api/chat",
+                                       "host.docker.internal:11434/api/generate")
+    assert PROFILE.agent.model_allow == ("api.anthropic.com:443",)
     assert PROFILE.record(False)["agent"]["model_host"] == "api.anthropic.com:443"
 
 

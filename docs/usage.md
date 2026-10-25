@@ -48,7 +48,7 @@ Capability isolation holds while Lure owns the agent loop. A real agent brings i
 | Piece | What it is |
 | --- | --- |
 | Internal network | Docker `--internal`: no default route, so the agent cannot reach the host or the internet directly; a direct IP connection fails |
-| Gateway | Lure's own egress proxy and DNS responder (`lure.sandbox.gateway`), the only container with a leg outside. Allows exact `host:port` pairs (the profile's model host; a plain-HTTP host can be held to a path, such as Ollama's `/api/chat`), decides by the CONNECT host or the TLS SNI, never decrypts TLS, and blocks and logs everything else. Allowed names resolve to the gateway; other names get NXDOMAIN and are logged |
+| Gateway | Lure's own egress proxy and DNS responder (`lure.sandbox.gateway`), the only container with a leg outside. Allows exact `host:port` pairs (the profile's model host; a plain-HTTP host can be held to a path, such as Ollama's `/api/generate` and `/api/chat`), decides by the CONNECT host or the TLS SNI, never decrypts TLS, and blocks and logs everything else. Allowed names resolve to the gateway; other names get NXDOMAIN and are logged |
 | Agent container | Non-root, read-only root filesystem, tmpfs `/workspace`, no host mounts, every capability dropped, no-new-privileges, memory, CPU and process limits; destroyed after the run |
 | Decoys | `npm`, `npx`, `pip`, `pip3`, `curl`, `wget` and `git` first on the agent's PATH: they log their arguments and fail |
 

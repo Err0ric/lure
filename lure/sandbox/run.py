@@ -82,7 +82,7 @@ def spec_for(profile: Profile, agent_image: str | None, gateway_image: str) -> S
     agent = profile.agent
     limits = Limits(**{k: (int(v) if k == "pids" else v) for k, v in agent.limits})
     return SandboxSpec(agent_image=agent_image or agent.image, gateway_image=gateway_image,
-                       allow=(agent.model_allow, *agent.allow), env=agent.env, limits=limits)
+                       allow=(*agent.model_allow, *agent.allow), env=agent.env, limits=limits)
 
 
 def to_fixture_path(path: Any, alias: str | None) -> Any:

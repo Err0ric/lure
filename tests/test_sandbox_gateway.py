@@ -255,3 +255,61 @@ def test_a_local_model_host_is_held_to_its_chat_endpoint():
     blocked = [e for e in events if e["event"] == "egress" and not e["allowed"]]
     assert [(e["via"], e.get("path")) for e in blocked] == [("http", "/api/delete"),
                                                             ("connect", None)]
+
+
+# Ollama (v1.13.1): only generate and chat, proven against a stub upstream,
+# never a real local service.
+
+OLLAMA_DESTRUCTIVE = ("/api/pull", "/api/delete", "/api/create", "/api/copy", "/api/push",
+                      "/api/blobs/sha256:00", "/api/tags", "/api/ps", "/api/show",
+                      "/api/chat/../pull", "/api/generate/../delete", "/api/%70ull", "/")
+
+
+def _ollama_allowlist():
+    from pathlib import Path
+
+    from lure.profiles import load_profile
+    profile = load_profile(Path(__file__).resolve().parent.parent / "profiles"
+                           / "example-ref-agent-local.yaml")
+    return Allowlist.parse(profile.agent.model_allow)
+
+
+def test_the_ollama_allowlist_permits_only_generate_and_chat():
+    allow = _ollama_allowlist()
+    host = "host.docker.internal"
+    assert allow.allows(host, 11434, "/api/chat")
+    assert allow.allows(host, 11434, "/api/generate")
+    for path in OLLAMA_DESTRUCTIVE:
+        assert not allow.allows(host, 11434, path), path
+    assert not allow.allows(host, 11434)  # no CONNECT tunnel
+
+
+@pytest.mark.loopback
+@pytest.mark.parametrize("method, path", [("POST", "/api/pull"), ("DELETE", "/api/delete"),
+                                          ("POST", "/api/create"), ("POST", "/api/copy"),
+                                          ("POST", "/api/push")])
+def test_destructive_ollama_requests_never_reach_the_stub(method, path):
+    events = []
+    upstream = Upstream()  # a stub: records connections, answers UPSTREAM
+    gw = Gateway("127.0.0.1", _ollama_allowlist(), sink=events.append, connect=upstream,
+                 ports={"proxy": 0, "http": 0, "tls": 0, "dns": 0})
+    gw.start()
+    try:
+        host = b"host.docker.internal:11434"
+        via_proxy = _talk(gw.ports["proxy"], f"{method} http://".encode() + host
+                          + path.encode() + b" HTTP/1.1\r\nHost: " + host + b"\r\n\r\n{}")
+        via_host = _talk(gw.ports["http"], f"{method} {path} HTTP/1.1\r\n".encode()
+                         + b"Host: " + host + b"\r\n\r\n{}")
+        chat = _talk(gw.ports["proxy"], b"POST http://" + host + b"/api/chat HTTP/1.1\r\n"
+                     b"Host: " + host + b"\r\n\r\n{}")
+        generate = _talk(gw.ports["proxy"], b"POST http://" + host + b"/api/generate "
+                         b"HTTP/1.1\r\nHost: " + host + b"\r\n\r\n{}")
+    finally:
+        gw.stop()
+    assert via_proxy.startswith(b"HTTP/1.1 403") and via_host.startswith(b"HTTP/1.1 403")
+    assert chat.startswith(b"UPSTREAM POST /api/chat")
+    assert generate.startswith(b"UPSTREAM POST /api/generate")
+    # The stub saw only the two allowed requests.
+    assert upstream.seen == [("host.docker.internal", 11434)] * 2
+    blocked = [e.get("path") for e in events if e["event"] == "egress" and not e["allowed"]]
+    assert blocked == [path, path]
