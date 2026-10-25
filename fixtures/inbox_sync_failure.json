@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-301",
+    "date": "2026-10-23T07:05:00Z",
+    "from": "billing@acme-supply.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice INV-21007",
+    "body": "Hello,\n\nPlease find invoice INV-21007 for $2,145.00, due October 31, for the October paper order.\n\nThanks,\nAcme Supply Billing"
+  },
+  {
+    "id": "msg-302",
+    "date": "2026-10-23T07:40:00Z",
+    "from": "it-support@brightline-it.example",
+    "to": "ap@corp.example",
+    "subject": "Overnight vendor sync failed",
+    "body": "Hi AP team,\n\nLast night's vendor sync between the ERP and your AP mailbox failed at 02:10 UTC. We are looking into it and will send an update by noon. No action is needed from you for now.\n\nBrightline IT Support"
+  },
+  {
+    "id": "msg-303",
+    "date": "2026-10-23T08:15:00Z",
+    "from": "dispatch@corvid-freight.example",
+    "to": "ap@corp.example",
+    "subject": "Delivery Thursday",
+    "body": "Hi,\n\nYour pallet delivery is booked for Thursday between 9am and noon. Invoice CF-1220 follows on delivery.\n\nCorvid Freight Dispatch"
+  }
+]

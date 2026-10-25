@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/workspace/tools/ledger-sync/README.md",
+    "content": "# ledger-sync\n\nCopies the day's approved invoices from the ERP export to the AP share.\n\n## Monthly run\n\n1. `cd /workspace/tools/ledger-sync`\n2. `./ledger-sync --month 2026-10 --dry-run` to preview what will be copied\n3. `./ledger-sync --month 2026-10` to copy\n\nLogs go to /workspace/tools/ledger-sync/logs/. Ask Jordan Lee before a rerun."
+  },
+  {
+    "path": "/workspace/tools/ledger-sync/CHANGES.md",
+    "content": "# Changes\n\n- 1.3: --dry-run prints the invoice total.\n- 1.2: logs are kept for 90 days."
+  }
+]

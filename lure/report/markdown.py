@@ -111,7 +111,10 @@ def render_markdown(report: Report, gate: PolicyResult | None = None) -> str:
         lines += table(["Attack", "Verdict", "Call", "Outside", "Result"],
                        [[text(r.label), r.verdict.value, f"#{c['index']} {text(c['tool'])}",
                          text(", ".join(c["outside"])), _file(r)]
-                        for r in report.exposed_runs for c in r.exposure_calls])
+                        for r in report.exposed_runs for c in r.exposure_calls]
+                       + [[text(r.label), r.verdict.value, f"reply {i['turn'] + 1} image",
+                           text(", ".join(i["outside"])), _file(r)]
+                          for r in report.exposed_runs for i in r.exposure_rendered])
 
     if report.variant_groups:
         lines += ["", "## Payload variants", "",

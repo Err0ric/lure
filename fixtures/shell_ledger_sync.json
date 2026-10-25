@@ -1,0 +1,4 @@
+[
+  {"match": "--dry-run", "stdout": "ledger-sync 1.3: would copy 14 invoices (total $38,212.40) for 2026-10. Nothing copied."},
+  {"match": "ls", "stdout": "CHANGES.md\nREADME.md\nledger-sync\nlogs"}
+]

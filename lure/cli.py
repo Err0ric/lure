@@ -50,6 +50,7 @@ from lure.profiles import prepare as prepare_for_profile
 from lure.profiles import select as select_for_profile
 from lure.rescore import (
     MANIFEST,
+    RETEST,
     add_exposure,
     attack_changed,
     attack_index,
@@ -61,6 +62,7 @@ from lure.rescore import (
 from lure.runner import DEFAULT_ATTEMPTS, MAX_TURNS, RunResult, run_adaptive, run_attack
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
+from lure.vetting import DECISIONS, DEFAULT_VETTING_DIR
 
 JUDGES = ("rules", "llm")
 
@@ -204,6 +206,39 @@ def build_parser() -> argparse.ArgumentParser:
                               help="attack files (default attacks); pinned versions are skipped")
     coverage_cmd.add_argument("--out", default="docs/arcanum-coverage.md",
                               help="output file (default docs/arcanum-coverage.md)")
+
+    decide = sub.add_parser("decide", help="record an approval decision for a profile run "
+                                           "(append-only decision log)")
+    decide.add_argument("profile", help="the profile YAML the decision is about")
+    decide.add_argument("--decision", required=True, choices=DECISIONS)
+    decide.add_argument("--by", required=True, metavar="ROLE",
+                        help="who decided, as a role (\"AP operations lead\"), not a name")
+    decide.add_argument("--conditions", nargs="+", default=[], metavar="TEXT",
+                        help="the conditions of an approve-with-conditions decision, one "
+                             "quoted text each")
+    decide.add_argument("--notes", help="free text kept with the decision")
+    decide.add_argument("--run", metavar="FOLDER",
+                        help="the profile run the decision is based on (default: the "
+                             "profile's latest run under results/<name>/)")
+    decide.add_argument("--results-dir", default="results",
+                        help="where profile runs live (default results)")
+    decide.add_argument("--vetting-dir", default=DEFAULT_VETTING_DIR,
+                        help=f"where decision logs live (default {DEFAULT_VETTING_DIR})")
+
+    retest = sub.add_parser("retest", help="rerun a profile's last suite and compare it with "
+                                           "the last approved run; exit 1 on a regression")
+    retest.add_argument("profile", help="the profile YAML to retest")
+    retest.add_argument("--results-dir", default="results",
+                        help="where profile runs live (default results)")
+    retest.add_argument("--vetting-dir", default=DEFAULT_VETTING_DIR,
+                        help=f"where decision logs live (default {DEFAULT_VETTING_DIR})")
+    retest.add_argument("--attacks-dir", default="attacks",
+                        help="attack files, pinned versions included (default attacks)")
+    retest.add_argument("--prices", help="prices file (USD per million tokens) to estimate "
+                                         "spend; needed by --max-cost")
+    retest.add_argument("--max-cost", type=_positive_float, metavar="USD",
+                        help="stop the rerun before estimated spend passes USD")
+    _policy_args(retest)
     return parser
 
 
@@ -288,6 +323,10 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         return compare_main(args, out)
     if args.command == "coverage":
         return coverage_main(args, out)
+    if args.command == "decide":
+        return decide_main(args, out)
+    if args.command == "retest":
+        return retest_main(args, out)
     try:
         profile = _apply_profile(args)
         # Load every attack first so a bad file fails before any model call.
@@ -426,18 +465,27 @@ def write_manifest(profile: Profile, args, policy: Policy, results: list, skippe
     path = Path(args.results_dir) / MANIFEST
     path.parent.mkdir(parents=True, exist_ok=True)
     data = {
-        "manifest_version": 1,
+        "manifest_version": 2,
         "lure_version": __version__,
         "profile": {"name": profile.name, "path": str(profile.path), "sha256": profile.sha256,
                     "owner": profile.owner, "role": profile.role,
                     "tools": [{"name": t.name, "description": t.description,
                                "maps_to": t.maps_to, "essential": t.essential}
                               for t in profile.tools],
-                    "third_party_tools": profile.third_party_tools},
+                    "third_party_tools": profile.third_party_tools,
+                    "renders": dict(profile.renders)},
         "target": results[0].target if results else f"{args.target}:{args.model or 'default'}",
         "judge": results[0].judge if results else args.judge,
         "repeat": args.repeat,
         "variants": args.variants,
+        # Version 2: what else lure retest needs to repeat the suite.
+        "only_flagged": args.only_flagged,
+        "payload_from": args.payload_from,
+        "attempt": args.attempt,
+        "max_turns": args.max_turns,
+        "attacker": ({"target": args.attacker_target, "model": args.attacker_model,
+                      "attempts": args.attempts or DEFAULT_ATTEMPTS}
+                     if args.attacker_model else None),
         "policy": {"source": policy.source, "path": policy.path, "sha256": policy.sha256},
         "started_at": started.isoformat(),
         "finished_at": datetime.now(UTC).isoformat(),
@@ -683,6 +731,11 @@ def report_main(args, out: TextIO) -> int:
         report = build_report(runs, target=args.target)
     except (ReportError, FileNotFoundError, PolicyError) as e:
         print(f"lure: {e}", file=sys.stderr)
+        retests = [Path(p) / RETEST for p in args.results if (Path(p) / RETEST).is_file()]
+        if retests and not runs:
+            print(f"lure: {retests[0].parent} is a retest with nothing left to run (the profile "
+                  f"no longer covers its suite); its findings are in {retests[0]}",
+                  file=sys.stderr)
         return EXIT_BAD_INPUT
     runs = [r for r in runs if r.record["target"] == report.target]
     gate = policy.gate_saved([(r.record, str(r.path)) for r in runs])
@@ -703,6 +756,7 @@ def report_main(args, out: TextIO) -> int:
         from lure.report.approval import (
             build_approval,
             load_manifest,
+            load_retest,
             write_approval,
             write_approval_md,
         )
@@ -717,7 +771,8 @@ def report_main(args, out: TextIO) -> int:
         except AttackError as e:
             print(f"lure: approval: cannot read {args.attacks_dir}: {e}", file=sys.stderr)
             attacks = {}
-        page = build_approval(report, manifest, policy, gate, attacks)
+        page = build_approval(report, manifest, policy, gate, attacks,
+                              retest=load_retest(args.results))
         if args.approval:
             tag = f" ({page.tag})" if page.tag else ""
             print(f"Wrote {write_approval(page, args.approval)}: {page.headline}{tag}", file=out)
@@ -768,6 +823,136 @@ def _attack_files(attacks_dir: str) -> dict[tuple[str, int], str]:
     except AttackError as e:
         print(f"lure: SARIF: cannot read {attacks_dir}: {e}", file=sys.stderr)
         return {}
+
+
+def decide_main(args, out: TextIO) -> int:
+    """lure decide: one line appended to vetting/<profile>/decisions.jsonl."""
+    from lure.vetting import VettingError, append_decision, decision_record, pick_run
+
+    try:
+        profile = load_profile(args.profile)
+        run = pick_run(profile, args.run, args.results_dir)
+        record = decision_record(profile, run, args.decision, args.by, args.conditions,
+                                 args.notes)
+        path, line = append_decision(args.vetting_dir, record)
+    except (ProfileError, VettingError) as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    print(f"Decision:  {record['decision']} for {profile.name}, by {record['by']}", file=out)
+    for c in record["conditions"]:
+        print(f"  condition: {c}", file=out)
+    print(f"Run:       {run} (profile sha256 {record['profile_sha256'][:12]})", file=out)
+    print(f"Logged:    {path} line {line}", file=out)
+    return EXIT_OK
+
+
+def retest_main(args, out: TextIO) -> int:
+    """lure retest: rerun the profile's last suite, compare it with the last
+    approved run, and save retest.json in the new run folder. Exit 1 on a
+    new failure, else 3 if the rerun stopped at --max-cost, else 2 if a run
+    errored, else 0."""
+    from lure.vetting import (
+        VettingError,
+        compare,
+        last_approved,
+        profile_runs,
+        read_decisions,
+        read_manifest,
+        rerun_argv,
+        write_retest,
+    )
+
+    try:
+        profile = load_profile(args.profile)
+        runs = profile_runs(args.results_dir, profile.name)
+        if not runs:
+            raise VettingError(f"no runs of {profile.name} under "
+                               f"{Path(args.results_dir) / profile.name}; run lure run "
+                               "--profile first")
+        last = runs[-1]
+        decision = last_approved(read_decisions(args.vetting_dir, profile.name))
+        baseline = Path(decision["run"]) if decision else last
+        if not (baseline / MANIFEST).is_file():
+            raise VettingError(f"the approved run {baseline} is gone; a retest compares with it")
+        if args.policy is None and not args.no_policy and profile.policy is not None:
+            args.policy = str(profile.policy)
+        policy = _policy(args)
+        files = {k: a.source for k, a in attack_index(args.attacks_dir).items()}
+        folder = Path(args.results_dir) / profile.name / datetime.now(UTC).strftime(
+            "%Y%m%dT%H%M%SZ")
+        while folder.exists():
+            folder = folder.with_name(folder.name + "-1")
+        argv = rerun_argv(read_manifest(last), profile, files, folder)
+        argv += ["--policy", args.policy] if args.policy else []
+        argv += ["--no-policy"] if args.no_policy else []
+        argv += ["--prices", args.prices] if args.prices else []
+        argv += ["--max-cost", str(args.max_cost)] if args.max_cost else []
+    except (ProfileError, VettingError, AttackError, PolicyError) as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    print(f"Retest:    {profile.name}, the suite of {last}", file=out)
+    print(file=out)
+    rerun = [load_attack(a) for a in argv[1:argv.index("--profile")]]
+    chosen, skipped = select_for_profile(profile, rerun)
+    if chosen:
+        code = main(argv, out)
+    else:
+        # The profile no longer covers any of the suite (a tool was removed):
+        # nothing to run, but the comparison still says so.
+        print_profile_plan(profile, chosen, skipped, out)
+        run_args = build_parser().parse_args(argv)
+        _apply_profile(run_args)
+        write_manifest(profile, run_args, policy, [], skipped, datetime.now(UTC), False)
+        code = EXIT_OK
+    if not (folder / MANIFEST).is_file():
+        return code
+    result = compare(baseline, folder, policy, decision, profile)
+    print(file=out)
+    print_retest(result, out)
+    path = write_retest(result, folder)
+    print(f"Saved:     {path}", file=out)
+    if result.regression:
+        return EXIT_POLICY_FAIL
+    if result.stopped:
+        return EXIT_MAX_COST
+    return EXIT_ERROR if code == EXIT_ERROR else EXIT_OK
+
+
+def print_retest(result, out: TextIO) -> None:
+    d = result.baseline_decision
+    if d:
+        print(f"Compared:  with the {d['decision']} decision of {d['decided_at'][:10]} by "
+              f"{d['by']} ({result.baseline})", file=out)
+    else:
+        print(f"Compared:  with the last run ({result.baseline}); no approve decision yet",
+              file=out)
+    same = "nothing (same profile, model, judge, Lure and attack versions)"
+    for i, line in enumerate(result.changes or [same]):
+        print(f"{'Changed:' if i == 0 else '':<11}{line}", file=out)
+    for title, lines in (("New failures", result.new_failures), ("Fixed", result.fixed),
+                         ("Still failing", result.still_failing)):
+        if lines:
+            print(f"{title} ({len(lines)}):", file=out)
+            for line in lines:
+                print(f"  {line}", file=out)
+    print(f"Still passing: {len(result.still_passing)}", file=out)
+    if result.no_longer_run:
+        print(f"No longer run ({len(result.no_longer_run)}):", file=out)
+        for label, reason in result.no_longer_run:
+            print(f"  {label}: {reason}", file=out)
+    if result.conditions:
+        print("Conditions:", file=out)
+        for c in result.conditions:
+            print(f"  {'verified' if c.verified else 'not verified':<13} {c.text} ({c.why})",
+                  file=out)
+    if result.regression:
+        n = len(result.new_failures)
+        verdict = f"REGRESSION: {n} new failure{'s' if n > 1 else ''}"
+    elif result.stopped:
+        verdict = "INCOMPLETE: stopped at --max-cost; no new failure in the runs done"
+    else:
+        verdict = "NO REGRESSION"
+    print(f"Result:    {verdict}", file=out)
 
 
 def coverage_main(args, out: TextIO) -> int:

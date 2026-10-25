@@ -14,6 +14,7 @@ from lure import cli
 from lure.attacks import load_attack
 from lure.batch import collect_attack_paths
 from lure.profiles import CANARY_SEPARATOR, ProfileError, load_profile, prepare, select
+from lure.tools import KNOWN_TOOLS
 from tests.fakes import ScriptedAdapter, call, say
 from tests.test_cli import SUMMARY
 
@@ -83,6 +84,9 @@ PEM = "-----BEGIN RSA " + "PRIVATE KEY-----"
      "is another Lure tool's name"),
     ({"third_party_tools": "yes"}, "third_party_tools must be true or false"),
     ({"suites": "some"}, "suites must be all or a list"),
+    ({"renders": {"images": "yes"}}, "renders must be a mapping of images and link_previews"),
+    ({"renders": {"video": True}}, "renders must be a mapping of images and link_previews"),
+    ({"renders": "all"}, "renders must be a mapping of images and link_previews"),
 ])
 def test_bad_profiles_are_rejected(tmp_path, changes, message):
     with pytest.raises(ProfileError, match=re.escape(message)):
@@ -104,10 +108,18 @@ def test_missing_profile_and_policy(tmp_path):
 
 
 def test_example_selects_every_attack_its_tools_cover():
-    chosen, skipped = select(load_profile(EXAMPLE), ATTACKS)
-    assert [(s.attack.id, s.reason) for s in skipped] == [
-        ("lure-tab-002", "no profile tool maps to write_file, delete_file")]
-    assert len(chosen) == len(ATTACKS) - 1
+    profile = load_profile(EXAMPLE)
+    mapped = {t.maps_to for t in profile.tools}
+    chosen, skipped = select(profile, ATTACKS)
+    # Each skip names exactly the Lure tools the profile does not map.
+    for s in skipped:
+        missing = [t for t in s.attack.tools if t in KNOWN_TOOLS and t not in mapped]
+        assert missing and s.reason == "no profile tool maps to " + ", ".join(missing), s.attack.id
+    # And every other attack is chosen.
+    assert len(chosen) + len(skipped) == len(ATTACKS)
+    assert ("lure-tab-002", "no profile tool maps to write_file, delete_file") in [
+        (s.attack.id, s.reason) for s in skipped]
+    assert {"lure-cra-002", "lure-egr-003", "lure-shx-001"} <= {s.attack.id for s in skipped}
 
 
 def test_third_party_tools_and_suites_gate_selection(tmp_path):
@@ -313,3 +325,41 @@ def test_reports_list_runs_the_agents_rules_kept_from_being_tested(tmp_path):
     text = md.read_text()
     assert "## Not tested: the agent's own rules" in text
     assert SETUP_BLOCKED in text
+
+
+# renders: what the agent's chat app does with images and links
+
+
+OPS = REPO / "profiles" / "example-ops-agent.yaml"
+
+
+def test_ops_example_loads_and_covers_the_new_tools():
+    p = load_profile(OPS)
+    assert (p.name, p.target) == ("example-ops-agent", "ollama")
+    assert dict(p.renders) == {"images": True, "link_previews": True}
+    assert {"list_env", "post_message"} <= {t.maps_to for t in p.tools}
+    chosen, _ = select(p, ATTACKS)
+    ids = {a.id for a in chosen}
+    assert {"lure-cra-001", "lure-cra-002", "lure-cra-003", "lure-cra-004",
+            "lure-egr-001", "lure-egr-002", "lure-egr-003"} <= ids
+
+
+def test_renders_unset_means_assumed_and_runs_everything(tmp_path):
+    p = load_profile(write(tmp_path))
+    assert dict(p.renders) == {"images": None, "link_previews": None}
+    chosen, _ = select(p, [BY_ID["lure-egr-001"], BY_ID["lure-egr-002"]])
+    assert [a.id for a in chosen] == ["lure-egr-001", "lure-egr-002"]
+
+
+def test_renders_false_skips_attacks_that_need_it(tmp_path):
+    ops = yaml.safe_load(OPS.read_text())
+    p = load_profile(write(tmp_path, tools=ops["tools"],
+                           renders={"images": False, "link_previews": False}))
+    chosen, skipped = select(p, [BY_ID[i] for i in ("lure-egr-001", "lure-egr-002",
+                                                    "lure-egr-003", "lure-cra-003")])
+    assert [a.id for a in chosen] == ["lure-egr-002", "lure-cra-003"]  # a link needs a click
+    assert [(s.attack.id, s.reason) for s in skipped] == [
+        ("lure-egr-001", ("the agent's chat app does not show images in its replies "
+                          "(renders.images: false)")),
+        ("lure-egr-003", ("the agent's chat app does not preview links in its posts "
+                          "(renders.link_previews: false)"))]

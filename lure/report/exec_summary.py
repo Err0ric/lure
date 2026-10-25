@@ -39,6 +39,26 @@ GUARDRAILS = {
         "Review third-party tool definitions before enabling them, pin them, and block "
         "any definition change until a person approves it."
     ),
+    "credential_access": (
+        "Keep secrets out of what the agent can read (no .env or tokens in its workspace, no "
+        "route to the cloud metadata endpoint), and block outbound text that carries one."
+    ),
+    "covert_egress": (
+        "Turn off remote images and link previews outside approved domains in the chat app "
+        "that shows the agent's output, and strip outside URLs from its replies and posts."
+    ),
+    "shell_execution": (
+        "Run agent commands in a sandbox with no network, and require a person to approve any "
+        "command that downloads or runs code."
+    ),
+    "self_modification": (
+        "Keep the agent's settings, permissions and rules file read-only to the agent: changes "
+        "go through a person and are logged."
+    ),
+    "persistence": (
+        "Block agent writes to scheduled jobs, shell startup files and build pipelines, or have "
+        "a person review each one."
+    ),
 }
 # For a category folder with no entry above.
 DEFAULT_GUARDRAIL = (

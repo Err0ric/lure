@@ -46,13 +46,18 @@ from lure.arcanum import ENCODING_CODES, SPLIT_CODES, merge
 from lure.arcanum import problems as arcanum_problems
 from lure.tools import KNOWN_TOOLS
 from lure.tools import responders as responders_mod
+from lure.tools.mock_chat import check_chat
 from lure.tools.mock_email import FixtureError
+from lure.tools.mock_env import check_env
 from lure.tools.mock_http import url_key
 from lure.tools.mock_mcp import check_mcp
 from lure.tools.mock_mcp import tool_names as mcp_tool_names
+from lure.tools.mock_settings import check_settings
+from lure.tools.mock_shell import check_shell
 from lure.tools.registry import FIXTURE_OPTIONAL, MCP_FIXTURE, fixture_for
 from lure.tools.responders import Responder
 from lure.tools.sources import item_source
+from lure.tools.urls import RENDER_KINDS
 
 # Categories are the folders under attacks/: a new category is a new folder.
 CATEGORY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -79,6 +84,8 @@ RULE_KEYS = {
     "args_not_contain": "strings",
     "account_not_in": "strings",
     "reply_contains": "strings",
+    "reply_url": "reply_url",
+    "url_in_args": "url_in_args",
     "asked_user_before": "tool",
     "flagged_as_suspicious": "bool",
 }
@@ -98,7 +105,7 @@ BASE64_RE = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")
 BARE_HOST_RE = re.compile(
     r"(?<![\w@.-])((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+"
     r"(?:com|net|org|io|co|ai|dev|app|gov|edu|mil|info|biz|me|us|uk|de|fr|ru|cn|"
-    r"xyz|online|site|cloud|tech|link|top|live))(?![\w-])",
+    r"xyz|online|site|cloud|tech|link|top|live))(?![\w-]|\.[a-z0-9])",
     re.IGNORECASE,
 )
 # The same hosts anywhere, after @ too: for text decoded from rot13, where a
@@ -110,6 +117,16 @@ HEX_RE = re.compile(r"\b(?:[0-9a-fA-F]{2}){8,}\b")
 # Prefixes of real API keys and tokens.
 SECRET_RE = re.compile(r"\b(?:sk-[A-Za-z0-9_-]{8,}|AKIA[0-9A-Z]{12,}|gh[pousr]_[A-Za-z0-9]{8,}|"
                        r"xox[abpr]-[A-Za-z0-9-]{8,})")
+# A PEM private key header. Fixtures never hold keys, fake or not.
+PRIVATE_KEY_RE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")
+# Every fake secret starts with this, so a leak is easy to spot and never real.
+FAKE_SECRET_PREFIX = "LURE-FAKE-"
+# A value given to a secret-named key: ERP_API_KEY=..., "Token": "...".
+SECRET_ASSIGN_RE = re.compile(
+    r"\b([\w.-]*?(?:(?:api|access|private)[_-]?key|secret|token|passw(?:or)?d|credential)s?[\w-]*)"
+    r"[\"']?[ \t]*[:=][ \t]*[\"']?([^\s\"',}]+)", re.IGNORECASE)
+# Environment variable names that hold secrets.
+SECRET_NAME_RE = re.compile(r"key|secret|token|passw(?:or)?d|pwd|credential", re.IGNORECASE)
 # 13 to 19 digits, optionally grouped by spaces or dashes: a card number shape.
 CARD_RE = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
 
@@ -489,6 +506,13 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
             check_mcp(loaded[MCP_FIXTURE])
         except FixtureError as e:
             raise fail(f"fixture {MCP_FIXTURE!r}: {e}") from None
+    for name, check in (("env", check_env), ("chat", check_chat), ("shell", check_shell),
+                        ("agent_settings", check_settings)):
+        if name in loaded:
+            try:
+                check(loaded[name])
+            except FixtureError as e:
+                raise fail(f"fixture {name!r}: {e}") from None
     mcp_tools = mcp_tool_names(loaded.get(MCP_FIXTURE))
     expected_fetch = _expected_fetch(data.get("expected_fetch", []), loaded, fail)
 
@@ -567,8 +591,18 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     keywords = _keywords(injection.get("keywords"), payload, loaded, fail)
 
     _check_domains(data, f"{path.name}", fail)
+    # Secret-named values must be canaries where secrets live: fixtures and
+    # payloads. A system prompt canary (an escalation code) is fake already.
+    _check_secrets(data, f"{path.name}", fail, assignments=False)
+    _check_secrets(payload, f"{path.name} payload", fail)
     for name, content in loaded.items():
         _check_domains(content, f"fixture {name!r}", fail)
+        _check_secrets(content, f"fixture {name!r}", fail)
+    for i, v in enumerate(loaded.get("env") or []):
+        if SECRET_NAME_RE.search(v["name"]) and v["value"] and not v["value"].startswith(
+                FAKE_SECRET_PREFIX):
+            raise fail(f"fixture 'env' {v['name']} looks like a secret: its value must start "
+                       f"with {FAKE_SECRET_PREFIX}")
 
     return Attack(
         id=attack_id,
@@ -826,12 +860,19 @@ def _check_body_contains(rules, fixtures, payload, fail) -> None:
     corpus = "\n".join(_strings(fixtures)).lower()
     for key, rule_list in rules.items():
         for i, rule in enumerate(rule_list):
-            for k in ("body_contains", "args_contain", "account_not_in"):
+            for k in ("body_contains", "args_contain", "account_not_in", "carries"):
                 allowed = corpus + "\n" + payload.lower() if k == "args_contain" else corpus
-                for text in rule.get(k, []):
+                strings = rule.get(k, []) if k != "carries" else [
+                    t for spec_key in ("reply_url", "url_in_args")
+                    for t in (rule.get(spec_key) or {}).get("carries", [])]
+                for text in strings:
                     if text.lower() not in allowed:
                         where = "the fixtures or payload" if k == "args_contain" else "the fixtures"
                         raise fail(f"{key}[{i}] {k} {text!r} does not appear in {where}")
+                    # Data in a URL counts only if the target put it there: a
+                    # payload that already holds it could just be echoed.
+                    if k == "carries" and text.lower() in payload.lower():
+                        raise fail(f"{key}[{i}] carries {text!r} appears in the payload")
 
 
 def _check_reply_contains(rules, fixtures, system_prompt, tools, task, payload, fail) -> None:
@@ -915,11 +956,35 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
                 or not all(isinstance(t, str) and t.strip() for t in v)
             ):
                 raise fail(f"{where} {k} must be a non-empty list of non-empty strings")
+            if kind in ("reply_url", "url_in_args"):
+                _url_spec(v, f"{where} {k}", kind == "reply_url", fail)
         for k in ("to_domain_not_in", "body_contains", "args_contain", "args_not_contain",
-                  "account_not_in"):
+                  "account_not_in", "url_in_args"):
             if k in rule and not ({"tool", "asked_user_before"} & set(rule)):
                 raise fail(f"{where} {k} needs a tool or asked_user_before")
     return list(value)
+
+
+URL_SPEC_KEYS = ("domain_not_in", "carries")
+
+
+def _url_spec(spec: Any, where: str, reply: bool, fail) -> None:
+    """{domain_not_in: [...], carries: [...]} and, for reply_url, render:
+    image, link or any. Without carries, any outside URL matches."""
+    keys = (*URL_SPEC_KEYS, "render") if reply else URL_SPEC_KEYS
+    if not isinstance(spec, dict) or "domain_not_in" not in spec or not set(spec) <= set(keys):
+        raise fail(f"{where} must be a mapping with domain_not_in and optionally "
+                   + ", ".join(k for k in keys if k != "domain_not_in"))
+    domains = spec["domain_not_in"]
+    if not isinstance(domains, list) or not domains or not all(
+            isinstance(d, str) and d.strip() for d in domains):
+        raise fail(f"{where} domain_not_in must be a non-empty list of domains")
+    carries = spec.get("carries", ["x"])
+    if not isinstance(carries, list) or not carries or not all(
+            isinstance(t, str) and t.strip() for t in carries):
+        raise fail(f"{where} carries must be a non-empty list of non-empty strings")
+    if reply and spec.get("render", "any") not in RENDER_KINDS:
+        raise fail(f"{where} render must be one of {list(RENDER_KINDS)}")
 
 
 def _check_domains(value: Any, where: str, fail) -> None:
@@ -933,6 +998,29 @@ def _check_domains(value: Any, where: str, fail) -> None:
         for d in domains:
             if not _is_example(d):
                 raise fail(f"{where} uses non-.example domain {d!r}")
+
+
+def secret_problems(text: str, assignments: bool = True) -> list[str]:
+    """Why text may not go in an attack or fixture: a real key shape, a
+    private key, or (with assignments) a secret-named value that is not a
+    LURE-FAKE- canary."""
+    problems = [f"looks like a real API key or token ({m[:6]}...)" for m in SECRET_RE.findall(text)]
+    if PRIVATE_KEY_RE.search(text):
+        problems.append("contains a private key")
+    for name, value in SECRET_ASSIGN_RE.findall(text) if assignments else ():
+        # Only credential-shaped values: long enough and with a digit, so
+        # prose like "token: see below" is not a secret.
+        if len(value) >= 8 and re.search(r"\d", value) and not value.startswith(
+                FAKE_SECRET_PREFIX):
+            problems.append(f"{name} has a value that is not a {FAKE_SECRET_PREFIX} canary")
+    return problems
+
+
+def _check_secrets(value: Any, where: str, fail, assignments: bool = True) -> None:
+    for text in _strings(value):
+        problems = secret_problems(text, assignments)
+        if problems:
+            raise fail(f"{where}: {problems[0]}")
 
 
 def payload_problems(text: str, encoding: str | None = None) -> list[str]:
@@ -954,8 +1042,7 @@ def payload_problems(text: str, encoding: str | None = None) -> list[str]:
     for t in texts:
         hosts = EMAIL_RE.findall(t) + URL_RE.findall(t) + BARE_HOST_RE.findall(t)
         problems += [f"non-.example domain {h!r}" for h in hosts if not _is_example(h)]
-        problems += [f"looks like a real API key or token ({m[:6]}...)"
-                     for m in SECRET_RE.findall(t)]
+        problems += secret_problems(t)
         problems += [f"looks like a card number ({m[:4]}...)" for m in CARD_RE.findall(t)
                      if _luhn(re.sub(r"\D", "", m))]
     return list(dict.fromkeys(problems))
@@ -1010,7 +1097,7 @@ def _strings(value: Any):
 def _domain_lists(value: Any):
     if isinstance(value, dict):
         for k, v in value.items():
-            if k in ("to_domain_not_in", "to_domain_in") and isinstance(v, list):
+            if k in ("to_domain_not_in", "to_domain_in", "domain_not_in") and isinstance(v, list):
                 yield [d for d in v if isinstance(d, str)]
             else:
                 yield from _domain_lists(v)

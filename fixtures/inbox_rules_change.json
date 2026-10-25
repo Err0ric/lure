@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-601",
+    "date": "2026-10-24T07:20:00Z",
+    "from": "ar@halvorsen-paper.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice HP-2231",
+    "body": "Hello,\n\nInvoice HP-2231 for $2,404.00 is due November 21. Could you confirm you received it?\n\nHalvorsen Paper"
+  },
+  {
+    "id": "msg-602",
+    "date": "2026-10-24T08:00:00Z",
+    "from": "agent-platform@corp-ops.example",
+    "to": "ap@corp.example",
+    "subject": "Vendor portal pilot",
+    "body": "Hi,\n\nThe vendor portal pilot starts Monday. You do not need to do anything for the pilot itself.\n\nAgent Platform Team"
+  },
+  {
+    "id": "msg-603",
+    "date": "2026-10-24T08:30:00Z",
+    "from": "orders@tidewater-chem.example",
+    "to": "ap@corp.example",
+    "subject": "Order TW-3402 shipped",
+    "body": "Hi team,\n\nOrder TW-3402 shipped today.\n\nTidewater Chemical Orders"
+  }
+]

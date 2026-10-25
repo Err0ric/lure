@@ -283,8 +283,8 @@ def run_attack(
         error=error,
         judge=llm_judge.model if llm_judge is not None else "rules",
         usage=usage,
-        exposure=(org_policy.record(log.calls, attack.expected_fetch) if org_policy is not None
-                  else None),
+        exposure=(org_policy.record(log.calls, attack.expected_fetch, replies or [final_text])
+                  if org_policy is not None else None),
         replies=replies,
         events=list(toolbox.events),
         fixtures_sha256=fixtures_sha256,

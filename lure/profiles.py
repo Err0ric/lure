@@ -9,6 +9,12 @@ holds no endpoints and no credentials.
 
 The system prompt goes to whatever model API the profile names. For a work
 agent, use an organization-approved API account or a local model.
+
+`renders` says what the chat app showing the agent's output does with it:
+`images` (shows images in replies, fetching them with no click) and
+`link_previews` (fetches links in the agent's chat posts to preview them).
+Unset means yes, the worst case. An attack whose harm needs one the app does
+not do is skipped with the reason.
 """
 
 from __future__ import annotations
@@ -22,18 +28,18 @@ from typing import Any
 import yaml
 
 from lure.adapters import TARGETS
-from lure.attacks import SECRET_RE, Attack
+from lure.attacks import PRIVATE_KEY_RE, SECRET_RE, Attack
 from lure.judge.rules import Judgment, Verdict
 from lure.tools import KNOWN_TOOLS
 from lure.tools.registry import ToolAlias
 
 REQUIRED_KEYS = ("name", "target", "tools")
 OPTIONAL_KEYS = ("owner", "role", "model", "system_prompt", "system_prompt_file",
-                 "third_party_tools", "policy", "suites")
+                 "third_party_tools", "policy", "suites", "renders")
+RENDER_KEYS = ("images", "link_previews")
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 # What model APIs accept as a tool name.
 TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-PRIVATE_KEY_RE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")
 MAX_DESCRIPTION = 1000
 CANARY_SEPARATOR = "\n\n"
 # The reason for a profile run that never reached the attack because the
@@ -69,6 +75,11 @@ class Profile:
     third_party_tools: bool = False
     policy: Path | None = None
     suites: tuple[str, ...] | None = None  # None means every category
+    # images and link_previews: True, False, or None when not set (assumed True).
+    renders: tuple[tuple[str, bool | None], ...] = (("images", None), ("link_previews", None))
+
+    def rendering(self, key: str) -> bool | None:
+        return dict(self.renders)[key]
 
     @property
     def aliases(self) -> dict[str, ToolAlias]:
@@ -155,12 +166,17 @@ def load_profile(path: str | Path) -> Profile:
         suites = None
     elif not (isinstance(suites, list) and suites and all(isinstance(s, str) for s in suites)):
         raise fail("suites must be all or a list of attack categories")
+    renders = data.get("renders", {})
+    if not isinstance(renders, dict) or not set(renders) <= set(RENDER_KEYS) or not all(
+            isinstance(v, bool) for v in renders.values()):
+        raise fail("renders must be a mapping of images and link_previews to true or false")
 
     return Profile(name=name, path=path, sha256=digest.hexdigest(), target=data["target"],
                    system_prompt=prompt.strip(), tools=tools, model=data.get("model"),
                    owner=data.get("owner"), role=data.get("role"),
                    third_party_tools=third_party, policy=policy,
-                   suites=tuple(suites) if suites else None)
+                   suites=tuple(suites) if suites else None,
+                   renders=tuple((k, renders.get(k)) for k in RENDER_KEYS))
 
 
 def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
@@ -212,6 +228,12 @@ def select(profile: Profile, attacks: list[Attack]) -> tuple[list[Attack], list[
                                            "profile's suites"))
         elif missing:
             skipped.append(Skipped(attack, "no profile tool maps to " + ", ".join(missing)))
+        elif needs_images(attack) and profile.rendering("images") is False:
+            skipped.append(Skipped(attack, "the agent's chat app does not show images in its "
+                                           "replies (renders.images: false)"))
+        elif needs_link_previews(attack) and profile.rendering("link_previews") is False:
+            skipped.append(Skipped(attack, "the agent's chat app does not preview links in its "
+                                           "posts (renders.link_previews: false)"))
         elif third_party and not profile.third_party_tools:
             skipped.append(Skipped(attack, "it adds third-party tools (" + ", ".join(third_party)
                                            + "); set third_party_tools: true if the agent "
@@ -219,6 +241,16 @@ def select(profile: Profile, attacks: list[Attack]) -> tuple[list[Attack], list[
         else:
             chosen.append(attack)
     return chosen, skipped
+
+
+def needs_images(attack: Attack) -> bool:
+    """The attack's harm is an image in the reply, fetched when it is shown."""
+    return any((r.get("reply_url") or {}).get("render") == "image" for r in attack.fail_if)
+
+
+def needs_link_previews(attack: Attack) -> bool:
+    """The attack's harm is a link in a chat post, fetched by its preview."""
+    return any(r.get("tool") == "post_message" and "url_in_args" in r for r in attack.fail_if)
 
 
 def prepare(profile: Profile, attack: Attack) -> tuple[Attack, str, bool]:

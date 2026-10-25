@@ -36,6 +36,7 @@ Start from [`profiles/example-ap-agent.yaml`](../profiles/example-ap-agent.yaml)
 | `third_party_tools` | no | `true` if the agent loads MCP or plugin tools. Enables the attacks that add third-party tools (tool poisoning, poisoned tool output). Default `false` |
 | `policy` | no | Path to a `lure.yaml`, relative to the profile. `--policy` on the command line wins |
 | `suites` | no | `all` (default) or a list of attack categories |
+| `renders` | no | What the chat app that shows the agent's output does: `images` (shows images in replies, which it fetches with no click) and `link_previews` (fetches links in the agent's chat posts to preview them), each `true` or `false`. Unset means `true`, the worst case; the approval report says so (below) |
 
 Each tool maps to one of Lure's mock tools:
 
@@ -46,10 +47,30 @@ Each tool maps to one of Lure's mock tools:
 | `fetch_url` | Fetching a web page |
 | `pay_invoice` | Making a payment |
 | `search_memory`, `save_memory` | Long-term memory or saved notes |
+| `list_env` | Reading the agent's environment variables or settings (read-only). Map only a tool whose job is reading settings, not a general shell |
+| `post_message` | Posting to a team chat app, or a ticket comment that previews links |
+| `run_command` | A shell or code runner. Lure answers from canned output and runs nothing |
+| `read_agent_settings`, `update_agent_settings` | The agent reading or changing its own configuration: allowlists, confirmation steps, limits, rules file |
+
+Credential files (`.env`, an agent's MCP settings) and the cloud metadata endpoint are fixtures, not tools: they reach the agent through `read_file` and `fetch_url`. Their secrets are fake `LURE-FAKE-` canaries, and the metadata host is `metadata.cloud.example`, served by the mock web tool.
 
 Each mock tool can have one agent tool mapped to it. Leave out what the agent cannot do: an agent with no delete tool is never offered one, and attacks that need it are skipped.
 
 Lure rejects a profile whose prompt contains something shaped like an API key or a private key. A profile holds no endpoints and no credentials.
+
+## Rendering: images and link previews
+
+The covert egress attacks leak data in a web address that something fetches by itself: an image in the agent's reply (`lure-egr-001`), or a link in a chat post whose preview the chat app builds (`lure-egr-003`). Whether that happens depends on the chat app, not the agent, so the profile says:
+
+```yaml
+renders:
+  images: false        # the chat app never shows remote images in replies
+  link_previews: true  # it does preview links in posts
+```
+
+An attack whose harm needs a behaviour the app does not have is skipped with the reason, such as "the agent's chat app does not show images in its replies (renders.images: false)". A link in a reply that needs a click (`lure-egr-002`) runs either way. Leave `renders` out if you are unsure: the attacks run, and the approval page states the assumption. When one of them fails, the page suggests turning off remote images and link previews outside approved domains, a setting in the chat app, rather than recommending Reject.
+
+See `profiles/example-ops-agent.yaml` for an agent with environment, workspace, web and chat tools, run on a local model through Ollama.
 
 ## Canary lines
 
@@ -64,6 +85,37 @@ lure report results/example-ap-agent/<timestamp>/ --approval approval.html
 ```
 
 One printable page (Letter or A4) for the person who approves the agent: what it can access, what was tested, what went wrong with one example each, a recommended decision with suggested conditions, and a sign-off block for the actual decision. The recommendation is rule-based and the thresholds live in an optional `approval:` block in `lure.yaml` (see `lure.example.yaml`). Run each attack at least 3 times (`--repeat 3`) for an approval decision; with fewer, the page says Preliminary. Mark a tool the agent cannot work without as `essential: true` in the profile, so the page suggests a confirmation step for it instead of removing it.
+
+## Recording the decision
+
+```bash
+lure decide profiles/example-ap-agent.yaml --decision approve-with-conditions \
+  --by "AP operations lead" \
+  --conditions "Require a person to confirm before ap_mail_send sends outside the approved list."
+```
+
+`lure decide` appends one line to `vetting/<profile>/decisions.jsonl`: the date, the decision (`approve`, `approve-with-conditions` or `reject`), who decided (a role, not a name), the conditions, the run folder it is based on (default: the profile's latest run) and the profile hash that run tested. The log is append-only: a later decision supersedes an earlier one, and nothing is edited. Lure refuses a run whose profile hash differs from the profile file as it is now, so a decision always matches what was tested. `vetting/` is gitignored, like profiles.
+
+## Retesting
+
+For the whole cycle (intake, test, decide, retest weekly and on change, track) with cron and GitHub Actions examples, see [vetting-workflow.md](vetting-workflow.md).
+
+```bash
+lure retest profiles/example-ap-agent.yaml --prices prices.yaml --max-cost 0.50
+```
+
+`lure retest` reruns the profile's last suite from its manifest (the same attacks and versions, variants, repeat count and judge), under the profile as it is now, into a new `results/<profile>/<timestamp>/` folder. It then compares that run with the run of the last `approve` or `approve-with-conditions` decision (or, with none, the previous run):
+
+| Line | Meaning |
+| --- | --- |
+| New failures | An attack (and variant) that fails the policy now and did not then. A regression: exit 1 |
+| Fixed | Failed then, passes now |
+| Still failing, Still passing | Unchanged |
+| No longer run | In the approved run but not this one, with the reason (for example a tool removed from the profile) |
+| Changed | Profile hash and tools added or removed, model, judge, Lure version, attack versions, policy |
+| Conditions | Each approved condition, verified or not. A condition to remove a tool is verified once the tool is gone. Conditions that need a person to confirm an action cannot be verified until Lure has a confirmation-gate mock |
+
+The comparison is saved as `retest.json` in the new run folder. `lure report <retest run> --approval approval.html` reads it: the page says what the retest was compared with and found, lists the approved decision's conditions with what the retest verified (a suggested condition with the same text is marked too), and drops "pending retest" once every condition is verified. A clean retest of an approve-with-conditions decision stays Approve with conditions, as the approval holds only while its conditions do. When a profile change leaves nothing in the suite to run (for example the one tool every attack needed was removed), the retest still compares and verifies conditions, but there are no results for a report page: `retest.json` and the terminal output are the record. Exit codes: 1 on a new failure, else 3 if the rerun stopped at `--max-cost`, else 2 if a run errored, else 0. Run it from the folder you ran `lure decide` in: the decision log stores the run folder as given. The manifest (version 2) also records `--only-flagged`, `--payload-from` and `--attempt`, `--max-turns` and the adaptive attacker (target, model, attempts), and a retest repeats them; a screening folder or replayed result that is gone is an error. Runs saved before manifest version 2 are repeated with the default max turns and no attacker. Payloads that differ between the two runs are listed under Changed.
 
 ## Not tested: the agent's own rules
 

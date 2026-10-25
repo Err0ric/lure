@@ -22,6 +22,8 @@ from lure.tools.call_log import ToolCall, ToolCallLog
 
 # A profile run's summary (lure run --profile), next to its records.
 MANIFEST = "manifest.json"
+# Written by lure retest next to a run's records; not a run record either.
+RETEST = "retest.json"
 
 
 def attack_index(attacks_dir: str | Path) -> dict[tuple[str, int], Attack]:
@@ -43,7 +45,8 @@ def record_paths(paths: list[str | Path]) -> list[Path]:
     found: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
-            found += sorted(f for f in p.glob("*.json") if f.is_file() and f.name != MANIFEST)
+            found += sorted(f for f in p.glob("*.json")
+                            if f.is_file() and f.name not in (MANIFEST, RETEST))
         elif p.is_file():
             found.append(p)
         else:
@@ -99,8 +102,9 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         judge=llm_judge.model if llm_judge is not None else "rules",
         # The target was not called again; keep the original run's usage.
         usage=record.get("usage", {}),
-        exposure=(org_policy.record(log.calls, attack.expected_fetch) if org_policy is not None
-                  else record.get("exposure")),
+        exposure=(org_policy.record(log.calls, attack.expected_fetch,
+                                    replies or [record.get("final_text")])
+                  if org_policy is not None else record.get("exposure")),
         replies=replies,
         events=events,
         # What the original run cost: rescoring calls no target, and a judge
@@ -109,6 +113,12 @@ def rescore(record: dict[str, Any], attack: Attack, llm_judge: LLMJudge | None =
         fixtures_sha256=record["attack"].get("fixtures_sha256", {}),
         profile=profile,
     )
+
+
+def record_replies(record: dict[str, Any]) -> list[str | None]:
+    """The agent's reply for each turn. Records before schema v2 have no
+    replies; their attacks were single-turn, so the final text is the one."""
+    return list(record.get("replies") or [record.get("final_text")])
 
 
 def rebuild_calls(record: dict[str, Any]) -> list[ToolCall]:
@@ -127,7 +137,7 @@ def add_exposure(record: dict[str, Any], org_policy: OrgPolicy, source: Path, ou
     expected = tuple(record["attack"].get("expected_fetch") or expected_fetch)
     if expected:
         data["attack"] = {**record["attack"], "expected_fetch": list(expected)}
-    data["exposure"] = org_policy.record(rebuild_calls(record), expected)
+    data["exposure"] = org_policy.record(rebuild_calls(record), expected, record_replies(record))
     data["rescore"] = {
         "source": str(source),
         "rescored_at": (now or datetime.now(UTC)).isoformat(),

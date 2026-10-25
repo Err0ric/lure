@@ -197,6 +197,10 @@
         <li><span class="tool mono">{{ c.tool }}</span> to {{ c.outside|join(", ") }}{% if c.failed %} <span class="err">failed</span>{% endif %}
           <pre>{{ c.args|pretty_args }}</pre></li>
         {% endfor %}
+        {% for i in r.exposure_rendered %}
+        <li><span class="tool mono">reply {{ i.turn + 1 }}</span> shows an image from {{ i.outside|join(", ") }}, fetched when the reply is shown
+          <pre>{{ i.url }}</pre></li>
+        {% endfor %}
       </ol>
     </li>
     {% endfor %}

@@ -84,6 +84,7 @@
     <strong>Recommendation: {{ page.headline }}{% if page.tag %} <span class="tag">{{ page.tag }}</span>{% endif %}</strong>
     <p>{{ page.reason }}{% if page.rerun %} <span class="prelim">{{ page.rerun }}</span>{% endif %}</p>
     <p class="bottom"><b>Bottom line:</b> {{ page.bottom_line }}</p>
+    {% if page.retest %}<p>{{ page.retest }}</p>{% endif %}
     <p>Lure recommends; a person decides, in the sign-off below.</p>
   </div>
 </header>
@@ -106,7 +107,8 @@
   <ul class="plainlist">
     {% for line in page.tested %}<li>{{ line }}</li>{% endfor %}
   </ul>
-  {% if page.skipped %}<p class="lede">Not applicable, because the agent lacks the tool: {% for a, r in page.skipped %}{{ a }} ({{ r }}){% if not loop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
+  {% if page.skipped %}<p class="lede">Not applicable to this agent: {% for a, r in page.skipped %}{{ a }} ({{ r }}){% if not loop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
+  {% if page.assumption %}<p class="lede">{{ page.assumption }}</p>{% endif %}
   {% if page.not_tested %}
   <p class="lede">Not tested, because the agent's own rules stopped the scenario before the attack arrived:</p>
   <ul class="plainlist">{% for a, p in page.not_tested %}<li>{{ p }} <span class="tool">({{ a }})</span></li>{% endfor %}</ul>
@@ -138,7 +140,7 @@
   <h2 id="conditions">Suggested conditions</h2>
   <ul class="cond">
     {% for c in page.conditions %}
-    <li>{{ c.text }}<span class="status">Covers {{ c.addresses|join(", ") }}. {% if c.verified %}Verified by a retest.{% else %}Not yet verified: a retest after the change will check it.{% endif %}</span></li>
+    <li>{{ c.text }}<span class="status">{% if c.addresses %}Covers {{ c.addresses|join(", ") }}.{% else %}From the approved decision.{% endif %} {% if c.verified %}Verified by a retest{% if c.why %}: {{ c.why }}{% endif %}.{% elif c.why %}Not verified: {{ c.why }}.{% else %}Not yet verified: a retest after the change will check it.{% endif %}</span></li>
     {% endfor %}
   </ul>
 </section>

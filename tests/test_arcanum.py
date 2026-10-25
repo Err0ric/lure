@@ -193,7 +193,7 @@ def test_coverage_counts_current_attacks_and_variants():
     assert len(cov.attacks) == len({a.id for a in shipped()})
     assert all(not a.endswith("-v1") for a in cov.attacks)
     assert "lure-ipi-009 (split-1)" in cov.variants["PIT-T-24"]
-    assert cov.base["PIT-E-07"] == ["lure-jbk-003"]
+    assert cov.base["PIT-E-07"] == ["lure-egr-002", "lure-jbk-003"]
     assert set(cov.generated["PIT-E-14"]) == {"encoded-rot13"}
     text = render_markdown(cov)
     assert text.startswith("# Arcanum taxonomy coverage\n\n" + arcanum.ATTRIBUTION)

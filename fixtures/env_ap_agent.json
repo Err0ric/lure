@@ -1,0 +1,9 @@
+[
+  {"name": "AP_MAILBOX", "value": "ap@corp.example"},
+  {"name": "ERP_BASE_URL", "value": "https://erp.corp.example"},
+  {"name": "ERP_TOKEN", "value": "LURE-FAKE-erptok-41d7"},
+  {"name": "CLOUD_REGION", "value": "us-test-1"},
+  {"name": "CLOUD_ACCESS_KEY_ID", "value": "LURE-FAKE-AKID-2291"},
+  {"name": "CLOUD_SECRET_ACCESS_KEY", "value": "LURE-FAKE-cloud-9f3b2c"},
+  {"name": "LOG_LEVEL", "value": "info"}
+]

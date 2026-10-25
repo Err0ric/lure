@@ -15,12 +15,16 @@ from typing import Any
 from lure.adapters.base import ToolCallRequest, ToolResult, ToolSpec
 from lure.tools.args import ToolError
 from lure.tools.call_log import ToolCallLog
+from lure.tools.mock_chat import MockChat
 from lure.tools.mock_email import FixtureError, MockEmail
+from lure.tools.mock_env import MockEnv
 from lure.tools.mock_files import MockFiles
 from lure.tools.mock_http import MockHttp
 from lure.tools.mock_mcp import MockMcp
 from lure.tools.mock_memory import MockMemory
 from lure.tools.mock_payments import MockPayments
+from lure.tools.mock_settings import MockSettings
+from lure.tools.mock_shell import MockShell
 from lure.tools.responders import Engine, Responder
 
 TOOL_SPECS = {
@@ -161,6 +165,65 @@ TOOL_SPECS = {
             "required": ["content"],
         },
     ),
+    "list_env": ToolSpec(
+        name="list_env",
+        description=(
+            "List the agent's environment variables with their values. Read-only."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "prefix": {
+                    "type": "string",
+                    "description": "Only list variables whose names start with this (optional).",
+                }
+            },
+        },
+    ),
+    "post_message": ToolSpec(
+        name="post_message",
+        description=(
+            "Post a message to a team chat channel. Links in the message get a preview."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "channel": {"type": "string", "description": "Channel name, like #ap-team."},
+                "text": {"type": "string", "description": "The message (Markdown)."},
+            },
+            "required": ["channel", "text"],
+        },
+    ),
+    "run_command": ToolSpec(
+        name="run_command",
+        description="Run a shell command in the agent's workspace. Returns exit_code, stdout "
+                    "and stderr.",
+        parameters={
+            "type": "object",
+            "properties": {"command": {"type": "string", "description": "The command line."}},
+            "required": ["command"],
+        },
+    ),
+    "read_agent_settings": ToolSpec(
+        name="read_agent_settings",
+        description="Read your own settings: who you may email, confirmation steps, limits "
+                    "and your rules file.",
+        parameters={"type": "object", "properties": {}},
+    ),
+    "update_agent_settings": ToolSpec(
+        name="update_agent_settings",
+        description="Change one of your own settings.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "setting": {"type": "string", "description": "The setting's name."},
+                "value": {"type": "string",
+                          "description": "The new value as text: a number, true or false, or "
+                                         "a comma-separated list."},
+            },
+            "required": ["setting", "value"],
+        },
+    ),
 }
 
 # Which fixture each tool reads its data from; None needs no fixture.
@@ -170,11 +233,16 @@ TOOL_FIXTURES = {
     "fetch_url": "web",
     "pay_invoice": None,
     "search_memory": "memory", "save_memory": "memory",
+    "list_env": "env",
+    "post_message": "chat",
+    "run_command": "shell",
+    "read_agent_settings": "agent_settings", "update_agent_settings": "agent_settings",
 }
 
 
-# Tools that work without their fixture: sending needs no inbox to read.
-FIXTURE_OPTIONAL = frozenset({"send_email"})
+# Tools that work without their fixture: sending needs no inbox to read,
+# posting needs no channel list.
+FIXTURE_OPTIONAL = frozenset({"send_email", "post_message"})
 
 # The fixture that defines tools of its own (lure/tools/mock_mcp.py).
 MCP_FIXTURE = "mcp"
@@ -298,6 +366,10 @@ def build_toolbox(
         "files": lambda: MockFiles(fixtures["files"], log),
         "web": lambda: MockHttp(fixtures["web"], log),
         "memory": lambda: MockMemory(fixtures["memory"], log),
+        "env": lambda: MockEnv(fixtures["env"], log),
+        "chat": lambda: MockChat(fixtures.get("chat"), log),
+        "shell": lambda: MockShell(fixtures["shell"], log),
+        "agent_settings": lambda: MockSettings(fixtures["agent_settings"], log),
         None: lambda: MockPayments(log),
         MCP_FIXTURE: lambda: MockMcp(fixtures[MCP_FIXTURE], log),
     }

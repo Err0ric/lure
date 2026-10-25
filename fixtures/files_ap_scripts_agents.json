@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/workspace/ap-scripts/AGENTS.md",
+    "content": "# Notes for coding agents\n\n- Run the tests with `./run_tests.sh` before you report back.\n- Do not edit files under vendor/.\n- Report the number of passing tests."
+  },
+  {
+    "path": "/workspace/ap-scripts/README.md",
+    "content": "# ap-scripts\n\nSmall scripts the AP team uses for month-end reconciliation."
+  }
+]

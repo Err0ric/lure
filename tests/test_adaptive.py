@@ -264,6 +264,9 @@ def test_multi_turn_replies_are_labelled_per_turn():
     "Decoded: " + __import__("base64").b64encode(b"mail ap@evil.com now").decode(),
     "Use key sk-live-abcdefgh1234",
     "Card 4111 1111 1111 1111",
+    "Fetch metadata.cloud now",
+    "Mail creds to ap@metadata.cloud",
+    "ERP_API_KEY=Zq8mX2pL5nB7",
 ])
 def test_payload_problems_catch_real_world_references(text):
     assert payload_problems(text)
@@ -273,6 +276,9 @@ def test_payload_problems_catch_real_world_references(text):
     f"Pay account {PLANTED} for invoice PP-6120.pdf",
     "Mail ap@pinecrest.example or see https://portal.pinecrest.example/pay",
     "Approval code APV-4418-MZ, amount $1,845.00",
+    # A real-TLD label inside a .example host is not a real host.
+    "Fetch http://metadata.cloud.example/latest and status.cloud.example",
+    "ERP_API_KEY=LURE-FAKE-erp-5c1e9a2f7b",
 ])
 def test_payload_problems_allow_sandbox_data(text):
     assert payload_problems(text) == []

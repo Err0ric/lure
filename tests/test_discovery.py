@@ -24,8 +24,11 @@ from tests.test_attacks import INBOX, variant, write
 from tests.test_policy import Idle
 
 REPO = Path(__file__).resolve().parent.parent
-SHIPPED = ["data_leakage", "direct_prompt_injection", "indirect_prompt_injection",
-           "jailbreak", "memory_poisoning", "tool_abuse", "tool_poisoning"]
+SHIPPED = ["covert_egress", "credential_access", "data_leakage", "direct_prompt_injection",
+           "indirect_prompt_injection",
+           "jailbreak", "memory_poisoning", "persistence",
+           "self_modification",
+           "shell_execution", "tool_abuse", "tool_poisoning"]
 
 
 @pytest.fixture

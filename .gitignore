@@ -26,6 +26,11 @@ reports/
 # except the example.
 profiles/*
 !profiles/example-ap-agent.yaml
+!profiles/example-ops-agent.yaml
+
+# Decision logs (lure decide) name real agents, roles and conditions: keep
+# them out of git, like profiles.
+vetting/
 
 # OS / editor
 .DS_Store

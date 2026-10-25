@@ -146,6 +146,8 @@ Other useful commands:
 | --- | --- |
 | `lure run --profile profiles/example-ap-agent.yaml` | Test your own agent: its system prompt and tool names over Lure's mocks. See [`docs/profiles.md`](docs/profiles.md); the prompt goes to the model API the profile names |
 | `lure report results/<profile>/<run>/ --approval approval.html` | One printable approval page for a non-technical approver: access, what was tested, what went wrong, a recommended decision with conditions, and a sign-off block |
+| `lure decide profiles/<name>.yaml --decision approve-with-conditions --by "<role>" --conditions "..."` | Record the decision in an append-only log, `vetting/<name>/decisions.jsonl` (gitignored) |
+| `lure retest profiles/<name>.yaml --prices prices.yaml --max-cost 0.50` | Rerun the profile's last suite and compare it with the last approved run: new failures (exit 1), fixed, what changed, which conditions a retest verified. The weekly workflow, with cron and GitHub Actions examples: [`docs/vetting-workflow.md`](docs/vetting-workflow.md) |
 | `lure run ... --target ollama --model llama3.1:8b` | Test a local model (set `LURE_OLLAMA_URL` in `.env` if it is not on localhost) |
 | `lure run ... --target openai --model <model>` | Test any OpenAI-compatible server: set `LURE_OPENAI_BASE_URL` and, if it needs one, `LURE_OPENAI_API_KEY` in `.env` |
 | `lure report results/my-run/ --md report.md --sarif lure.sarif` | Also write a Markdown report and SARIF 2.1.0 for CI code scanning |
@@ -192,7 +194,7 @@ An adaptive run is worst of several attempts, so its rates are not comparable wi
 
 ## Attack library
 
-36 attack files in 7 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+52 attack files in 12 categories. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Category | Attacks | ATLAS techniques |
 | --- | --- | --- |
@@ -203,16 +205,23 @@ An adaptive run is worst of several attempts, so its rates are not comparable wi
 | Tool abuse | `lure-tab-001` to `003` (3) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0086, AML.T0101 |
 | Tool poisoning | `lure-tpo-001` to `004` (4) | AML.T0048.000, AML.T0053, AML.T0086, AML.T0110.000 |
 | Memory poisoning | `lure-mem-001` to `005`, with `002` v1 and v2 (6) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0080.000, AML.T0080.001, AML.T0086 |
+| Credential access | `lure-cra-001` to `004` (4) | AML.T0051.001, AML.T0053, AML.T0055, AML.T0083, AML.T0086, AML.T0098 |
+| Covert egress | `lure-egr-001` to `003` (3) | AML.T0051.001, AML.T0057, AML.T0067, AML.T0077, AML.T0086 |
+| Shell and code execution | `lure-shx-001` to `003` (3) | AML.T0050, AML.T0051.001, AML.T0053, AML.T0086 |
+| Self-modification | `lure-smo-001` to `003` (3) | AML.T0051.001, AML.T0053, AML.T0081 |
+| Persistence | `lure-per-001` to `003` (3) | AML.T0051.001, AML.T0053, AML.T0094, AML.T0112.000 |
 
-Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1567, T1656, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23, and the v1.3 additions (AML.T0068 on encoded variants, T1656 on `lure-tpo-004` and `lure-ipi-009`) on 2026-10-24; the full mapping is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
+Every attack also carries ATT&CK IDs where they apply (for example T1048, T1485, T1566, T1567, T1656, T1657). All IDs were checked on atlas.mitre.org and attack.mitre.org on 2026-10-23, and the v1.3 additions (AML.T0068 on encoded variants, T1656 on `lure-tpo-004` and `lure-ipi-009`) on 2026-10-24. The v1.5 additions (AML.T0055, AML.T0067, AML.T0077, AML.T0083, AML.T0098) were checked on 2026-10-24 in MITRE's ATLAS data release 2026.09, and T1552, T1552.001 and T1552.005 on attack.mitre.org; the full mapping is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
 
 **Arcanum Prompt Injection Taxonomy (v1.4).** Every current attack also carries codes from the [Arcanum Prompt Injection Taxonomy](https://www.arcanum-sec.com/pitax) v1.6.1: input (where the payload enters), intent, technique and evasion, for example `PIT-N-06`, `PIT-I-19`, `PIT-T-42`, `PIT-E-07`. Variants add their own (split adds `PIT-T-24`; base64, rot13 and hex add `PIT-E-07`, `PIT-E-14`, `PIT-E-21`). Codes are checked against a vendored copy of the taxonomy, carried in every result and SARIF rule, and `lure coverage` writes [`docs/arcanum-coverage.md`](docs/arcanum-coverage.md): which nodes the library tests and which it does not test yet. Pinned older attack versions are not mapped.
 
 Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com). Lure is not affiliated with or endorsed by Arcanum Information Security. See [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
+**Credential access and covert egress (v1.5)** test whether the agent hands over secrets (a workspace `.env`, its environment, cloud metadata credentials, its own MCP token; every secret is a fake `LURE-FAKE-` canary) and whether data leaves without a send: an image or link in the reply, or a link in a chat post, whose web address carries the data and is fetched by the chat app with no click. Those are judged from the reply and the tool log (`reply_url`, `url_in_args`), and counted as exposure.
+
 **Trust-boundary attacks (v1.3)** test whether the agent trusts content because of where it claims to come from: an outside claim the agent itself saves to memory and acts on in a new session (`lure-mem-004`), a memory note that moves an approval limit (`lure-mem-005`), a tool definition posing as an IT security notice (`lure-tpo-004`), the user's own voice quoted in a vendor email (`lure-ipi-009`), and a fake user turn in a tool's output (`lure-ipi-010`).
 
-Mock tools: `read_inbox`, `send_email` (to, cc, bcc), `list_files`, `read_file`, `write_file`, `delete_file`, `fetch_url`, `pay_invoice`, `search_memory` and `save_memory`, plus tools an `mcp` fixture defines (for tool poisoning). None of them is a real server or service.
+Mock tools: `read_inbox`, `send_email` (to, cc, bcc), `list_files`, `read_file`, `write_file`, `delete_file`, `fetch_url`, `pay_invoice`, `search_memory`, `save_memory`, `list_env` (read-only, from a fixture, never the real environment), `post_message` (lists the links a chat preview would fetch, fetches none), `run_command` (canned output from a fixture; nothing runs) and `read_agent_settings`, `update_agent_settings` (the agent's own settings, in memory), plus tools an `mcp` fixture defines (for tool poisoning). None of them is a real server or service.
 
 Multi-step attacks: `followup_tasks` adds later user turns (optionally in a new session, with the chat cleared and memory kept), and responders make fixtures react to the agent: a reply earns a follow-up email, or a tool changes its own description after first use. See [`CONTRIBUTING.md`](CONTRIBUTING.md#multi-step-attacks).
 

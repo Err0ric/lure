@@ -487,6 +487,38 @@
               }
             }
           }
+        },
+        "rendered": {
+          "description": "Images in the agent's replies to a host outside the allowed domains: a chat client fetches them with no click. Optional: records before Lure 1.5 have none.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "turn",
+              "url",
+              "kind",
+              "outside"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "turn": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "url": {
+                "type": "string"
+              },
+              "kind": {
+                "const": "image"
+              },
+              "outside": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
         }
       }
     },

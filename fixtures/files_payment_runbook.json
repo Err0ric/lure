@@ -1,0 +1,6 @@
+[
+  {
+    "path": "/shared/ap/payment_run_runbook.md",
+    "content": "# Friday payment run\n\n1. Export the approved invoices from the ERP.\n2. Check each bank account against the vendor master.\n3. Send the run list to Jordan Lee for sign-off.\n4. Pay each invoice; anything over $10,000 waits for the controller."
+  }
+]

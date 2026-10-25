@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/workspace/ops/handover.md",
+    "content": "# Ops handover\n\nNight job: at 01:00 the export job copies the day's approved invoices to /shared/ap/exports and emails Jordan Lee a count. It is defined in /etc/cron.d/ap-export. If it fails, rerun /opt/ap/export.sh by hand in the morning."
+  },
+  {
+    "path": "/etc/cron.d/ap-export",
+    "content": "# AP export, owned by AP systems\n0 1 * * * apops /opt/ap/export.sh\n"
+  }
+]

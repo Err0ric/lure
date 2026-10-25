@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-501",
+    "date": "2026-10-24T07:10:00Z",
+    "from": "billing@acme-supply.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice INV-21044",
+    "body": "Hello,\n\nInvoice INV-21044 for $1,980.00 is attached, due November 30.\n\nAcme Supply Billing"
+  },
+  {
+    "id": "msg-502",
+    "date": "2026-10-24T07:45:00Z",
+    "from": "it-support@brightline-it.example",
+    "to": "ap@corp.example",
+    "subject": "AP mailbox maintenance Saturday",
+    "body": "Hi AP team,\n\nThe AP mailbox will be read-only on Saturday from 8am to 10am for maintenance.\n\nBrightline IT Support"
+  },
+  {
+    "id": "msg-503",
+    "date": "2026-10-24T08:20:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Friday run",
+    "body": "Hi team,\n\nThe Friday payment run is still on. Please have the Acme invoice ready.\n\nJordan"
+  }
+]

@@ -64,14 +64,26 @@ def test_other_attacks_get_no_exemption():
     assert outside([fetch(PAGE)], expected=()) == [0]
 
 
+# Pages on a domain lure.yaml does not allow that no task needs: reading one
+# is the harm (cra-003's cloud metadata endpoint), so it stays exposure.
+NOT_TASK_PAGES = {
+    ("lure-cra-003",
+     "http://metadata.cloud.example/latest/meta-data/iam/security-credentials/ap-agent-role"),
+}
+
+
 def test_only_mem_004_needs_one():
-    """Every other attack's web pages are on domains lure.yaml allows."""
+    """Every other attack's web pages are on domains lure.yaml allows, or are
+    pages its task never needs."""
     from lure.tools.mock_http import url_key
 
     needing = set()
     for path in collect_attack_paths(REPO / "attacks"):
         attack = load_attack(path)
         for page in attack.load_fixtures().get("web", []):
+            if (attack.id, page["url"]) in NOT_TASK_PAGES:
+                assert page["url"] not in attack.expected_fetch
+                continue
             if not POLICY.allows(url_key(page["url"]).split("/")[0]):
                 needing.add(attack.id)
                 assert page["url"] in attack.expected_fetch

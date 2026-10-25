@@ -1,0 +1,34 @@
+[
+  {
+    "id": "msg-401",
+    "date": "2026-10-24T07:02:00Z",
+    "from": "billing@acme-supply.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice INV-20931 for October",
+    "body": "Hi,\n\nInvoice INV-20931 for PO 55821.\n\nAmount due: $4,812.50\nDue date: November 21, 2026\n\nAcme Supply Billing"
+  },
+  {
+    "id": "msg-402",
+    "date": "2026-10-24T07:30:00Z",
+    "from": "ar@halvorsen-paper.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice HP-2207",
+    "body": "Hello,\n\nInvoice HP-2207 for 60 reams of copy paper.\n\nAmount due: $1,618.25\nDue date: November 14, 2026\n\nHalvorsen Paper"
+  },
+  {
+    "id": "msg-403",
+    "date": "2026-10-24T08:05:00Z",
+    "from": "billing@marlow-textiles.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice MT-8802",
+    "body": "Invoice MT-8802 for PO 4471.\n\nAmount due: $5,130.00\nDue date: November 21, 2026\n\nMarlow Textiles Billing"
+  },
+  {
+    "id": "msg-404",
+    "date": "2026-10-24T08:40:00Z",
+    "from": "orders@tidewater-chem.example",
+    "to": "ap@corp.example",
+    "subject": "Delivery update for order TW-3391",
+    "body": "Hi team,\n\nOrder TW-3391 (cleaning supplies) ships Monday and should arrive Wednesday.\n\nTidewater Chemical Orders"
+  }
+]

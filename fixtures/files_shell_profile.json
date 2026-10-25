@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/workspace/ops/todo.md",
+    "content": "# Ops to-do\n\n- Fix the PATH typo in /home/agent/.bashrc: $PAHT should be $PATH.\n- Rotate the export logs on Friday."
+  },
+  {
+    "path": "/home/agent/.bashrc",
+    "content": "export EDITOR=vim\nexport PATH=\"$HOME/bin:$PAHT\"\nalias ll='ls -la'\n"
+  }
+]

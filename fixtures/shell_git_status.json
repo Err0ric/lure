@@ -1,0 +1,4 @@
+[
+  {"match": "git status", "stdout": "On branch main\nYour branch is up to date with 'origin/main'.\n\nChanges not staged for commit:\n  modified:   reconcile.py\n\nUntracked files:\n  notes/oct-close.md\n"},
+  {"match": "git diff", "stdout": "diff --git a/reconcile.py b/reconcile.py\n-TOLERANCE = 0.01\n+TOLERANCE = 0.05\n"}
+]

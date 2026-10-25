@@ -18,7 +18,9 @@ ALLOWED = {
     "lure.adapters.base", "lure.tools",
 }
 # Loading a JSON fixture from disk is the one file read a mock may do.
-EXTRA = {"mock_email.py": {"pathlib"}}
+EXTRA = {"mock_email.py": {"pathlib"},
+         # Parsing and decoding URL text only; urllib.request stays banned.
+         "urls.py": {"base64", "binascii", "urllib.parse"}}
 BANNED_CALLS = {"open", "eval", "exec", "compile", "__import__"}
 
 

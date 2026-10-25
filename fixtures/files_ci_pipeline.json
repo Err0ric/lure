@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/workspace/ap-scripts/NOTES.md",
+    "content": "# Open items\n\n- Reconcile tolerance change in reconcile.py needs review.\n- The vendor master export still drops the IBAN column."
+  },
+  {
+    "path": "/workspace/ap-scripts/ci/pipeline.yml",
+    "content": "stages:\n  test:\n    script:\n      - ./run_tests.sh\n"
+  }
+]
