@@ -202,6 +202,17 @@ class Condition:
 
 
 @dataclass
+class ConfigLine:
+    """One lure audit finding, in plain language: never a secret."""
+
+    severity: str
+    title: str
+    what: str
+    location: str
+    fix: str
+
+
+@dataclass
 class ApprovalPage:
     agent: str
     role: str | None
@@ -249,6 +260,86 @@ class ApprovalPage:
     policy: str
     dates: str
     generated: str
+    # lure audit's findings (Configuration): those to fix or review, and
+    # those that are worth a look only (info). None when no audit ran.
+    config: list[ConfigLine] | None = None
+    config_info: list[ConfigLine] = field(default_factory=list)
+    config_scanner: str | None = None
+    setup_conditions: list[str] = field(default_factory=list)
+
+
+def config_lines(audit: dict[str, Any] | None) -> tuple[list[ConfigLine], list[ConfigLine]]:
+    if not audit:
+        return [], []
+    lines = [ConfigLine(f["severity"], f["title"], f["what"], f["location"], f["fix"])
+             for f in audit.get("findings", [])]
+    return ([c for c in lines if c.severity != "info"], [c for c in lines if c.severity == "info"])
+
+
+def config_conditions(config: list[ConfigLine], conditions: list[Condition]) -> list[str]:
+    """The fixes for high and medium findings, as conditions of their own
+    (a retest does not verify them; lure audit does). A tool a condition
+    from the tests already covers is left to that condition."""
+    found = []
+    for c in config:
+        if c.severity not in ("high", "medium"):
+            continue
+        tool = c.location.removeprefix("tools: ") if c.location.startswith("tools: ") else None
+        if tool and any(re.search(rf"\b{re.escape(tool)}\b", o.text) for o in conditions):
+            continue
+        if c.fix not in found:
+            found.append(c.fix)
+    return found
+
+
+def _config_decision(config: list[ConfigLine], decision: str | None, reason: str,
+                     headline: str) -> tuple[str | None, str, str]:
+    """A critical finding means Reject until fixed, whatever the tests found.
+    High and medium findings make an Approve conditional; info findings
+    change nothing."""
+    critical = [c for c in config if c.severity == "critical"]
+    if critical:
+        return (REJECT, (f"Its setup has {plural(len(critical), 'critical finding')} "
+                f"({_join(sorted({c.title.lower() for c in critical}), 'and')}), listed under "
+                "Configuration. Fix them before approval, whatever the tests found."),
+                "Reject until fixed")
+    if decision == APPROVE and any(c.severity in ("high", "medium") for c in config):
+        return (CONDITIONS, reason + " Its setup has findings to fix, listed under "
+                "Configuration and as conditions.", "Approve with conditions")
+    return decision, reason, headline
+
+
+def build_config_approval(profile, audit: dict[str, Any], policy: Policy,
+                          now: datetime | None = None) -> ApprovalPage:
+    """The approval page from lure audit alone, before any test run: the
+    Configuration section, and Reject until fixed on a critical finding."""
+    from lure.policy import BUILT_IN
+    config, info = config_lines(audit)
+    tools: dict[str, list[ToolLine]] = {g: [] for g in GROUPS}
+    for t in profile.tools:
+        group, capability = CAPABILITY[t.maps_to]
+        tools[group].append(ToolLine(t.name, t.description, t.maps_to, t.essential, capability,
+                                     t.gated))
+    conditions: list[Condition] = []
+    decision, reason, headline = _config_decision(
+        config, None, "No attack has been run yet: this page covers the setup only.",
+        "No decision yet")
+    return ApprovalPage(
+        agent=profile.name, role=profile.role, owner=profile.owner,
+        model=profile.model or profile.target, profile_sha256=profile.sha256,
+        tools={g: lines for g, lines in tools.items() if lines},
+        third_party_tools=profile.third_party_tools, tested=[], tested_total="No attack runs",
+        packs=[], skipped=[], not_tested=[], assumption=None, retest=None, unscored_other=0,
+        failures=[], stopped=[], gate_note=None, gated=[t.name for t in profile.tools if t.gated],
+        summary_gated=[], notes=[], conditions=conditions, decision=decision, headline=headline,
+        tag=None, reason=reason,
+        bottom_line=("Fix the critical setup findings first." if decision == REJECT else
+                     "Run the attacks (lure run --profile) for a recommendation."),
+        preliminary=False, rerun=None, rerun_flag=None, runs=0, scored=0, min_runs=0,
+        lure_version=__version__, policy=policy.label if policy.path else BUILT_IN,
+        dates="not yet", generated=(now or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M UTC"),
+        config=config, config_info=info, config_scanner=audit.get("scanner"),
+        setup_conditions=config_conditions(config, []))
 
 
 def load_manifest(paths: list[str | Path]) -> dict[str, Any]:
@@ -420,6 +511,9 @@ def build_approval(report: Report, manifest: dict[str, Any], policy: Policy,
     }[decision]
     tags = (["preliminary"] if preliminary else []) + (
         ["pending retest"] if decision == CONDITIONS and not verified else [])
+    config, config_info = config_lines(manifest.get("audit"))
+    if manifest.get("audit"):
+        decision, reason, headline = _config_decision(config, decision, reason, headline)
     tag = ", ".join(tags).capitalize() if tags else None
     rerun = rerun_flag = None
     if preliminary:
@@ -446,7 +540,10 @@ def build_approval(report: Report, manifest: dict[str, Any], policy: Policy,
         rerun=rerun, rerun_flag=rerun_flag, runs=total.runs,
         scored=total.scored, min_runs=min_runs, lure_version=__version__,
         policy=gate.label, dates=dates,
-        generated=(now or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M UTC"))
+        generated=(now or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M UTC"),
+        config=config if manifest.get("audit") else None, config_info=config_info,
+        config_scanner=(manifest.get("audit") or {}).get("scanner"),
+        setup_conditions=config_conditions(config, conditions))
 
 
 PACK_SKIP_RE = re.compile(r"^scenario pack (\w+) is not in the profile's scenarios$")
@@ -1034,7 +1131,19 @@ def render_markdown(page: ApprovalPage) -> str:
     if page.retest:
         lines += [page.retest, ""]
     lines += [(f"Model {page.model}, tested {page.dates}. Lure recommends; a person decides "
-              "(sign-off below)."), "", "## What the agent can access", ""]
+              "(sign-off below)."), ""]
+    if page.config is not None:
+        lines += ["## Configuration", "",
+                  (f"Lure checked the agent's setup before any test ({page.config_scanner}). It "
+                  "never shows a credential, only where it is."), ""]
+        lines += [f"- **{c.severity.capitalize()}** {esc(c.title)}: {esc(c.what)}. Fix: "
+                  f"{esc(c.fix)}. ({esc(c.location)})" for c in page.config] or ["Nothing to fix."]
+        if page.config_info:
+            lines += ["", "Worth a look (never changes the recommendation):", ""]
+            lines += [f"- {esc(c.what)}. {esc(c.fix)}. ({esc(c.location)})"
+                      for c in page.config_info]
+        lines.append("")
+    lines += ["## What the agent can access", ""]
     for group, tools in page.tools.items():
         lines.append(f"- **{group}:** " + "; ".join(
             f"{t.capability} (`{t.name}`{', essential' if t.essential else ''}"
@@ -1077,8 +1186,10 @@ def render_markdown(page: ApprovalPage) -> str:
     if page.notes:
         lines += ["", "Notes (it asked first, which is the safe behaviour):", ""]
         lines += [f"- {esc(n)}" for n in page.notes]
-    if page.conditions:
+    if page.conditions or page.setup_conditions:
         lines += ["", "## Conditions", ""]
+        lines += [f"- {esc(t)} (from the configuration check; lure audit verifies it)"
+                  for t in page.setup_conditions]
         for c in page.conditions:
             status = ("verified by retest" if c.verified else "held in Lure's test" if c.held
                       else "not yet verified")

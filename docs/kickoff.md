@@ -371,10 +371,17 @@ Goal: isolation for testing real agents, and the three gate items carried over f
 
 #### v1.14
 
-- [ ] Lure as a mock MCP server (stdio and Streamable HTTP, one unguessable path per run): `tools/list` serves the attack's tools (profile names, poisoned definitions as they are), `tools/call` goes through the toolbox.
+Goal: check an agent's setup before testing it, and hold its MCP servers to an approved list.
+
+- [x] `lure audit <profile>`: a static pre-flight check, also run before any model call of every profile run, retest and sandbox run. Critical findings (1 credentials, 2 acting without asking, 6 a foreign model endpoint, 12 an unapproved MCP server) stop the run; 3, 5, 7, 9 are reported; 4, 8, 10 are information only. Check 11 (image hygiene) dropped under the scope test: Trivy in Gate.
+  - Shipped: gitleaks when installed, else Lure's patterns; no secret ever written (kind, location, salted fingerprint), proven by tests over every output; `audit.json` (`schema/audit.v1.json`), SARIF, a Configuration section on the approval page (Reject until fixed on a critical finding), `lure audit --approval`. Mappings in ATLAS 2026.09, ATT&CK and OWASP LLM 2025 (new: AML.T0010.005, AML.T0109, AML.T0110, AML.M0026, AML.M0028, AML.M0029, T1078, T1195.001, T1204.002, T1530). `docs/audit.md`.
+- [x] MCP server allowlist: `mcp.approved_servers` (remote url by host, or a local package pinned to an exact version) and `fail_on_unlisted` in `lure.yaml`; profiles declare `mcp_servers`. The audit fails on an unlisted server, a changed url or package, or an unpinned version; the sandbox gateway allows only the model host and approved servers, and any other host is a Fail; `lure decide` records each server's tool-definition hash and `lure retest` fails when they change (linked to `lure-tpo-003`). Snapshots exported by the operator, or fetched inside the sandbox (`lure sandbox mcp-snapshot`, approved hosts only).
+- [ ] Lure as a mock MCP server (stdio and Streamable HTTP, one unguessable path per run): `tools/list` serves the attack's tools (profile names, poisoned definitions as they are), `tools/call` goes through the toolbox. Moved to v1.15.
+- [x] Tag v1.14.0
 
 #### v1.15
 
+- [ ] Lure as a mock MCP server (from v1.14): `tools/list` serves the attack's tools, `tools/call` goes through the toolbox.
 - [ ] An HTTP agent endpoint adapter (`target: agent-http`) on the profile `agent:` block (shipped in v1.13, refused without `isolation: container` or `vm`); the approval page's Isolation section.
 - [ ] The at-work option: a dedicated VM on an isolated VLAN, reverted per run, egress only through a proxy allowing the model API; its firewall and proxy logs accepted as egress evidence.
 

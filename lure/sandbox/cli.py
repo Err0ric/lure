@@ -56,12 +56,23 @@ def add_parser(sub) -> None:
                      help="policy file (default lure.yaml if present)")
     run.add_argument("--no-policy", dest="no_policy", action="store_true")
     sbx.add_parser("clean", help="remove leftover sandbox containers and networks")
+    snap = sbx.add_parser("mcp-snapshot", help="fetch the approved remote MCP servers' tool "
+                                               "definitions from inside the sandbox")
+    snap.add_argument("--profile", required=True, help="the profile whose mcp_servers to fetch")
+    snap.add_argument("--out", required=True, help="where to write the snapshot JSON")
+    snap.add_argument("--gateway-image", default=GATEWAY_IMAGE)
+    snap.add_argument("--agent-image", default=AGENT_IMAGE)
+    snap.add_argument("--policy", "--org-policy", dest="policy",
+                      help="policy file with the mcp: allowlist (default lure.yaml)")
+    snap.add_argument("--no-policy", dest="no_policy", action="store_true")
 
 
 def sandbox_main(args: argparse.Namespace, out: TextIO = sys.stdout) -> int:
     try:
         if args.sandbox_command == "build":
             return _build(args, out)
+        if args.sandbox_command == "mcp-snapshot":
+            return _snapshot(args, out)
         if args.sandbox_command == "clean":
             found = clean()
             print(f"Removed {len(found['containers'])} containers and "
@@ -84,11 +95,58 @@ def _build(args, out: TextIO) -> int:
     return EXIT_OK
 
 
+def _snapshot(args, out: TextIO) -> int:
+    import json
+
+    from lure.audit.mcp import tool_hashes
+    from lure.cli import _policy
+    from lure.sandbox.snapshot import fetch_snapshot
+
+    profile = load_profile(args.profile)
+    policy = _policy(args)
+    if policy.mcp is None:
+        raise PolicyError("the policy has no mcp: approved_servers; nothing is approved to fetch")
+    servers, skipped = [], []
+    for name in profile.mcp_servers:
+        approved = policy.mcp.get(name)
+        if approved is None:
+            raise PolicyError(f"{name} is not on the approved list; Lure fetches approved "
+                              "servers only")
+        if approved.url is None:
+            skipped.append(name)
+        else:
+            servers.append((name, approved.url))
+    for name in skipped:
+        print(f"Skipped:   {name}: a local server; Lure never starts one, export its snapshot",
+              file=out)
+    if not servers:
+        raise ProfileError("no approved remote MCP server in the profile's mcp_servers")
+    if not docker_available():
+        raise SandboxError("docker is not available: install it and start the daemon")
+    allow = tuple(dict.fromkeys(policy.mcp.get(n).host for n, _ in servers))
+    data, egress = fetch_snapshot(servers, args.agent_image, args.gateway_image, allow)
+    path = Path(args.out)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    hashes = tool_hashes(path)
+    for name, _ in servers:
+        entry = data.get(name, {})
+        if "error" in entry:
+            print(f"Failed:    {name}: {entry['error']}", file=out)
+        else:
+            print(f"Fetched:   {name}: {len(entry.get('tools', []))} tools, definitions "
+                  f"{hashes.get(name, '')[:12]}", file=out)
+    blocked = [e for e in egress if not e.get("allowed")]
+    print(f"Wrote {path}; egress allowed to {', '.join(allow)} only"
+          + (f", {len(blocked)} blocked" if blocked else ""), file=out)
+    return EXIT_OK if all("error" not in data.get(n, {}) for n, _ in servers) else EXIT_POLICY
+
+
 def _run(args, out: TextIO) -> int:
     from lure.batch import collect_attack_paths
     from lure.cli import _policy, exit_code, print_policy, print_result
     from lure.policy import PolicyRun
-    from lure.sandbox.run import key_problem, missing_env, run_in_sandbox
+    from lure.sandbox.run import key_problem, missing_env, run_in_sandbox, spec_for
 
     profile = load_profile(args.profile)
     if profile.agent is None:
@@ -107,6 +165,12 @@ def _run(args, out: TextIO) -> int:
     if unset:
         raise ProfileError(f"agent.env names variables that are not set: {', '.join(unset)}")
     policy = _policy(args)
+    from lure.audit.cli import preflight
+    results_dir = args.results_dir or str(
+        Path("results") / profile.name / f"sandbox-{datetime.now(UTC):%Y%m%dT%H%M%SZ}")
+    # Before any container or model call: a critical finding stops here.
+    if preflight(profile, policy, results_dir, out).blocked:
+        return EXIT_POLICY
     attacks = [load_attack(p) for t in args.attack for p in collect_attack_paths(t)]
     attacks, skipped = select_for_profile(profile, attacks)
     for s in skipped:
@@ -120,16 +184,16 @@ def _run(args, out: TextIO) -> int:
         if run_docker(["image", "inspect", image], check=False).returncode != 0:
             raise SandboxError(f"image {image} not found; run lure sandbox build (Lure pulls "
                                "nothing)")
-    results_dir = args.results_dir or str(
-        Path("results") / profile.name / f"sandbox-{datetime.now(UTC):%Y%m%dT%H%M%SZ}")
     print(f"Sandbox:   {profile.name}: {agent_image}, egress allowed to "
-          f"{', '.join((*profile.agent.model_allow, *profile.agent.allow))} only", file=out)
+          f"{', '.join(spec_for(profile, agent_image, args.gateway_image, policy.mcp).allow)} "
+          "only", file=out)
     results = []
     for attack in attacks:
         for _ in range(args.repeat):
             prepared, prompt, canary = prepare_for_profile(profile, attack)
             result = run_in_sandbox(prepared, profile, prompt, gateway_image=args.gateway_image,
                                     agent_image=agent_image, org_policy=policy.exposure,
+                                    mcp=policy.mcp,
                                     profile_record=profile.record(canary))
             result.save(results_dir)
             results.append(result)

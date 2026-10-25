@@ -68,8 +68,6 @@ PEM = "-----BEGIN RSA " + "PRIVATE KEY-----"
     ({"target": "gemini"}, "target must be one of"),
     ({"system_prompt_file": "p.txt"}, "exactly one of system_prompt or system_prompt_file"),
     ({"system_prompt": None}, "exactly one of system_prompt or system_prompt_file"),
-    ({"system_prompt": f"Use key {SECRET}."}, "looks like a real API key"),
-    ({"system_prompt": f"{PEM}\nabc"}, "looks like a real API key or private key"),
     ({"tools": []}, "tools must be a non-empty list"),
     ({"tools": [{"name": "x", "description": "d"}]}, "needs name, description and maps_to"),
     ({"tools": [{"name": "x", "description": "d", "maps_to": "send_email", "essential": "yes"}]},
@@ -363,3 +361,20 @@ def test_renders_false_skips_attacks_that_need_it(tmp_path):
                           "(renders.images: false)")),
         ("lure-egr-003", ("the agent's chat app does not preview links in its posts "
                           "(renders.link_previews: false)"))]
+
+
+@pytest.mark.parametrize("prompt", [f"Use key {SECRET}.", f"{PEM}\nabc"])
+def test_a_credential_in_the_prompt_is_the_audits_to_stop(tmp_path, prompt):
+    """v1.14: the loader no longer refuses it; lure audit reports where it is
+    (with a fingerprint, never the value) and stops the run."""
+    from lure.audit import audit
+    from lure.policy import Policy
+    path = tmp_path / "p.yaml"
+    data = yaml.safe_load(EXAMPLE.read_text())
+    data.pop("policy", None)
+    path.write_text(yaml.safe_dump({**data, "system_prompt": prompt}))
+    result = audit(load_profile(path), Policy(), key=b"k" * 32)
+    assert result.blocked
+    assert [f.location for f in result.findings if f.check == "credentials"] == [
+        "system_prompt, line 1"]
+    assert SECRET not in str(result.to_dict()) and PEM not in str(result.to_dict())

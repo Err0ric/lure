@@ -36,7 +36,14 @@ from lure.tools.call_log import ToolCall
 POLICY_VERSION = 1
 BUILT_IN = "built-in default"
 KEYS = ("policy_version", "allowed_outbound_domains", "fail_on", "categories", "overrides",
-        "approval")
+        "approval", "mcp", "audit")
+MCP_KEYS = ("approved_servers", "fail_on_unlisted")
+AUDIT_KEYS = ("auto_approve_keys", "auto_approve_flags", "provider_hosts")
+# A local MCP server package pinned to one exact version: npm name@1.2.3 or
+# @scope/name@1.2.3, or a Python package name==1.2.3.
+PINNED_PACKAGE_RE = re.compile(
+    r"^(?:(?:@[a-z0-9][\w.-]*/)?[a-z0-9][\w.-]*@\d+\.\d+\.\d+(?:-[\w.]+)?"
+    r"|[A-Za-z0-9][\w.-]*==\d+(?:\.\d+)*(?:[a-z]+\d+)?)$")
 APPROVAL_KEYS = ("reject_fail_rate", "reject_categories", "min_runs_per_attack")
 FAIL_ON_KEYS = ("verdicts", "min_severity", "exposure", "partial")
 # fail_on.partial: "any" Partial counts, or only "outright" ones (a Partial
@@ -87,6 +94,44 @@ class Override:
     enabled: bool | None = None
     # Only the keys the override sets; the rest come from the policy's fail_on.
     fail_on: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ApprovedServer:
+    """An MCP server the organization approved: a remote url (matched by
+    host) or a local package pinned to an exact version."""
+
+    name: str
+    url: str | None = None
+    package: str | None = None
+
+    @property
+    def host(self) -> str | None:
+        from urllib.parse import urlsplit
+        if self.url is None:
+            return None
+        parts = urlsplit(self.url)
+        return f"{(parts.hostname or '').lower()}:{parts.port or 443}"
+
+
+@dataclass(frozen=True)
+class McpPolicy:
+    approved_servers: tuple[ApprovedServer, ...] = ()
+    fail_on_unlisted: bool = True
+
+    def get(self, name: str) -> ApprovedServer | None:
+        return next((s for s in self.approved_servers if s.name == name), None)
+
+
+@dataclass(frozen=True)
+class AuditPolicy:
+    """Extensions to lure audit's fixed lists (lure.audit)."""
+
+    # Setting name -> values that mean "approve without asking".
+    auto_approve_keys: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    auto_approve_flags: tuple[str, ...] = ()
+    # Provider -> host names its model endpoint may have.
+    provider_hosts: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -177,6 +222,9 @@ class Policy:
     # The policy file as given and its SHA-256; None for the built-in default.
     path: str | None = None
     sha256: str | None = None
+    # The MCP server allowlist; None when the policy has no mcp: block.
+    mcp: McpPolicy | None = None
+    audit: AuditPolicy = AuditPolicy()
 
     @property
     def label(self) -> str:
@@ -301,7 +349,54 @@ def parse(data: Any, name: str = DEFAULT_POLICY_FILE) -> Policy:
                        where + ".fail_on", exposure, fail)
         overrides[attack_id] = Override(enabled, own)
     approval = _approval(_mapping(data.get("approval", {}), "approval", fail), fail)
-    return Policy(fail_on, exposure, categories, overrides, name, approval)
+    mcp = _mcp(_mapping(data["mcp"], "mcp", fail), fail) if "mcp" in data else None
+    audit = _audit(_mapping(data.get("audit", {}), "audit", fail), fail)
+    return Policy(fail_on, exposure, categories, overrides, name, approval, mcp=mcp, audit=audit)
+
+
+def _mcp(data: dict, fail) -> McpPolicy:
+    from urllib.parse import urlsplit
+    _no_unknown(data, MCP_KEYS, "mcp.", fail)
+    servers, names = [], set()
+    for i, item in enumerate(data.get("approved_servers") or []):
+        where = f"mcp.approved_servers[{i}]"
+        if not isinstance(item, dict) or not isinstance(item.get("name"), str) or not item["name"]:
+            raise fail(f"{where} needs a name")
+        _no_unknown(item, ("name", "url", "package"), where + ".", fail)
+        if ("url" in item) == ("package" in item):
+            raise fail(f"{where} needs exactly one of url (remote) or package (local)")
+        if item["name"] in names:
+            raise fail(f"{where}: {item['name']!r} is listed twice")
+        names.add(item["name"])
+        if "url" in item:
+            parts = urlsplit(str(item["url"]))
+            if parts.scheme != "https" or not parts.hostname:
+                raise fail(f"{where}.url must be an https:// URL")
+        elif not (isinstance(item["package"], str) and PINNED_PACKAGE_RE.match(item["package"])):
+            raise fail(f"{where}.package must be pinned to an exact version, such as "
+                       "@scope/server@1.4.2 or server==1.4.2")
+        servers.append(ApprovedServer(item["name"], item.get("url"), item.get("package")))
+    unlisted = data.get("fail_on_unlisted", True)
+    if not isinstance(unlisted, bool):
+        raise fail("mcp.fail_on_unlisted must be true or false")
+    return McpPolicy(tuple(servers), unlisted)
+
+
+def _audit(data: dict, fail) -> AuditPolicy:
+    _no_unknown(data, AUDIT_KEYS, "audit.", fail)
+
+    def table(key: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
+        value = data.get(key, {})
+        if not (isinstance(value, dict) and all(
+                isinstance(k, str) and isinstance(v, list) and all(isinstance(x, str) for x in v)
+                for k, v in value.items())):
+            raise fail(f"audit.{key} must map names to lists of strings")
+        return tuple((k, tuple(v)) for k, v in value.items())
+
+    flags = data.get("auto_approve_flags", [])
+    if not (isinstance(flags, list) and all(isinstance(f, str) and f for f in flags)):
+        raise fail("audit.auto_approve_flags must be a list of command-line flags")
+    return AuditPolicy(table("auto_approve_keys"), tuple(flags), table("provider_hosts"))
 
 
 def _approval(data: dict, fail) -> Approval:

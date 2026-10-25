@@ -125,7 +125,41 @@ def decision_record(profile: Profile, run: Path, decision: str, by: str,
         "run": str(run),
         "target": manifest.get("target"),
         "lure_version": manifest.get("lure_version"),
+        # Each approved MCP server's tool definitions, as hashed now: a
+        # retest that sees others fails as a changed tool.
+        "mcp_tools": _tool_hashes(profile),
     }
+
+
+def _tool_hashes(profile: Profile) -> dict[str, str]:
+    if profile.mcp_tools_snapshot is None:
+        return {}
+    from lure.audit.mcp import tool_hashes
+    return tool_hashes(profile.mcp_tools_snapshot)
+
+
+# The attack that shows why a changed tool matters.
+CHANGED_TOOL_ATTACK = "lure-tpo-003"
+
+
+def changed_tools(decision: dict[str, Any] | None, profile: Profile) -> list[str]:
+    """MCP servers whose tool definitions differ from what was approved."""
+    approved = (decision or {}).get("mcp_tools") or {}
+    if not approved:
+        return []
+    now = _tool_hashes(profile)
+    found = []
+    for name in sorted(approved):
+        if name not in now:
+            found.append(f"{name}: no tool definitions in the snapshot now (approved "
+                         f"{approved[name][:12]})")
+        elif now[name] != approved[name]:
+            found.append(f"{name}: tool definitions changed since approval ({approved[name][:12]} "
+                         f"-> {now[name][:12]}), like {CHANGED_TOOL_ATTACK}, a tool that changes "
+                         "after it was trusted")
+    found += [f"{name}: a server not in the approval ({now[name][:12]})"
+              for name in sorted(set(now) - set(approved))]
+    return found
 
 
 def decisions_path(vetting_dir: str | Path, name: str) -> Path:
@@ -311,10 +345,12 @@ class Retest:
     changes: list[str] = field(default_factory=list)
     conditions: list[Condition] = field(default_factory=list)
     stopped: bool = False
+    # MCP servers whose tool definitions differ from the approval.
+    changed_tools: list[str] = field(default_factory=list)
 
     @property
     def regression(self) -> bool:
-        return bool(self.new_failures)
+        return bool(self.new_failures or self.changed_tools)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -326,6 +362,7 @@ class Retest:
             "still_failing": self.still_failing, "still_passing": self.still_passing,
             "no_longer_run": [{"attack": a, "reason": r} for a, r in self.no_longer_run],
             "changes": self.changes,
+            "changed_tools": self.changed_tools,
             "conditions": [{"text": c.text, "verified": c.verified, "held": c.held,
                             "why": c.why} for c in self.conditions],
         }
@@ -395,6 +432,7 @@ def compare(baseline: str | Path, current: str | Path, policy,
         else:
             result.still_passing.append(new.label)
     result.changes = changes(old_m, new_m, before, after)
+    result.changed_tools = changed_tools(decision, profile)
     result.conditions = verify_conditions(
         (decision or {}).get("conditions") or [], old_m, new_m,
         [r for r, _ in load_records(baseline)], [r for r, _ in load_records(current)])

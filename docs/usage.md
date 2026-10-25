@@ -108,6 +108,7 @@ Other useful commands:
 | `lure decide profiles/<name>.yaml --decision approve-with-conditions --by "<role>" --conditions "..."` | Record the decision in an append-only log, `vetting/<name>/decisions.jsonl` (gitignored) |
 | `lure status profiles/<name>.yaml` | Exit 0 if the latest decision approves the profile and the profile is unchanged since; exit 1 if rejected, undecided or changed. For a tool repository's CI: [`gitea-pipeline.md`](gitea-pipeline.md) |
 | `lure retest profiles/<name>.yaml --prices prices.yaml --max-cost 0.50` | Rerun the profile's last suite and compare it with the last approved run: new failures (exit 1), fixed, what changed, which conditions a retest verified. The weekly workflow, with cron and GitHub Actions examples: [`docs/vetting-workflow.md`](vetting-workflow.md) |
+| `lure audit profiles/<name>.yaml` | Check the agent's setup before any test: credentials, auto-approve modes, ungated tools, egress, model endpoint, MCP servers. Exit 1 on a critical finding, which also stops every profile run before any model call. [`docs/audit.md`](audit.md) |
 | `lure sandbox run attacks/ --profile profiles/example-ref-agent-local.yaml` | Test a real agent that runs as code, in a throwaway container behind Lure's egress gateway (`lure sandbox build` first; Docker needed). Guide: [`docs/container.md`](container.md#run-a-real-agent-in-the-sandbox) |
 | `lure run ... --target ollama --model llama3.1:8b` | Test a local model (set `LURE_OLLAMA_URL` in `.env` if it is not on localhost) |
 | `lure run ... --target openai --model <model>` | Test any OpenAI-compatible server: set `LURE_OPENAI_BASE_URL` and, if it needs one, `LURE_OPENAI_API_KEY` in `.env` |
@@ -223,4 +224,4 @@ For CI, write Markdown for the job summary and SARIF for code scanning: `lure re
 | Judge | Scores the run from the tool-call log (rules first, LLM judge second) |
 | Reporter | Builds the static HTML report (exec summary, ATLAS heatmap, category table, exposure and findings), plus Markdown and SARIF on request |
 
-A future `config_audit` stage would check agent and MCP settings before any run; see [`docs/config-audit.md`](config-audit.md). It is not implemented.
+`lure audit` checks the agent's setup and MCP servers before every profile run, and stops the run on a critical finding; see [`docs/audit.md`](audit.md).

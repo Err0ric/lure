@@ -40,6 +40,7 @@ Start from [`profiles/example-ap-agent.yaml`](../profiles/example-ap-agent.yaml)
 | `suites` | no | `all` (default) or a list of attack categories |
 | `scenarios` | no | `all` (default) or a list of scenario packs: `accounts_payable`, `customer_support`, `it_helpdesk`. A pack is the kind of work an attack's task is; the approval report names the packs tested |
 | `confirmer` | no | Who stands in for the person at a gate: `careful` (default) or `deny_all`. Only with a gated tool |
+| `agent_config`, `schedule`, `credentials`, `working_dir`, `instruction_files`, `memory_sink`, `log_sink`, `transcript_sink`, `mcp_servers`, `mcp_tools_snapshot`; tool `domains` | no | What `lure audit` reads about the agent's setup: its config files, how it runs, declared credentials (names only), where its instructions and memory live, its MCP servers. See [lure audit](audit.md) |
 | `agent`, `isolation` | no | A real agent that runs as code (`lure sandbox run`): its image, model URL and the environment variable names it inherits. Refused without `isolation: container` or `vm`. See [Run a real agent in the sandbox](container.md#run-a-real-agent-in-the-sandbox) |
 | `renders` | no | What the chat app that shows the agent's output does: `images` (shows images in replies, which it fetches with no click) and `link_previews` (fetches links in the agent's chat posts to preview them), each `true` or `false`. Unset means `true`, the worst case; the approval report says so (below) |
 

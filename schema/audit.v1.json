@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Err0ric/lure/schema/audit.v1.json",
+  "title": "lure audit findings",
+  "description": "What lure audit found in an agent's setup (audit.json, lure audit --json, and the run manifest's audit block). Never holds a secret: a credential is a rule name, a location and a salted fingerprint.",
+  "type": "object",
+  "required": [
+    "audit_version",
+    "profile",
+    "profile_sha256",
+    "scanner",
+    "blocked",
+    "counts",
+    "findings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "audit_version": {
+      "const": 1
+    },
+    "profile": {
+      "type": "string"
+    },
+    "profile_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "scanner": {
+      "description": "How credentials were scanned: gitleaks <version> or lure patterns.",
+      "type": "string"
+    },
+    "blocked": {
+      "description": "True when a critical finding stops a profile run before any model call.",
+      "type": "boolean"
+    },
+    "counts": {
+      "type": "object",
+      "required": [
+        "critical",
+        "high",
+        "medium",
+        "info"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "critical": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "high": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "medium": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "check",
+          "key",
+          "title",
+          "severity",
+          "what",
+          "location",
+          "fix",
+          "atlas",
+          "attack",
+          "owasp"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              12
+            ]
+          },
+          "key": {
+            "enum": [
+              "auto_approve",
+              "credentials",
+              "external_persistence",
+              "instruction_origin",
+              "mcp_allowlist",
+              "mcp_hygiene",
+              "model_endpoint",
+              "privileged_credential",
+              "prompt_hygiene",
+              "ungated_tool",
+              "unrestricted_egress"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "info"
+            ]
+          },
+          "what": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "fix": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "description": "12 hex characters of HMAC-SHA256 with this checkout's salt: matches the same credential across runs, never reveals it.",
+            "type": "string",
+            "pattern": "^[0-9a-f]{12}$"
+          },
+          "atlas": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^AML\\.[TM]\\d{4}(\\.\\d{3})?$"
+            }
+          },
+          "attack": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^T\\d{4}(\\.\\d{3})?$"
+            }
+          },
+          "owasp": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^LLM\\d{2}:2025$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

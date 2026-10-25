@@ -1,11 +1,11 @@
 # Known gaps and roadmap
 
-> Status: v1.13.2. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
+> Status: v1.14.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
 
 ## Known gaps
 
 - **Targets:** Anthropic, Ollama and OpenAI-compatible endpoints. Providers with other APIs need an adapter; see [`CONTRIBUTING.md`](../CONTRIBUTING.md).
-- **Real agents:** `lure sandbox run` isolates an agent in a container, but only Lure's reference agent reports its tool calls; for a third-party agent the gateway log and workspace diff are the evidence until the mock MCP server (v1.14).
+- **Real agents:** `lure sandbox run` isolates an agent in a container, but only Lure's reference agent reports its tool calls; for a third-party agent the gateway log and workspace diff are the evidence until the mock MCP server (v1.15).
 - **Results store:** one JSON file per run is the source of truth; `lure store` indexes them into DuckDB and can rebuild from them. `lure serve` is local and read-only: no sharing, accounts or remote access.
 - **Reactive fixtures:** responders are declarative triggers on tool calls, not a simulated counterpart that writes new text. Each released item is fixed in advance.
 - **LLM judge:** injected text in a reply can reach the judge; see [How a run is scored](usage.md#how-a-run-is-scored).
@@ -33,11 +33,11 @@
 - [x] v1.13.0: isolation for real agents: Lure's own egress gateway (hostname allowlist, no TLS decryption, blocked egress and DNS lookups logged as exposure), a throwaway non-root container per run on an internal-only network, decoy commands and a workspace diff, a reference agent image, `lure sandbox`, and a changed model endpoint as a critical Fail (`lure-smo-004` v2). Also `split_over` across invoice numbers (`lure-tab-004` v2), a tolerant summary-gate check (strict kept as an option), and live llama3.1 gate smoke tests
 - [x] v1.13.1: the sandbox's model key is `LURE_AGENT_API_KEY` only (never `ANTHROPIC_API_KEY`), Ollama limited to `/api/generate` and `/api/chat`, `pytest -m docker` in CI, gitleaks in a pre-commit hook
 - [x] v1.13.2: the sandbox's internal network gives the Docker host no address on its bridge, so the agent cannot reach host services; a Docker test with host stubs proves it
+- [x] v1.14.0: `lure audit`, a pre-flight check of an agent's setup that stops a run on a critical finding (credentials, acting without asking, a foreign model endpoint, an unapproved MCP server) with a Configuration section on the approval page; and an MCP server allowlist in `lure.yaml`, enforced at the sandbox gateway, with tool-definition hashes checked on retest
 
 ### Next
 
-- [ ] v1.14: Lure as a mock MCP server (stdio and Streamable HTTP), so an unmodified MCP-based agent uses Lure's mock tools
-- [ ] v1.15: an HTTP agent endpoint adapter (on the v1.13 profile `agent:` block), the approval page's Isolation section, and the at-work guide: a dedicated VM on an isolated VLAN, with firewall and proxy logs accepted as egress evidence
+- [ ] v1.15: Lure as a mock MCP server (stdio and Streamable HTTP), so an unmodified MCP-based agent uses Lure's mock tools; an HTTP agent endpoint adapter (on the v1.13 profile `agent:` block), the approval page's Isolation section, and the at-work guide: a dedicated VM on an isolated VLAN, with firewall and proxy logs accepted as egress evidence
 
 ### Later
 

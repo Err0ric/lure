@@ -38,6 +38,7 @@ from lure.attacks import (
     load_attack,
     payload_problems,
 )
+from lure.audit import cli as audit_cli
 from lure.batch import SummaryRow, collect_attack_paths, summarize
 from lure.budget import ROLES, Budget
 from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError
@@ -272,6 +273,7 @@ def build_parser() -> argparse.ArgumentParser:
                             help=f"where decision logs live (default {DEFAULT_VETTING_DIR})")
 
     sandbox_cli.add_parser(sub)
+    audit_cli.add_parser(sub)
 
     serve_cmd = sub.add_parser("serve", help="browse runs, transcripts, approval pages and "
                                              "vetting history in a local, read-only dashboard")
@@ -383,10 +385,18 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         return status_main(args, out)
     if args.command == "sandbox":
         return sandbox_cli.sandbox_main(args, out)
+    if args.command == "audit":
+        return audit_cli.audit_main(args, out)
     try:
         profile = _apply_profile(args)
         # Load every attack first so a bad file fails before any model call.
         policy = _policy(args)
+        audited = None
+        if profile is not None:
+            # Before any model call: a critical finding stops the run here.
+            audited = audit_cli.preflight(profile, policy, args.results_dir, out)
+            if audited.blocked:
+                return EXIT_POLICY_FAIL
         attacks = []
         for target in args.attack:
             _check_categories(policy, target)
@@ -474,7 +484,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
               file=out)
     gate = policy.gate([PolicyRun.from_result(r) for r in results])
     if profile is not None:
-        path = write_manifest(profile, args, policy, results, skipped, started, stopped)
+        path = write_manifest(profile, args, policy, results, skipped, started, stopped,
+                              audited)
         print(file=out)
         print(f"Manifest:  {path}", file=out)
     print(file=out)
@@ -515,7 +526,7 @@ def print_profile_plan(profile: Profile, attacks: list, skipped: list, out: Text
 
 
 def write_manifest(profile: Profile, args, policy: Policy, results: list, skipped: list,
-                   started: datetime, stopped: bool) -> Path:
+                   started: datetime, stopped: bool, audited=None) -> Path:
     """manifest.json next to a profile run's records: what ran, under which
     profile, policy and settings, and what was skipped and why."""
     path = Path(args.results_dir) / MANIFEST
@@ -557,9 +568,20 @@ def write_manifest(profile: Profile, args, policy: Policy, results: list, skippe
                  for r in results],
         "skipped": [{"attack": s.attack.id, "version": s.attack.version, "reason": s.reason}
                     for s in skipped],
+        # lure audit before the run (no secrets, only where and a fingerprint).
+        "audit": audited.to_dict() if audited is not None else None,
+        "mcp_tools": _mcp_tool_hashes(profile),
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return path
+
+
+def _mcp_tool_hashes(profile: Profile) -> dict[str, str]:
+    """Each MCP server's tool-definition hash, from the profile's snapshot."""
+    if profile.mcp_tools_snapshot is None:
+        return {}
+    from lure.audit.mcp import tool_hashes
+    return tool_hashes(profile.mcp_tools_snapshot)
 
 
 def _plan_variants(attacks: list[Attack], args, out: TextIO) -> list[Attack]:
@@ -1011,7 +1033,8 @@ def print_retest(result, out: TextIO) -> None:
     same = "nothing (same profile, model, judge, Lure and attack versions)"
     for i, line in enumerate(result.changes or [same]):
         print(f"{'Changed:' if i == 0 else '':<11}{line}", file=out)
-    for title, lines in (("New failures", result.new_failures), ("Fixed", result.fixed),
+    for title, lines in (("Changed tools", result.changed_tools),
+                         ("New failures", result.new_failures), ("Fixed", result.fixed),
                          ("Still failing", result.still_failing)):
         if lines:
             print(f"{title} ({len(lines)}):", file=out)

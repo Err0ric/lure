@@ -18,8 +18,8 @@ RUN python -m pip uninstall -y -q pip \
  && groupadd --system --gid 10001 agent \
  && useradd --system --uid 10001 --gid agent --home-dir /workspace --no-create-home \
       --shell /usr/sbin/nologin agent
-COPY lure/sandbox/refagent/agent.py lure/sandbox/refagent/decoy.py /opt/lure/
-RUN chmod 0755 /opt/lure/agent.py /opt/lure/decoy.py \
+COPY lure/sandbox/refagent/agent.py lure/sandbox/refagent/decoy.py lure/sandbox/refagent/mcpsnap.py /opt/lure/
+RUN chmod 0755 /opt/lure/agent.py /opt/lure/decoy.py /opt/lure/mcpsnap.py \
  && mkdir /opt/lure/decoys \
  && for c in npm npx pip pip3 curl wget git; do ln -s ../decoy.py /opt/lure/decoys/$c; done
 ENV PATH=/opt/lure/decoys:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

@@ -162,6 +162,53 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | [lure-tpo-003](../attacks/tool_poisoning/lure-tpo-003.yaml) | Tool poisoning | critical | AML.T0110.000, AML.T0053, AML.T0048.000 | T1657 |
 | [lure-tpo-004](../attacks/tool_poisoning/lure-tpo-004.yaml) | Tool poisoning | high | AML.T0110.000, AML.T0086 | T1048, T1656 |
 
+## lure audit checks
+
+The pre-flight configuration check ([`docs/audit.md`](audit.md)) maps each check to ATLAS (techniques and the mitigation that is missing), ATT&CK and the OWASP Top 10 for LLM Applications 2025. Checked on 2026-10-25: ATLAS in the data release 2026.09 (`dist/v6/ATLAS-2026.09.yaml`), ATT&CK on attack.mitre.org, OWASP on genai.owasp.org.
+
+| ID | Name | Checks |
+| --- | --- | --- |
+| AML.T0010.005 | AI Supply Chain Compromise: AI Agent Tool | 7, 12 |
+| AML.T0012 | Valid Accounts | 4 |
+| AML.T0051.001 | LLM Prompt Injection: Indirect | 9 |
+| AML.T0053 | AI Agent Tool Invocation | 2, 3 |
+| AML.T0055 | Unsecured Credentials | 1 |
+| AML.T0056 | Extract LLM System Prompt | 8 |
+| AML.T0057 | LLM Data Leakage | 10 |
+| AML.T0069.002 | Discover LLM System Information: System Prompt | 8 |
+| AML.T0077 | LLM Response Rendering | 5 |
+| AML.T0080.000 | AI Agent Context Poisoning: Memory | 10 |
+| AML.T0081 | Modify AI Agent Configuration | 3, 6 |
+| AML.T0083 | Credentials from AI Agent Configuration | 1 |
+| AML.T0086 | Exfiltration via AI Agent Tool Invocation | 3, 5 |
+| AML.T0101 | Data Destruction via AI Agent Tool Invocation | 3 |
+| AML.T0109 | AI Supply Chain Rug Pull | 7, 12 |
+| AML.T0110 | AI Agent Tool Poisoning | 7 |
+| AML.T0112.000 | Machine Compromise: Local AI Agent | 9 |
+| AML.M0026 | Privileged AI Agent Permissions Configuration (mitigation) | 4 |
+| AML.M0028 | AI Agent Tools Permissions Configuration (mitigation) | 3 |
+| AML.M0029 | Human In-the-Loop for AI Agent Actions (mitigation) | 2, 3 |
+| T1048 | Exfiltration Over Alternative Protocol | 3, 5 |
+| T1059.004 | Command and Scripting Interpreter: Unix Shell | 3 |
+| T1078 | Valid Accounts | 4 |
+| T1098 | Account Manipulation | 3 |
+| T1195.001 | Supply Chain Compromise: Compromise Software Dependencies and Development Tools | 7, 12 |
+| T1204.002 | User Execution: Malicious File | 9 |
+| T1485 | Data Destruction | 3 |
+| T1530 | Data from Cloud Storage | 10 |
+| T1552.001 | Unsecured Credentials: Credentials In Files | 1 |
+| T1557 | Adversary-in-the-Middle | 6, 7 |
+| T1562.001 | Impair Defenses: Disable or Modify Tools | 3 |
+| T1565.001 | Data Manipulation: Stored Data Manipulation | 3 |
+| T1567 | Exfiltration Over Web Service | 5 |
+| T1657 | Financial Theft | 3 |
+| LLM01:2025 | Prompt Injection | 7, 9 |
+| LLM02:2025 | Sensitive Information Disclosure | 1, 5, 6, 10 |
+| LLM03:2025 | Supply Chain | 6, 7, 12 |
+| LLM05:2025 | Improper Output Handling | 5 |
+| LLM06:2025 | Excessive Agency | 2, 3, 4 |
+| LLM07:2025 | System Prompt Leakage | 1, 8 |
+
 ## Arcanum Prompt Injection Taxonomy
 
 Alongside ATLAS and ATT&CK, every current attack carries codes from the Arcanum Prompt Injection Taxonomy v1.6.1 (`arcanum:` in the attack file, `attack.arcanum` in results, tags on SARIF rules). Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com). Lure is not affiliated with or endorsed by Arcanum Information Security; see [`THIRD_PARTY.md`](../THIRD_PARTY.md).

@@ -91,6 +91,27 @@
   </div>
 </header>
 
+{% if page.config is not none %}
+<section aria-labelledby="config">
+  <h2 id="config">Configuration</h2>
+  <p class="lede">Lure checked the agent's setup before any test ({{ page.config_scanner }}). It never shows a credential, only where it is.</p>
+  {% if not page.config %}
+  <p class="lede">Nothing to fix.</p>
+  {% else %}
+  <ul class="problems">
+    {% for c in page.config %}
+    <li><span class="tag{% if c.severity == 'critical' %} fail{% endif %}">{{ c.severity|capitalize }}</span> {{ c.title }}: {{ c.what }}.
+      <span class="what">Fix: {{ c.fix }}. <span class="tool">({{ c.location }})</span></span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if page.config_info %}
+  <p class="lede">Worth a look (never changes the recommendation):</p>
+  <ul class="plainlist">{% for c in page.config_info %}<li>{{ c.what }}. {{ c.fix }}. <span class="tool">({{ c.location }})</span></li>{% endfor %}</ul>
+  {% endif %}
+</section>
+{% endif %}
+
 <div class="pair">
 <section aria-labelledby="access">
   <h2 id="access">What the agent can access</h2>
@@ -147,10 +168,13 @@
   {% endif %}
 </section>
 
-{% if page.conditions %}
+{% if page.conditions or page.setup_conditions %}
 <section aria-labelledby="conditions">
   <h2 id="conditions">Suggested conditions</h2>
   <ul class="cond">
+    {% for text in page.setup_conditions %}
+    <li>{{ text }}<span class="status">From the configuration check; lure audit verifies it after the change.</span></li>
+    {% endfor %}
     {% for c in page.conditions %}
     <li>{{ c.text }}<span class="status">{% if c.addresses %}Covers {{ c.addresses|join(", ") }}.{% else %}From the approved decision.{% endif %} {% if c.verified %}Verified by a retest{% if c.why %}: {{ c.why }}{% endif %}.{% elif c.held %}Held in Lure's test: {{ c.why }}. The real app's step is confirmed on sign-off.{% elif c.why %}Not verified: {{ c.why }}.{% else %}Not yet verified: a retest after the change will check it.{% endif %}</span></li>
     {% endfor %}

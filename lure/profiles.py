@@ -40,7 +40,7 @@ from typing import Any
 import yaml
 
 from lure.adapters import TARGETS
-from lure.attacks import PRIVATE_KEY_RE, SCENARIOS, SECRET_RE, Attack
+from lure.attacks import ORIGINS, SCENARIOS, Attack
 from lure.gate import CAREFUL, CONFIRMERS, SHOWS, STRICT, SUMMARY_CHECKS, TOLERANT, Gate
 from lure.judge.rules import Judgment, Verdict
 from lure.tools import AMOUNT_TOOLS, GATABLE_TOOLS, KNOWN_TOOLS
@@ -49,7 +49,13 @@ from lure.tools.registry import ToolAlias
 REQUIRED_KEYS = ("name", "target", "tools")
 OPTIONAL_KEYS = ("owner", "role", "model", "system_prompt", "system_prompt_file",
                  "third_party_tools", "policy", "suites", "renders", "confirmer", "scenarios",
-                 "agent", "isolation")
+                 "agent", "isolation", "agent_config", "schedule", "credentials",
+                 "working_dir", "instruction_files", "memory_sink", "log_sink",
+                 "transcript_sink", "mcp_servers", "mcp_tools_snapshot")
+# What lure audit reads (lure.audit). All descriptive: names, paths and
+# hosts, never secret values.
+SCHEDULES = ("interactive", "unattended")
+SINK_KEYS = ("memory_sink", "log_sink", "transcript_sink")
 ISOLATIONS = ("container", "vm")
 AGENT_KEYS = ("image", "provider", "model_url")
 AGENT_OPTIONAL = ("command", "env", "allow", "settings_file", "model_url_key", "limits")
@@ -97,6 +103,8 @@ class ProfileTool:
     gate_over: float | None = None
     # How closely a summary must name the harm: tolerant or strict (lure.gate).
     summary_check: str = TOLERANT
+    # Domains a URL-taking tool is limited to (lure audit check 5).
+    domains: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -161,6 +169,17 @@ class Profile:
     # A real agent run as code (lure sandbox run), and how it is isolated.
     agent: AgentSpec | None = None
     isolation: str | None = None
+    # Read by lure audit (lure.audit).
+    agent_config: tuple[Path, ...] = ()
+    schedule: str = "interactive"
+    credentials: tuple[dict[str, Any], ...] = ()
+    working_dir: str | None = None
+    instruction_files: tuple[dict[str, str], ...] = ()
+    sinks: tuple[tuple[str, str], ...] = ()
+    mcp_servers: tuple[str, ...] = ()
+    mcp_tools_snapshot: Path | None = None
+    # The system_prompt_file, when the prompt came from one.
+    prompt_file: Path | None = None
 
     def rendering(self, key: str) -> bool | None:
         return dict(self.renders)[key]
@@ -253,13 +272,14 @@ def load_profile(path: str | Path) -> Profile:
             raise fail(f"system_prompt_file not found: {prompt_path}") from None
         digest.update(prompt_bytes)
         prompt = prompt_bytes.decode("utf-8")
+        prompt_file = prompt_path
     else:
         prompt = data["system_prompt"]
+        prompt_file = None
     if not isinstance(prompt, str) or not prompt.strip():
         raise fail("the system prompt must be non-empty text")
-    if SECRET_RE.search(prompt) or PRIVATE_KEY_RE.search(prompt):
-        raise fail("the system prompt contains what looks like a real API key or private key; "
-                   "remove it: a profile holds no credentials")
+    # A credential in the prompt is lure audit's (check 1, critical): it says
+    # where, with a fingerprint, and stops the run before any model call.
 
     tools = _tools(data["tools"], fail)
     third_party = data.get("third_party_tools", False)
@@ -293,6 +313,7 @@ def load_profile(path: str | Path) -> Profile:
         raise fail("confirmer is set, but no tool is gated: mark a tool gated: true")
 
     agent, isolation = _agent(data, fail)
+    audit_keys = _audit_keys(data, path, fail)
     return Profile(name=name, path=path, sha256=digest.hexdigest(), target=data["target"],
                    system_prompt=prompt.strip(), tools=tools, model=data.get("model"),
                    owner=data.get("owner"), role=data.get("role"),
@@ -300,7 +321,63 @@ def load_profile(path: str | Path) -> Profile:
                    suites=tuple(suites) if suites else None,
                    renders=tuple((k, renders.get(k)) for k in RENDER_KEYS),
                    confirmer=confirmer, scenarios=tuple(scenarios) if scenarios else None,
-                   agent=agent, isolation=isolation)
+                   agent=agent, isolation=isolation, prompt_file=prompt_file, **audit_keys)
+
+
+def _audit_keys(data: dict[str, Any], path: Path, fail) -> dict[str, Any]:
+    """The keys lure audit reads, validated. Paths are relative to the
+    profile and must exist."""
+    out: dict[str, Any] = {}
+
+    def paths(value: Any, key: str) -> tuple[Path, ...]:
+        if not (isinstance(value, list) and all(isinstance(v, str) and v for v in value)):
+            raise fail(f"{key} must be a list of file paths, relative to the profile")
+        found = tuple(path.parent / v for v in value)
+        missing = [str(p) for p in found if not p.is_file()]
+        if missing:
+            raise fail(f"{key}: not found: {', '.join(missing)}")
+        return found
+
+    if "agent_config" in data:
+        out["agent_config"] = paths(data["agent_config"], "agent_config")
+    if "mcp_tools_snapshot" in data:
+        out["mcp_tools_snapshot"] = paths([data["mcp_tools_snapshot"]], "mcp_tools_snapshot")[0]
+    schedule = data.get("schedule", "interactive")
+    if schedule not in SCHEDULES:
+        raise fail(f"schedule must be one of {', '.join(SCHEDULES)}")
+    out["schedule"] = schedule
+    creds = data.get("credentials", [])
+    if not (isinstance(creds, list) and all(
+            isinstance(c, dict) and isinstance(c.get("name"), str) and c["name"]
+            and set(c) <= {"name", "scopes", "tools"}
+            and all(isinstance(s, str) for s in c.get("scopes", []))
+            and all(isinstance(t, str) for t in c.get("tools", [])) for c in creds)):
+        raise fail("credentials must be a list of {name, scopes, tools}: names only, never values")
+    out["credentials"] = tuple(dict(c) for c in creds)
+    if "working_dir" in data:
+        if not isinstance(data["working_dir"], str) or not data["working_dir"].strip():
+            raise fail("working_dir must be a path")
+        out["working_dir"] = data["working_dir"].strip()
+    files = data.get("instruction_files", [])
+    if not (isinstance(files, list) and all(
+            isinstance(f, dict) and isinstance(f.get("path"), str) and set(f) <= {"path", "origin"}
+            and f.get("origin", "repo") in ORIGINS for f in files)):
+        raise fail(f"instruction_files must be a list of {{path, origin}}; origin one of "
+                   f"{', '.join(ORIGINS)}")
+    out["instruction_files"] = tuple({"path": f["path"], "origin": f.get("origin", "repo")}
+                                     for f in files)
+    sinks = []
+    for key in SINK_KEYS:
+        if key in data:
+            if not isinstance(data[key], str) or not data[key].strip():
+                raise fail(f"{key} must be a host, a URL or local")
+            sinks.append((key, data[key].strip()))
+    out["sinks"] = tuple(sinks)
+    servers = data.get("mcp_servers", [])
+    if not (isinstance(servers, list) and all(isinstance(s, str) and s for s in servers)):
+        raise fail("mcp_servers must be a list of approved server names (lure.yaml mcp)")
+    out["mcp_servers"] = tuple(servers)
+    return out
 
 
 def _agent(data: dict[str, Any], fail) -> tuple[AgentSpec | None, str | None]:
@@ -373,7 +450,8 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
     for i, item in enumerate(value):
         where = f"tools[{i}]"
         if not isinstance(item, dict) or set(item) - {"essential", "gated", "gate_shows",
-                                                      "gate_over", "summary_check"} != {
+                                                      "gate_over", "summary_check",
+                                                      "domains"} != {
                 "name", "description", "maps_to"}:
             raise fail(f"{where} needs name, description and maps_to (and optionally essential, "
                        "gated, gate_shows, gate_over and summary_check)")
@@ -423,8 +501,19 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
         names.add(name)
         mapped.add(maps_to)
         tools.append(ProfileTool(name, " ".join(description.split()), maps_to, essential, gated,
-                                 shows, float(over) if over is not None else None, check))
+                                 shows, float(over) if over is not None else None, check,
+                                 _domains(item, where, fail)))
     return tuple(tools)
+
+
+def _domains(item: dict[str, Any], where: str, fail) -> tuple[str, ...] | None:
+    if "domains" not in item:
+        return None
+    value = item["domains"]
+    if not (isinstance(value, list) and value and all(isinstance(d, str) and d.strip()
+                                                      for d in value)):
+        raise fail(f"{where}: domains must be a non-empty list of domains")
+    return tuple(d.strip().lower() for d in value)
 
 
 def select(profile: Profile, attacks: list[Attack]) -> tuple[list[Attack], list[Skipped]]:

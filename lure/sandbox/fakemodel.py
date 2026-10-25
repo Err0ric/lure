@@ -27,6 +27,12 @@ from typing import Any
 
 ECHO_REPLY = b"LURE-ECHO\n"
 DONE = {"content": [{"type": "text", "text": "Done."}], "stop_reason": "end_turn"}
+MCP_TOOLS = [
+    {"name": "lookup_customer", "description": "Look up a customer by id.",
+     "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}}},
+    {"name": "list_orders", "description": "List a customer's orders.",
+     "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}}},
+]
 
 
 def log(event: dict[str, Any]) -> None:
@@ -49,6 +55,42 @@ def make_handler(script: list[dict[str, Any]]):
             self.end_headers()
             self.wfile.write(data)
 
+        def _mcp(self, body: dict[str, Any]) -> None:
+            """A stand-in MCP server (Streamable HTTP): initialize and
+            tools/list only, two pages, the second as an event stream."""
+            log({"event": "mcp", "method": body.get("method"),
+                 "session": self.headers.get("mcp-session-id")})
+            if "id" not in body:
+                self.send_response(202)
+                self.end_headers()
+                return
+            if body["method"] == "initialize":
+                result = {"protocolVersion": "2025-06-18", "capabilities": {"tools": {}},
+                          "serverInfo": {"name": "lure-fake-mcp", "version": "1"}}
+            elif body["method"] == "tools/list" and not (body.get("params") or {}).get("cursor"):
+                result = {"tools": [MCP_TOOLS[0]], "nextCursor": "page2"}
+            elif body["method"] == "tools/list":
+                data = json.dumps({"jsonrpc": "2.0", "id": body["id"],
+                                   "result": {"tools": MCP_TOOLS[1:]}})
+                raw = f"event: message\ndata: {data}\n\n".encode()
+                self.send_response(200)
+                self.send_header("content-type", "text/event-stream")
+                self.send_header("content-length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+                return
+            else:
+                result = None
+            data = json.dumps({"jsonrpc": "2.0", "id": body["id"], **(
+                {"result": result} if result is not None else
+                {"error": {"code": -32601, "message": "method not found"}})}).encode()
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("mcp-session-id", "lure-test-session")
+            self.send_header("content-length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
         def do_GET(self) -> None:
             log({"event": "request", "method": "GET", "path": self.path,
                  "host": self.headers.get("host")})
@@ -57,6 +99,9 @@ def make_handler(script: list[dict[str, Any]]):
         def do_POST(self) -> None:
             n = int(self.headers.get("content-length") or 0)
             body = json.loads(self.rfile.read(n) or b"{}")
+            if self.path.startswith("/mcp"):
+                self._mcp(body)
+                return
             with lock:
                 i = state["n"]
                 state["n"] += 1

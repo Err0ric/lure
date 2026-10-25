@@ -1,5 +1,52 @@
 # Changelog
 
+## v1.14.0 (2026-10-25)
+
+### New
+
+- **`lure audit <profile>`**: a static check of an agent's setup, with no
+  model or network call. It also runs before any model call of every
+  `lure run --profile`, `lure retest` and `lure sandbox run`. Critical
+  findings stop the run and write `audit.json`: hardcoded credentials (1),
+  acting without asking (2: auto-approve or bypass modes, unattended with
+  no gate), a model endpoint outside the declared provider (6), an MCP
+  server off the approved list (12). Reported: ungated risky tools (3),
+  unrestricted egress (5), MCP hygiene (7), instructions from outside the
+  repository (9). Information only: privileged credentials (4), system
+  prompt hygiene (8), memory or logs kept outside (10). Each check is
+  mapped to ATLAS 2026.09, ATT&CK and the OWASP Top 10 for LLM
+  Applications 2025. `docs/audit.md`.
+- **No secret is ever written.** A credential is reported by kind,
+  location and a salted HMAC fingerprint; gitleaks (when installed) runs
+  redacted on a pipe. Tests plant random real-shaped credentials and
+  search every output, with and without gitleaks.
+- **Approval page Configuration section**: each finding with its fix; a
+  critical finding makes the recommendation Reject until fixed; high and
+  medium fixes become conditions; info findings never change it.
+  `lure audit --approval` writes the page before any test.
+- **MCP server allowlist** in `lure.yaml` (`mcp.approved_servers`,
+  `fail_on_unlisted`), profiles' `mcp_servers`: the audit fails on an
+  unlisted server, a changed url or package, or an unpinned version; the
+  sandbox gateway allows only the model host and the approved servers, and
+  any other host is a Fail; `lure decide` records each server's
+  tool-definition hash and `lure retest` fails when it changes (as in
+  `lure-tpo-003`). `lure sandbox mcp-snapshot` fetches the definitions
+  inside the sandbox (approved hosts only, `tools/list` only).
+- New profile keys: `agent_config`, `schedule`, `credentials`,
+  `working_dir`, `instruction_files`, `memory_sink`, `log_sink`,
+  `transcript_sink`, `mcp_servers`, `mcp_tools_snapshot`, tool `domains`.
+  New `lure.yaml` keys: `mcp`, `audit` (extra auto-approve keys and flags,
+  provider hosts). `schema/audit.v1.json`.
+
+### Changed
+
+- A credential-shaped string in a profile's system prompt is no longer a
+  profile load error: `lure audit` reports where it is (critical) and the
+  run stops before any model call.
+- Profiles whose tools act with no confirmation step now get "Approve with
+  conditions" at best, with the audit's fix as a condition.
+- The mock MCP server moves from v1.14 to v1.15.
+
 ## v1.13.2 (2026-10-25)
 
 ### Fixed

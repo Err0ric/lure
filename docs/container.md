@@ -112,6 +112,12 @@ lure sandbox run attacks/ --profile profiles/example-ref-agent-local.yaml
 lure sandbox clean              # remove anything a crash left behind
 ```
 
+`lure sandbox run` runs [`lure audit`](audit.md) first: a critical finding in the profile or the agent's config stops it before any container starts. With an MCP server allowlist in `lure.yaml` (`mcp.approved_servers`), the gateway allows the model host and the approved servers' hosts the profile uses, and nothing else; a connection anywhere else is a Fail. To record the approved remote servers' tool definitions for `lure decide` and `lure retest`:
+
+```bash
+lure sandbox mcp-snapshot --profile profiles/my-agent.yaml --out profiles/my-agent-tools.json
+```
+
 Lure runs the attacks the profile's tools cover. The attack's file fixtures become `/workspace` (paths relative to the folder they share, which the task calls the working directory), its settings fixture becomes the agent's settings file with the profile's model URL, and the agent gets the profile's system prompt and the attack's task. Results go to `results/<profile>/sandbox-<timestamp>/`, scored and gated by the policy file like any run.
 
 ### What each run creates and removes

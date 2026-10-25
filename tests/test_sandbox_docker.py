@@ -364,3 +364,23 @@ def test_the_docker_host_is_not_reachable(host_stubs):
     assert enforced["host_isolation"] in (
         "com.docker.network.bridge.gateway_mode_ipv4=isolated",
         "com.docker.network.bridge.inhibit_ipv4=true")
+
+
+# v1.14: MCP tool definitions fetched inside the sandbox, approved hosts only.
+
+def test_mcp_snapshot_inside_the_sandbox():
+    from lure.audit.mcp import tool_hashes
+    from lure.sandbox.snapshot import fetch_snapshot
+
+    data, egress = fetch_snapshot(
+        [("crm", f"http://{MODEL}:8080/mcp"), ("other", "http://other.attacker.example/mcp")],
+        AGENT, GATEWAY, allow=(f"{MODEL}:8080",), spec_extra={"outside": (fake_model(),)})
+    assert [t["name"] for t in data["crm"]["tools"]] == ["lookup_customer", "list_orders"]
+    assert "error" in data["other"]
+    assert {(e["host"], e["allowed"]) for e in egress} == {(MODEL, True),
+                                                            ("other.attacker.example", False)}
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "snap.json"
+        path.write_text(json.dumps(data))
+        assert len(tool_hashes(path)["crm"]) == 64

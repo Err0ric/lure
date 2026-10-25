@@ -148,7 +148,7 @@ def test_the_reference_agent_image_is_ours_non_root_and_without_pip():
     copies = [i for i in lines if i.startswith(("COPY ", "ADD "))]
     # Only Lure's own reference agent and decoy, nothing fetched.
     assert copies == [("COPY lure/sandbox/refagent/agent.py lure/sandbox/refagent/decoy.py "
-                      "/opt/lure/")]
+                       "lure/sandbox/refagent/mcpsnap.py /opt/lure/")]
     users = [i for i in lines if i.startswith("USER ")]
     assert users and users[-1] == "USER 10001:10001"
     assert lines.index(users[-1]) > max(i for i, line in enumerate(lines)
@@ -175,7 +175,7 @@ def test_the_sandbox_guide_commands_are_ones_the_cli_accepts():
             if command.startswith("lure sandbox"):
                 parser.parse_args(shlex.split(command)[1:])
                 found += 1
-    assert found == 4
+    assert found == 5
 
 
 def test_secret_scanning_is_pinned_and_fails_on_findings():

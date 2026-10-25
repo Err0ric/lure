@@ -51,6 +51,7 @@ From there to a gated CI run on a model you choose: [`docs/run-in-your-environme
 | [Attack library](docs/attack-library.md) | Every attack category, scenario pack and mock tool |
 | [Writing a profile](docs/writing-a-profile.md) | Step-by-step tutorial for vetting your own agent |
 | [Profiles](docs/profiles.md) | Profile reference, confirmation gates and the approval report |
+| [lure audit](docs/audit.md) | The pre-flight check of an agent's setup, and the MCP server allowlist |
 | [Weekly vetting workflow](docs/vetting-workflow.md) | Decide, retest on change and every week, track |
 | [Vetting on Gitea](docs/gitea-pipeline.md) | Pull-request approvals, CODEOWNERS, branch protection, `lure status` as a required check |
 | [ATLAS and ATT&CK mapping](docs/atlas-mapping.md) | Every ID, what uses it, and when it was checked |

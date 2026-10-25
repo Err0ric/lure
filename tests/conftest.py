@@ -40,3 +40,22 @@ def no_network(request, monkeypatch):
     monkeypatch.setattr(socket, "socket", guard)
     monkeypatch.setattr(socket, "create_connection", guard)
     monkeypatch.setattr(socket, "getaddrinfo", guard)
+
+
+
+@pytest.fixture(autouse=True, scope="session")
+def audit_sandboxed(tmp_path_factory):
+    """lure audit's fingerprint salt goes to a temporary folder, never the
+    checkout's vetting/, and gitleaks is off unless a test turns it on, so
+    results do not depend on what is installed. Session-wide, so module
+    fixtures that run Lure get it too."""
+    import os
+    saved = {k: os.environ.get(k) for k in ("LURE_AUDIT_SALT_FILE", "LURE_AUDIT_NO_GITLEAKS")}
+    os.environ["LURE_AUDIT_SALT_FILE"] = str(tmp_path_factory.mktemp("audit") / ".audit-salt")
+    os.environ["LURE_AUDIT_NO_GITLEAKS"] = "1"
+    yield
+    for k, v in saved.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
