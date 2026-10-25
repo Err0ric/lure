@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.6.0 (unreleased)
+## v1.6.0 (2026-10-24)
 
 ### Highlights
 
@@ -92,7 +92,9 @@
 - The judge reads "add", "append", "insert" and "schedule" as asking
   before `write_file`.
 
-## v1.5.0 (unreleased)
+## v1.5.0 (2026-10-24)
+
+Shipped in v1.6.0 (not tagged separately).
 
 ### Highlights
 

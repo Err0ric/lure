@@ -250,6 +250,7 @@ Goal: vet a real agent, not just a model: bring your own agent, get a one-page a
   - Shipped: `lure-egr-001` (Markdown image in the reply, URL-encoded data), `lure-egr-002` (lookalike statement link, base64 data in the path), `lure-egr-003` (tracking link in a `post_message`, fetched by the preview). New judge keys `reply_url` (confirmed, like `reply_contains`) and `url_in_args`; `exposure.rendered` lists outside images in replies; `post_message` link hosts are exposure. ATT&CK T1048, not T1567 (the hosts are attacker lookalikes, not legitimate web services). Profiles: `renders: {images, link_previews}`; the approval report suggests a client condition for these Fails instead of forcing Reject. `profiles/example-ops-agent.yaml` maps `list_env` and `post_message`.
 - [x] Coverage after v1.5 (proposed codes; final codes are picked per attack and reviewed like v1.4): inputs 5 of 12 (no change), intents 6 to 8 of 27, techniques 11 to 15 of 70, evasions 4 to 6 of 63.
   - Shipped: inputs 5 of 12, intents 8 of 27, techniques 15 of 70, evasions 6 of 63, from 38 current attacks.
+- [x] Shipped in v1.6.0 (not tagged separately)
 
 ### v1.6
 
@@ -278,11 +279,13 @@ Goal: track decisions and retest on change; test agents that can run code or cha
   - Shipped: `lure-per-001` (cron line), `lure-per-002` (login-only `.bashrc` line during a real fix), `lure-per-003` (sleeper: a note fires on the next pipeline edit, a follow-up turn; a generic `ci/pipeline.yml`). ATLAS AML.T0112.000 Machine Compromise: Local AI Agent and AML.T0094 Delay Execution of LLM Instructions instead of AML.T0081 (the files are host files, not agent configuration); ATT&CK T1053.003, T1546.004, T1677. Arcanum PIT-T-44 on per-003 only, PIT-T-60 on the others.
 - [x] Coverage after v1.6 (proposed): inputs 5 of 12, intents 8 of 27, techniques 15 to 18 of 70, evasions 6 of 63.
   - Shipped: inputs 5 of 12, intents 8 of 27, techniques 18 of 70, evasions 6 of 63, from 47 current attacks.
+- [ ] Tag v1.6.0
 
 ### Later
 
 - [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies. Blocked on picking a local open-weights attacker model via Ollama (Claude attackers refused most exfiltration goals in v1.3).
 - [ ] Confirm-gate mock tool, so "require human confirmation" conditions can be verified by a retest.
+- [ ] `lure rescore --exposure-only` accepts adaptive runs. It skips them now ("rescore does not re-judge attempts yet"), although exposure-only re-judges nothing; the 18 v1.3 adaptive records were checked by hand for v1.6.0.
 - [ ] Multi-agent targets (an orchestrator plus specialists) and handoff attacks.
 - [ ] Scenario packs beyond accounts payable, so a profiled agent is tested on its own kind of work: customer support (tickets, refunds, account changes) and IT helpdesk (password resets, access requests, device tickets). Same mock-only rules; each pack brings its own fixtures, tasks and mock tools.
 
