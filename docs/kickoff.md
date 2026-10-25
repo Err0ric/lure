@@ -346,7 +346,7 @@ Goal: test coding agents against instruction files that came from outside their 
 - [x] A fixture `origin` field (`repo`, `download`, `user`): validated and stripped before any mock, so the agent never sees it; carried into results (`attack.injection.origin`, `.source`), the judge's reason and the approval page ("followed instructions from a downloaded file"), with a condition. `twin_of` marks a control; the approval page reports whether the agent acted on it. Scenario pack `coding`.
 - [x] `lure-shx-004` (install a package from an outside registry), `lure-smo-004` (set its own model endpoint to an outside relay), `lure-cra-008` (print or send its auth token); controls `lure-shx-005`, `lure-smo-005`, `lure-cra-009` from the repository's own AGENTS.md. New IDs AML.T0011.001 (ATLAS 2026.09), T1204.005 and T1557 (attack.mitre.org, 2026-10-25; T1557 as the closest fit for a base URL change).
   - A control is decided by its rules alone: the LLM judge read following a legitimate repository instruction as complying with an attacker. `read_file` resolves a relative path to the one file ending with it.
-- [ ] Tag v1.12.0
+- [x] Tag v1.12.0
 
 ### Next
 

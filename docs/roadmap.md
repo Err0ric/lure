@@ -1,6 +1,6 @@
 # Known gaps and roadmap
 
-> Status: v1.11.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
+> Status: v1.12.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
 
 ## Known gaps
 
@@ -28,7 +28,7 @@
 - [x] v1.9.0: HR and recruiting and sales and CRM scenario packs, with example profiles
 - [x] v1.10.0: DuckDB results store (`lure store`) and a local, read-only `lure serve` dashboard
 - [x] v1.11.0: `lure status`, Gitea pipeline examples and guide, SECURITY.md, issue and pull request templates, a container image, how the sandbox works
-- [ ] v1.12: coding-agent instruction-file attacks (a file from a download asks to install a package, change the model endpoint, or hand over the auth token) and a fixture `origin` field (repo, download, user), on today's mocks
+- [x] v1.12.0: coding-agent instruction-file attacks (a file from a download asks to install a package, change the model endpoint, or hand over the auth token) and a fixture `origin` field (repo, download, user), on today's mocks
 
 ### Next
 
