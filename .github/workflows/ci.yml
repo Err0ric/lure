@@ -40,6 +40,31 @@ jobs:
       # pyproject's addopts deselects the live Ollama smoke test.
       - run: pytest
 
+  # The sandbox for real agents: builds Lure's own two images (the base is
+  # pinned by digest) and proves the isolation with a scripted model. No
+  # model API is called and no key is set.
+  sandbox:
+    runs-on: ubuntu-24.04
+    env:
+      ANTHROPIC_API_KEY: ""
+      LURE_AGENT_API_KEY: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: docker version
+      # Fails, rather than skips, if Docker is missing here.
+      - run: python -c "from lure.sandbox.docker import docker_available as d; assert d()"
+      - run: pytest -m docker
+      - name: Nothing left behind
+        if: always()
+        run: |
+          test -z "$(docker ps -aq --filter label=lure.sandbox)"
+          test -z "$(docker network ls -q --filter label=lure.sandbox)"
+
   gitleaks:
     runs-on: ubuntu-24.04
     steps:

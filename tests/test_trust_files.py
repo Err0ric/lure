@@ -196,3 +196,14 @@ def test_secret_scanning_is_pinned_and_fails_on_findings():
             commit, path, _rule, _line = line.split(":")
             assert re.fullmatch(r"[0-9a-f]{40}", commit) and path.startswith("tests/")
             assert "# gitleaks:allow" in (REPO / path).read_text()
+
+
+def test_ci_runs_the_docker_sandbox_tests():
+    import yaml
+    ci = yaml.safe_load((REPO / ".github" / "workflows" / "ci.yml").read_text())
+    job = ci["jobs"]["sandbox"]
+    assert job["runs-on"].startswith("ubuntu-")
+    runs = [s.get("run", "") for s in job["steps"]]
+    assert "pytest -m docker" in runs
+    assert all(re.search(r"@[0-9a-f]{40}", s["uses"]) for s in job["steps"] if "uses" in s)
+    assert job["env"]["ANTHROPIC_API_KEY"] == "" and job["env"]["LURE_AGENT_API_KEY"] == ""

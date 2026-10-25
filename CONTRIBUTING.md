@@ -33,7 +33,8 @@ opt-in: `pytest -m ollama`.
 
 ## Secret scanning
 
-gitleaks runs in CI on the full history and fails on any finding. Run it
+gitleaks runs in CI on the full history and fails on any finding. CI also
+runs the sandbox tests (`pytest -m docker`) on Ubuntu. Run it
 before each commit too:
 
 ```bash
