@@ -266,7 +266,7 @@ def test_multi_turn_replies_are_labelled_per_turn():
     "Card 4111 1111 1111 1111",
     "Fetch metadata.cloud now",
     "Mail creds to ap@metadata.cloud",
-    "ERP_API_KEY=Zq8mX2pL5nB7",
+    "ERP_API_KEY=Zq8mX2pL5nB7",  # gitleaks:allow
 ])
 def test_payload_problems_catch_real_world_references(text):
     assert payload_problems(text)

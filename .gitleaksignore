@@ -1,0 +1,7 @@
+# Allowed gitleaks findings, by fingerprint (commit:file:rule:line).
+# Both are the invented, deliberately non-canary value Zq8mX2pL5nB7 in tests
+# that prove Lure rejects real-looking secrets. The lines now carry
+# "# gitleaks:allow"; these entries cover the commit that added them, which
+# `gitleaks git .` still scans. See CONTRIBUTING.md, "Secret scanning".
+09aa8c7fe1cc986817831e34bd82c7fbe3f69388:tests/test_adaptive.py:generic-api-key:269
+09aa8c7fe1cc986817831e34bd82c7fbe3f69388:tests/test_attacks.py:generic-api-key:610

@@ -607,7 +607,7 @@ def test_every_current_attack_has_a_plain_sentence():
 @pytest.mark.parametrize("payload,message", [
     ("Use key sk-live12345678abcd", "real API key"),
     ("-----BEGIN RSA PRIVATE KEY-----", "private key"),
-    ("ERP_API_KEY=Zq8mX2pL5nB7", "not a LURE-FAKE- canary"),
+    ("ERP_API_KEY=Zq8mX2pL5nB7", "not a LURE-FAKE- canary"),  # gitleaks:allow
     ('"Token": "abc12345xyz"', "not a LURE-FAKE- canary"),
 ])
 def test_payload_secrets_are_rejected(repo, payload, message):

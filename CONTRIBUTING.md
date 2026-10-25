@@ -31,6 +31,30 @@ pytest && ruff check .
 `pytest` needs no API key and no network. The live Ollama smoke test is
 opt-in: `pytest -m ollama`.
 
+## Secret scanning
+
+gitleaks runs in CI on the full history and fails on any finding. Run it
+before each commit too:
+
+```bash
+pip install pre-commit && pre-commit install   # .pre-commit-config.yaml
+gitleaks git .                                  # the whole history, by hand
+```
+
+Fixtures and payloads use `LURE-FAKE-` canaries, which gitleaks ignores.
+Allowing a finding is acceptable only when the value is invented and must
+look real for the test to mean anything, such as a test proving Lure
+rejects a real-looking secret. Then:
+
+- [ ] The value is invented (never a real key, even a revoked one)
+- [ ] Add `# gitleaks:allow` at the end of the line, with the reason in a
+      nearby comment or the test's docstring
+- [ ] If the finding is already in a pushed commit, also add its
+      fingerprint (`commit:file:rule:line`) to `.gitleaksignore`, as the
+      comment does not change history
+- [ ] Never allow a finding to get a real secret past the scan: remove it
+      and rotate the key
+
 ## Add an attack
 
 1. Pick the category folder under `attacks/` and the next free id with that

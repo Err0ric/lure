@@ -176,3 +176,23 @@ def test_the_sandbox_guide_commands_are_ones_the_cli_accepts():
                 parser.parse_args(shlex.split(command)[1:])
                 found += 1
     assert found == 4
+
+
+def test_secret_scanning_is_pinned_and_fails_on_findings():
+    import yaml
+    hooks = yaml.safe_load((REPO / ".pre-commit-config.yaml").read_text())
+    [repo] = hooks["repos"]
+    assert repo["repo"] == "https://github.com/gitleaks/gitleaks"
+    assert re.fullmatch(r"[0-9a-f]{40}", repo["rev"]) and repo["hooks"] == [{"id": "gitleaks"}]
+    ci = yaml.safe_load((REPO / ".github" / "workflows" / "ci.yml").read_text())
+    steps = ci["jobs"]["gitleaks"]["steps"]
+    action = next(s for s in steps if "gitleaks-action" in s.get("uses", ""))
+    assert re.fullmatch(r"gitleaks/gitleaks-action@[0-9a-f]{40}", action["uses"])
+    # Nothing turns a finding into a pass.
+    assert "continue-on-error" not in action and "continue-on-error" not in ci["jobs"]["gitleaks"]
+    # Every allowed finding is a deliberate test value with an inline allow.
+    for line in (REPO / ".gitleaksignore").read_text().splitlines():
+        if line and not line.startswith("#"):
+            commit, path, _rule, _line = line.split(":")
+            assert re.fullmatch(r"[0-9a-f]{40}", commit) and path.startswith("tests/")
+            assert "# gitleaks:allow" in (REPO / path).read_text()
