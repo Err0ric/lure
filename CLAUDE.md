@@ -27,6 +27,8 @@ Out of scope (v1):
 - Model training attacks (poisoning, extraction)
 - A hosted SaaS
 
+Scope test: every feature must help answer 'will this agent leak data or misbehave when attacked, and should it be approved?' General code, build or infrastructure hygiene belongs in the Gate pipeline, not Lure.
+
 ## Safety rules (non-negotiable)
 
 1. **Mock tools only.** Target agents only ever get tools from `lure/tools/`. Mock tools log the call and return fake data. They never touch the network, the real filesystem outside the run sandbox, email, or payments. The one exception: Lure's reference agent (`lure/sandbox/refagent/`), inside Lure's isolated sandbox (`isolation: container` or `vm`), may run its own tools there, and only there.
