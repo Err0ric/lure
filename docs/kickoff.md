@@ -326,7 +326,7 @@ Goal: query runs across folders, and browse runs, transcripts, approval pages an
 - [x] `lure serve` (from v1.1): standard library server on 127.0.0.1, GET and HEAD only. Pages Runs, Run, Attack, Profiles, Profile, and a folder's report and approval page built on request without writing files. Fixed queries only.
   - Host header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS rebinding; else 421). CSP with no scripts and no remote images, nosniff, no-referrer, frame denial, no CORS headers. Everything escaped; nothing rendered as Markdown.
 - [x] Tests reach 127.0.0.1 only under the `loopback` marker; every other host stays blocked.
-- [ ] Tag v1.10.0
+- [x] Tag v1.10.0
 
 ### Next
 

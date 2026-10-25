@@ -1,6 +1,6 @@
 # Known gaps and roadmap
 
-> Status: v1.9.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
+> Status: v1.10.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
 
 ## Known gaps
 
@@ -26,7 +26,7 @@
 - [x] v1.7.0: confirmation gates, customer support and IT helpdesk scenario packs, `lure rescore --exposure-only` for adaptive runs
 - [x] v1.8.0: evasion variants (zero-width, homoglyphs, hidden HTML, translated), team chat as an input, summary-only and threshold gates, the profile tutorial
 - [x] v1.9.0: HR and recruiting and sales and CRM scenario packs, with example profiles
-- [ ] v1.10: DuckDB results store (`lure store`) and a local, read-only `lure serve` dashboard
+- [x] v1.10.0: DuckDB results store (`lure store`) and a local, read-only `lure serve` dashboard
 
 ### Next
 
