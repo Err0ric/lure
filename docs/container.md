@@ -7,7 +7,7 @@ The container is a convenient, tidy place to run Lure. It is not what keeps a mo
 ## Build
 
 ```bash
-docker build -t lure:1.12.0 .
+docker build -t lure:1.13.0 .
 ```
 
 `.dockerignore` keeps `.env`, `results/`, `vetting/` and every profile except the examples out of the build context, so they can never end up in an image layer.
@@ -20,7 +20,7 @@ Rules-only work needs no network at all, so turn it off:
 # Rescore or report saved runs: no model is called.
 docker run --rm --network none \
   -v "$PWD/results:/work/results" \
-  lure:1.12.0 report results/my-run/ --out results/my-run/report.html
+  lure:1.13.0 report results/my-run/ --out results/my-run/report.html
 ```
 
 A run against a hosted model passes the key at run time, never at build time:
@@ -28,7 +28,7 @@ A run against a hosted model passes the key at run time, never at build time:
 ```bash
 docker run --rm --env-file .env \
   -v "$PWD/results:/work/results" \
-  lure:1.12.0 run attacks/indirect_prompt_injection/lure-ipi-001.yaml --target anthropic
+  lure:1.13.0 run attacks/indirect_prompt_injection/lure-ipi-001.yaml --target anthropic
 ```
 
 Your own profile, mounted read-only with its policy:
@@ -37,7 +37,7 @@ Your own profile, mounted read-only with its policy:
 docker run --rm --env-file .env \
   -v "$PWD/profiles/my-agent.yaml:/work/profiles/my-agent.yaml:ro" \
   -v "$PWD/results:/work/results" \
-  lure:1.12.0 run --profile profiles/my-agent.yaml --repeat 3 \
+  lure:1.13.0 run --profile profiles/my-agent.yaml --repeat 3 \
     --prices prices.example.yaml --max-cost 1.00
 ```
 
@@ -48,7 +48,7 @@ A local model on the host, so prompts never leave the machine:
 ```bash
 docker run --rm -e LURE_OLLAMA_URL=http://host.docker.internal:11434 \
   -v "$PWD/results:/work/results" \
-  lure:1.12.0 run attacks/ --target ollama --model llama3.1:8b
+  lure:1.13.0 run attacks/ --target ollama --model llama3.1:8b
 ```
 
 On Linux, add `--add-host host.docker.internal:host-gateway`.
@@ -61,7 +61,7 @@ Lure needs no extra privileges, so drop them all:
 docker run --rm --read-only --tmpfs /tmp \
   --cap-drop ALL --security-opt no-new-privileges \
   --env-file .env -v "$PWD/results:/work/results" \
-  lure:1.12.0 run attacks/ --target anthropic --model claude-haiku-5-5
+  lure:1.13.0 run attacks/ --target anthropic --model claude-haiku-5-5
 ```
 
 | Flag | Why |

@@ -365,7 +365,7 @@ Goal: isolation for testing real agents, and the three gate items carried over f
   - Shipped: `summary_check: tolerant` (default) or `strict` per summary-gated tool; tolerant also takes an account's last four digits; results record it (`profile.summary_check`).
 - [x] Live llama3.1 smoke tests for the misled (summary gate) and split (threshold gate) paths, which Haiku never took; they are covered by scripted tests only.
   - Shipped: `pytest -m ollama` runs both paths live. llama3.1:8b took the misled path (12 of 30 summary-gate runs, invented accounts) but never split a payment (10 runs). The smoke found two judge bugs, fixed: `amount_over` matched a call with no amount, and `lure rescore` dropped gate outcomes.
-- [ ] Tag v1.13.0
+- [x] Tag v1.13.0
 
 #### v1.14
 
