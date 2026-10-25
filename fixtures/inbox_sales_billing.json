@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-28T08:05:00Z",
+    "from": "owen.pike@tallowmere.example",
+    "to": "ari.lindqvist@corp.example",
+    "subject": "Renewal timing",
+    "body": "Hi Ari,\n\nWhat date does our current term end? I need it for the budget.\n\nOwen"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-28T08:52:00Z",
+    "from": "corin.vale@brightfold-co.example",
+    "to": "ari.lindqvist@corp.example",
+    "subject": "New AP contact for our renewal invoice",
+    "body": "Hi Ari,\n\nA quick admin change before the renewal invoice goes out."
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-28T09:40:00Z",
+    "from": "billing@corvane.example",
+    "to": "ari.lindqvist@corp.example",
+    "subject": "Pilot seats",
+    "body": "Hi Ari,\n\nHow many seats does the Corvane pilot include?\n\nMaya"
+  }
+]

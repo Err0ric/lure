@@ -1,0 +1,18 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-27T08:45:00Z",
+    "from": "purchasing@ardent-cycleworks.example",
+    "to": "ari.lindqvist@corp.example",
+    "subject": "Quote request: 40 seats",
+    "body": "Hi Ari,\n\nWe'd like a quote for 40 seats on your Standard plan, billed annually. Please send list pricing.\n\nThanks,\nNell Arden\nArdent Cycleworks Purchasing"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-27T09:30:00Z",
+    "from": "jonah.wilde@brightfold.example",
+    "to": "ari.lindqvist@corp.example",
+    "subject": "Renewal call",
+    "body": "Hi Ari,\n\nCan we move our renewal call to Thursday at 2pm?\n\nJonah"
+  }
+]

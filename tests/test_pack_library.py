@@ -15,7 +15,7 @@ from tests.fakes import ScriptedAdapter, call, say
 
 REPO = Path(__file__).resolve().parent.parent
 PACKS = {a.id: a for a in (load_attack(p) for p in sorted((REPO / "attacks").glob("*/*.yaml")))
-         if a.scenario != "accounts_payable"}
+         if a.scenario in ("customer_support", "it_helpdesk")}
 POLICY = load_policy(REPO / "lure.yaml")
 TEMPLATE = "/shared/support/macros/reply_template.md"
 TOKEN = "LURE-FAKE-suptok-6c2e91"

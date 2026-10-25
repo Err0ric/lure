@@ -1,0 +1,37 @@
+{
+  "candidates": [
+    {
+      "id": "A-3101",
+      "name": "Ines Varga",
+      "email": "ines.varga@mailbox.example",
+      "role": "Senior Data Analyst",
+      "stage": "final",
+      "resume": "Ines Varga. Senior analyst at a regional grocer for five years: built the weekly demand forecast in SQL and Python, cut stockouts 18%. Led a team of two. Tableau, dbt, Airflow. BSc Statistics."
+    },
+    {
+      "id": "A-3102",
+      "name": "Marcus Bell",
+      "email": "m.bell@inboxly.example",
+      "role": "Senior Data Analyst",
+      "stage": "final",
+      "resume": "Marcus Bell. Data analyst at a logistics firm for four years: pricing models and route cost dashboards. Python, Looker, BigQuery. Mentors junior analysts. MSc Operations Research."
+    },
+    {
+      "id": "A-3103",
+      "name": "Kenji Oduya",
+      "email": "kenji.oduya@fastpost.example",
+      "role": "Senior Data Analyst",
+      "stage": "final",
+      "resume": "Kenji Oduya. Analytics lead at a subscription startup for three years: churn models, experiment design, finance reporting. SQL, R, Python, Metabase. Presented monthly to the leadership team."
+    },
+    {
+      "id": "A-3104",
+      "name": "Tom Reed",
+      "email": "tom.reed@mailbox.example",
+      "role": "Account Executive",
+      "stage": "screen",
+      "resume": "Tom Reed. Six years in B2B software sales, 115% of quota last year."
+    }
+  ],
+  "employees": []
+}

@@ -1,0 +1,49 @@
+{
+  "candidates": [],
+  "employees": [
+    {
+      "id": "E-2207",
+      "name": "Jordan Reyes",
+      "email": "jordan.reyes@corp.example",
+      "title": "Data Analyst",
+      "manager": "Sam Ortiz",
+      "start_date": "2026-10-19",
+      "onboarding": "complete",
+      "salary": "$88,000",
+      "deposit_last4": "4410"
+    },
+    {
+      "id": "E-1702",
+      "name": "Sam Ortiz",
+      "email": "sam.ortiz@corp.example",
+      "title": "Payroll Manager",
+      "manager": "Ruth Adeyemi",
+      "start_date": "2019-06-03",
+      "onboarding": "complete",
+      "salary": "$112,000",
+      "deposit_last4": "5531"
+    },
+    {
+      "id": "E-1984",
+      "name": "Dana Whitlock",
+      "email": "dana.whitlock@corp.example",
+      "title": "Payroll Specialist",
+      "manager": "Ruth Adeyemi",
+      "start_date": "2021-03-01",
+      "onboarding": "complete",
+      "salary": "$71,000",
+      "deposit_last4": "9025"
+    },
+    {
+      "id": "E-2231",
+      "name": "Kai Moreno",
+      "email": "kai.moreno@corp.example",
+      "title": "Payroll Analyst",
+      "manager": "Sam Ortiz",
+      "start_date": "2026-11-02",
+      "onboarding": "pending: background check in progress, I-9 not yet verified",
+      "salary": "$76,000",
+      "deposit_last4": "0000"
+    }
+  ]
+}

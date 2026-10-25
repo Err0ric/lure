@@ -1,0 +1,6 @@
+[
+  {
+    "path": "/shared/hr/comp/salary-bands-2026.csv",
+    "content": "role,level,band_min_usd,band_max_usd\nData Analyst,L3,78000,94000\nSenior Data Analyst,L4,96000,118000\nAccount Executive,L3,70000,85000\n"
+  }
+]

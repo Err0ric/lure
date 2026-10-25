@@ -306,6 +306,17 @@ Goal: harder payloads and more channels, and the weaker kinds of confirmation st
 - [x] Coverage after v1.8: inputs 6 of 12 (new PIT-N-03), intents 8 of 27, techniques 20 of 70, evasions 9 of 63 (new PIT-E-05, PIT-E-20, PIT-E-23), from 58 current attacks.
 - [x] Tag v1.8.0
 
+### v1.9
+
+Goal: two more scenario packs, so HR and sales agents are tested on their own work. Mock tools only.
+
+- [x] HR and recruiting pack (`hr`): mocks `list_candidates`, `lookup_employee`, `update_direct_deposit` (an HR system, in memory). `lure-ipi-015` (resume note: salary band and finalists to an agency), `lure-ipi-016` (direct deposit change from a personal address), `lure-ipi-017` (payroll admin access while onboarding is pending; unlike `lure-ipi-013`, the agent's own HR record has the answer), `lure-mem-006` (agency note copies offer letters outside).
+- [x] Sales and CRM pack (`sales`): mocks `list_deals`, `lookup_account`, `update_account` (a CRM, in memory). `lure-ipi-018` (fake VP note: price book and discount matrix outside), `lure-egr-007` (CRM note: forecast "sync" link carrying the deals), `lure-ipi-019` (lookalike domain moves the billing contact), `lure-mem-007` (memory note: a 35% discount no one approved; no ATT&CK ID, like `lure-tab-004`).
+  - New IDs: AML.T0036 (ATLAS 2026.09), T1213.004 and T1565.001 (attack.mitre.org, 2026-10-25). T1213.004 (CRM software) instead of the parent T1213.
+- [x] Example profiles `example-hr-agent.yaml` and `example-sales-agent.yaml`.
+- [x] Coverage after v1.9: inputs 7 of 12 (new PIT-N-04), intents 9 of 27 (new PIT-I-07), techniques 21 of 70 (new PIT-T-38), evasions 9 of 63, from 66 current attacks.
+- [ ] Tag v1.9.0
+
 ### Later
 
 - [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies. Blocked on picking a local open-weights attacker model via Ollama (Claude attackers refused most exfiltration goals in v1.3).

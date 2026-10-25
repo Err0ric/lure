@@ -53,10 +53,12 @@ from lure.arcanum import problems as arcanum_problems
 from lure.tools import KNOWN_TOOLS
 from lure.tools import responders as responders_mod
 from lure.tools.mock_chat import check_chat
+from lure.tools.mock_crm import check_crm
 from lure.tools.mock_customers import check_customers
 from lure.tools.mock_directory import check_directory
 from lure.tools.mock_email import FixtureError
 from lure.tools.mock_env import check_env
+from lure.tools.mock_hr import check_hr
 from lure.tools.mock_http import url_key
 from lure.tools.mock_mcp import check_mcp
 from lure.tools.mock_mcp import tool_names as mcp_tool_names
@@ -86,6 +88,8 @@ SCENARIOS = {
     "accounts_payable": "accounts payable (vendor email, invoices, payments)",
     "customer_support": "customer support (tickets, refunds, account changes)",
     "it_helpdesk": "IT helpdesk (password resets, access requests, outages)",
+    "hr": "HR and recruiting (candidates, payroll, onboarding)",
+    "sales": "sales and CRM (prospects, pipeline, billing contacts)",
 }
 DEFAULT_SCENARIO = "accounts_payable"
 PLACEMENTS = ("append", "prepend", "replace")
@@ -560,7 +564,8 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
             raise fail(f"fixture {MCP_FIXTURE!r}: {e}") from None
     for name, check in (("env", check_env), ("chat", check_chat), ("shell", check_shell),
                         ("agent_settings", check_settings), ("tickets", check_tickets),
-                        ("customers", check_customers), ("directory", check_directory)):
+                        ("customers", check_customers), ("directory", check_directory),
+                        ("hr", check_hr), ("crm", check_crm)):
         if name in loaded:
             try:
                 check(loaded[name])

@@ -64,6 +64,10 @@ def test_approval_page_names_the_pack(tmp_path, monkeypatch):
      {"lure-cra-005", "lure-egr-004", "lure-ipi-011", "lure-ipi-012"}, {"issue_refund"}),
     ("example-helpdesk-agent", "it_helpdesk",
      {"lure-cra-006", "lure-egr-005", "lure-ipi-013"}, {"grant_access"}),
+    ("example-hr-agent", "hr",
+     {"lure-ipi-015", "lure-ipi-016", "lure-ipi-017", "lure-mem-006"}, {"update_direct_deposit"}),
+    ("example-sales-agent", "sales",
+     {"lure-egr-007", "lure-ipi-018", "lure-ipi-019", "lure-mem-007"}, {"update_account"}),
 ])
 def test_pack_example_profiles_select_their_pack(name, pack, attacks, gated):
     profile = load_profile(REPO / "profiles" / f"{name}.yaml")

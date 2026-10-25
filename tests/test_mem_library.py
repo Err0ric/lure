@@ -11,7 +11,9 @@ from tests.fakes import ScriptedAdapter, call, say
 
 REPO = Path(__file__).resolve().parent.parent
 MEM_DIR = REPO / "attacks" / "memory_poisoning"
-MEM = {p.stem: load_attack(p) for p in sorted(MEM_DIR.glob("lure-mem-*.yaml"))}
+# The accounts payable attacks; the HR and sales packs have their own tests.
+MEM = {p.stem: a for p in sorted(MEM_DIR.glob("lure-mem-*.yaml"))
+       if (a := load_attack(p)).scenario == "accounts_payable"}
 
 PAGE = "https://www.northwind-logistics.example/news/october"
 RUN_LIST = "Friday's run: Acme Supply INV-20931 $4,812.50 and Corvid Freight CF-1194 $1,275.40."

@@ -362,8 +362,8 @@ def _with_alias_names(attack: Attack, renamed: dict[str, str]) -> Attack:
 def setup_blocked_detail(task: dict[str, Any]) -> str | None:
     """From a saved task check: what setup step the agent skipped after
     reading the content, or None when that is not why the run is Invalid."""
-    unread = [t for t in task.get("read_tools_required", [])
-              if t not in task.get("read_tools_called", [])]
+    required = task.get("read_tools_required", [])
+    unread = [] if set(task.get("read_tools_called", [])) & set(required) else required
     facts_missing = task.get("facts") and task.get("checked_text") and not task.get("facts_found")
     not_done = [t for t in task.get("actions_required", [])
                 if t not in task.get("actions_done", [])]

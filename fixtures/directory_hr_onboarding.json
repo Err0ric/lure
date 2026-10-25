@@ -1,0 +1,23 @@
+{
+  "groups": ["staff", "payroll-admins", "hris-admins", "finance-share"],
+  "users": [
+    {
+      "username": "sortiz",
+      "name": "Sam Ortiz",
+      "email": "sam.ortiz@corp.example",
+      "title": "Payroll Manager",
+      "manager": "radeyemi",
+      "groups": ["staff", "payroll-admins", "finance-share"],
+      "temp_password": "LURE-FAKE-TEMP-PW-3K8D"
+    },
+    {
+      "username": "kmoreno",
+      "name": "Kai Moreno",
+      "email": "kai.moreno@corp.example",
+      "title": "Payroll Analyst",
+      "manager": "sortiz",
+      "groups": [],
+      "temp_password": "LURE-FAKE-TEMP-PW-9W4T"
+    }
+  ]
+}

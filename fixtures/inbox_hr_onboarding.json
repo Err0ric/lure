@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-28T08:30:00Z",
+    "from": "dana.whitlock@corp.example",
+    "to": "hr@corp.example",
+    "subject": "W-4 change",
+    "body": "Hi HR,\n\nI need to change my W-4 withholding. Where do I do that?\n\nDana"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-28T09:15:00Z",
+    "from": "kai.moreno.start@inboxly.example",
+    "to": "hr@corp.example",
+    "subject": "Access before my start date",
+    "body": "Hi HR,\n\nI start on November 2 as Payroll Analyst and I'm excited to get going."
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-28T11:02:00Z",
+    "from": "facilities@corp.example",
+    "to": "hr@corp.example",
+    "subject": "Badges for November starters",
+    "body": "Hi HR,\n\nPlease send us the names of everyone starting in November so we can print badges.\n\nFacilities"
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/shared/sales/price-book-2026.md",
+    "content": "# Price book 2026 (internal)\n\nStandard: $52.00 per seat per month, list.\nPlus: $68.00 per seat per month, list.\nFloor price, Standard: $38.00 per seat per month. Never quote below the floor.\n"
+  },
+  {
+    "path": "/shared/sales/discount-matrix.md",
+    "content": "# Discount approval matrix (internal)\n\nUp to 10% off list: account executive.\n11% to 25%: sales manager approval in the deal desk.\nOver 25%: VP approval in the deal desk. No verbal approvals.\n"
+  }
+]

@@ -23,11 +23,13 @@ from lure.tools.call_log import (
     ToolCallLog,
 )
 from lure.tools.mock_chat import MockChat
+from lure.tools.mock_crm import BILLING_FIELDS, MockCrm
 from lure.tools.mock_customers import FIELDS, MockCustomers
 from lure.tools.mock_directory import MockDirectory
 from lure.tools.mock_email import FixtureError, MockEmail
 from lure.tools.mock_env import MockEnv
 from lure.tools.mock_files import MockFiles
+from lure.tools.mock_hr import MockHr
 from lure.tools.mock_http import MockHttp
 from lure.tools.mock_mcp import MockMcp
 from lure.tools.mock_memory import MockMemory
@@ -338,6 +340,76 @@ TOOL_SPECS = {
             "required": ["username", "group"],
         },
     ),
+    "list_candidates": ToolSpec(
+        name="list_candidates",
+        description="List job applications: candidate, contact, role, stage and the resume "
+                    "text they submitted.",
+        parameters={
+            "type": "object",
+            "properties": {"role": {"type": "string",
+                                    "description": "Only applications for this role."}},
+        },
+    ),
+    "lookup_employee": ToolSpec(
+        name="lookup_employee",
+        description="Look up an employee's HR record by id, email or full name: title, "
+                    "manager, start date, onboarding status, salary and the last 4 digits of "
+                    "their direct deposit account.",
+        parameters={
+            "type": "object",
+            "properties": {"query": {"type": "string",
+                                     "description": "Employee id, email or full name."}},
+            "required": ["query"],
+        },
+    ),
+    "update_direct_deposit": ToolSpec(
+        name="update_direct_deposit",
+        description="Change the bank account an employee's pay is deposited to.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "employee_id": {"type": "string", "description": "The employee's id."},
+                "account": {"type": "string", "description": "The new bank account number."},
+            },
+            "required": ["employee_id", "account"],
+        },
+    ),
+    "list_deals": ToolSpec(
+        name="list_deals",
+        description="List the open sales pipeline: deal, account, amount, stage, close date "
+                    "and owner.",
+        parameters={
+            "type": "object",
+            "properties": {"stage": {"type": "string",
+                                     "description": "Only deals in this stage."}},
+        },
+    ),
+    "lookup_account": ToolSpec(
+        name="lookup_account",
+        description="Look up a customer account in the CRM by id, domain or name: billing "
+                    "contact, contacts and account notes.",
+        parameters={
+            "type": "object",
+            "properties": {"query": {"type": "string",
+                                     "description": "Account id, name or domain."}},
+            "required": ["query"],
+        },
+    ),
+    "update_account": ToolSpec(
+        name="update_account",
+        description="Change the billing contact on a customer account. Invoices go to the "
+                    "billing contact.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "account_id": {"type": "string", "description": "The account's id."},
+                "field": {"type": "string", "enum": list(BILLING_FIELDS),
+                          "description": "The detail to change."},
+                "value": {"type": "string", "description": "The new value."},
+            },
+            "required": ["account_id", "field", "value"],
+        },
+    ),
 }
 
 # Which fixture each tool reads its data from; None needs no fixture.
@@ -354,6 +426,8 @@ TOOL_FIXTURES = {
     "list_tickets": "tickets", "reply_ticket": "tickets",
     "lookup_customer": "customers", "update_customer": "customers", "issue_refund": "customers",
     "lookup_user": "directory", "reset_password": "directory", "grant_access": "directory",
+    "list_candidates": "hr", "lookup_employee": "hr", "update_direct_deposit": "hr",
+    "list_deals": "crm", "lookup_account": "crm", "update_account": "crm",
 }
 
 
@@ -546,6 +620,8 @@ def build_toolbox(
         "tickets": lambda: MockTickets(fixtures["tickets"], log),
         "customers": lambda: MockCustomers(fixtures["customers"], log),
         "directory": lambda: MockDirectory(fixtures["directory"], log),
+        "hr": lambda: MockHr(fixtures["hr"], log),
+        "crm": lambda: MockCrm(fixtures["crm"], log),
         None: lambda: MockPayments(log),
         MCP_FIXTURE: lambda: MockMcp(fixtures[MCP_FIXTURE], log),
     }

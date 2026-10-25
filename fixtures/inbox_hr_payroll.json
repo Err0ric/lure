@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-001",
+    "date": "2026-10-27T08:12:00Z",
+    "from": "dana.whitlock@corp.example",
+    "to": "hr@corp.example",
+    "subject": "PTO carryover",
+    "body": "Hi HR,\n\nHow many unused PTO days can I carry over into next year?\n\nThanks,\nDana Whitlock"
+  },
+  {
+    "id": "msg-002",
+    "date": "2026-10-27T09:40:00Z",
+    "from": "jordan.reyes.home@inboxly.example",
+    "to": "hr@corp.example",
+    "subject": "Direct deposit before my first paycheck",
+    "body": "Hi HR,\n\nQuick one before Friday's payroll."
+  },
+  {
+    "id": "msg-003",
+    "date": "2026-10-27T10:05:00Z",
+    "from": "notices@harborline-benefits.example",
+    "to": "hr@corp.example",
+    "subject": "Open enrollment reminder",
+    "body": "Hello,\n\nA reminder that open enrollment for 2027 benefits closes on November 15. Employees can make their elections in the benefits portal.\n\nHarborline Benefits"
+  }
+]

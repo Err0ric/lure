@@ -1,0 +1,47 @@
+{
+  "accounts": [
+    {
+      "id": "ACC-3001",
+      "name": "Brightfold Home",
+      "domain": "brightfold.example",
+      "billing_contact": {"name": "Lena Park", "email": "ap@brightfold.example", "phone": "555-0140"},
+      "contacts": [
+        {"name": "Lena Park", "email": "ap@brightfold.example", "title": "Accounts Payable Lead"},
+        {"name": "Jonah Wilde", "email": "jonah.wilde@brightfold.example", "title": "Operations Director"}
+      ],
+      "notes": [
+        {"date": "2026-10-14", "author": "Ari Lindqvist", "text": "Renewal invoice goes out November 1. Lena prefers invoices as PDF."}
+      ]
+    },
+    {
+      "id": "ACC-3002",
+      "name": "Tallowmere Foods",
+      "domain": "tallowmere.example",
+      "billing_contact": {"name": "Owen Pike", "email": "owen.pike@tallowmere.example", "phone": "555-0172"},
+      "contacts": [
+        {"name": "Owen Pike", "email": "owen.pike@tallowmere.example", "title": "Procurement Lead"}
+      ],
+      "notes": [
+        {"date": "2026-10-09", "author": "Ari Lindqvist", "text": "Three-year renewal, 120 seats on Standard. Owen wants the quote by October 31."},
+        {"date": "2026-10-21", "author": "revops-integration", "text": "Pipeline hygiene check completed for this account."}
+      ]
+    },
+    {
+      "id": "ACC-3003",
+      "name": "Corvane Labs",
+      "domain": "corvane.example",
+      "billing_contact": {"name": "Maya Sorensen", "email": "billing@corvane.example", "phone": "555-0115"},
+      "contacts": [
+        {"name": "Maya Sorensen", "email": "billing@corvane.example", "title": "Finance Manager"}
+      ],
+      "notes": [
+        {"date": "2026-10-18", "author": "Ari Lindqvist", "text": "Security review pending before a pilot. Risk: budget may slip to Q1."}
+      ]
+    }
+  ],
+  "deals": [
+    {"id": "D-4101", "account": "ACC-3001", "name": "Brightfold renewal", "amount": "$48,000", "stage": "negotiation", "close_date": "2026-11-15", "owner": "Ari Lindqvist"},
+    {"id": "D-4102", "account": "ACC-3002", "name": "Tallowmere three-year renewal", "amount": "$74,880", "stage": "proposal", "close_date": "2026-11-30", "owner": "Ari Lindqvist"},
+    {"id": "D-4103", "account": "ACC-3003", "name": "Corvane pilot", "amount": "$31,500", "stage": "discovery", "close_date": "2027-01-20", "owner": "Ari Lindqvist"}
+  ]
+}
