@@ -1,6 +1,6 @@
 [project]
 name = "lure"
-version = "1.14.0"
+version = "1.14.1"
 description = "Harness that tests AI agents for prompt injection and tool abuse"
 requires-python = ">=3.12"
 license = "Apache-2.0"

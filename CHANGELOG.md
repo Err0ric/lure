@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.14.1 (2026-10-25)
+
+### Changed
+
+- **A warning when `agent.allow` has no effect.** Under an MCP allowlist
+  (`mcp:` in `lure.yaml`) the sandbox gateway allows only the model host and
+  the approved servers, so a profile's `agent.allow` is ignored. `lure audit`
+  and `lure sandbox run` now say so, and `audit.json` lists it under
+  `warnings`. A warning is never a finding: it does not block a run or
+  change a recommendation.
+
 ## v1.14.0 (2026-10-25)
 
 ### New

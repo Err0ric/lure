@@ -1,6 +1,6 @@
 # Known gaps and roadmap
 
-> Status: v1.14.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
+> Status: v1.14.1. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
 
 ## Known gaps
 
@@ -34,6 +34,7 @@
 - [x] v1.13.1: the sandbox's model key is `LURE_AGENT_API_KEY` only (never `ANTHROPIC_API_KEY`), Ollama limited to `/api/generate` and `/api/chat`, `pytest -m docker` in CI, gitleaks in a pre-commit hook
 - [x] v1.13.2: the sandbox's internal network gives the Docker host no address on its bridge, so the agent cannot reach host services; a Docker test with host stubs proves it
 - [x] v1.14.0: `lure audit`, a pre-flight check of an agent's setup that stops a run on a critical finding (credentials, acting without asking, a foreign model endpoint, an unapproved MCP server) with a Configuration section on the approval page; and an MCP server allowlist in `lure.yaml`, enforced at the sandbox gateway, with tool-definition hashes checked on retest
+- [x] v1.14.1: a warning when a profile's `agent.allow` is ignored under an MCP allowlist
 
 ### Next
 

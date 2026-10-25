@@ -378,6 +378,7 @@ Goal: check an agent's setup before testing it, and hold its MCP servers to an a
 - [x] MCP server allowlist: `mcp.approved_servers` (remote url by host, or a local package pinned to an exact version) and `fail_on_unlisted` in `lure.yaml`; profiles declare `mcp_servers`. The audit fails on an unlisted server, a changed url or package, or an unpinned version; the sandbox gateway allows only the model host and approved servers, and any other host is a Fail; `lure decide` records each server's tool-definition hash and `lure retest` fails when they change (linked to `lure-tpo-003`). Snapshots exported by the operator, or fetched inside the sandbox (`lure sandbox mcp-snapshot`, approved hosts only).
 - [ ] Lure as a mock MCP server (stdio and Streamable HTTP, one unguessable path per run): `tools/list` serves the attack's tools (profile names, poisoned definitions as they are), `tools/call` goes through the toolbox. Moved to v1.15.
 - [x] Tag v1.14.0
+- [x] v1.14.1 patch: a warning when `agent.allow` is set under an MCP allowlist, which makes the gateway ignore it.
 
 #### v1.15
 
