@@ -88,7 +88,7 @@ def _run(args, out: TextIO) -> int:
     from lure.batch import collect_attack_paths
     from lure.cli import _policy, exit_code, print_policy, print_result
     from lure.policy import PolicyRun
-    from lure.sandbox.run import missing_env, run_in_sandbox
+    from lure.sandbox.run import key_problem, missing_env, run_in_sandbox
 
     profile = load_profile(args.profile)
     if profile.agent is None:
@@ -100,6 +100,9 @@ def _run(args, out: TextIO) -> int:
                            "isolated VM")
     if args.repeat < 1:
         raise ValueError("--repeat must be at least 1")
+    problem = key_problem(profile)
+    if problem:
+        raise ProfileError(problem)
     unset = missing_env(profile)
     if unset:
         raise ProfileError(f"agent.env names variables that are not set: {', '.join(unset)}")

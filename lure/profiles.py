@@ -55,6 +55,10 @@ AGENT_KEYS = ("image", "provider", "model_url")
 AGENT_OPTIONAL = ("command", "env", "allow", "settings_file", "model_url_key", "limits")
 AGENT_PROVIDERS = ("anthropic", "ollama")
 LIMIT_KEYS = ("memory", "cpus", "pids", "workspace")
+# The key a sandboxed agent's model calls use: a separate key with a spend
+# cap, never one of Lure's own (LURE_KEYS), which run targets and judges.
+AGENT_KEY = "LURE_AGENT_API_KEY"
+LURE_KEYS = ("ANTHROPIC_API_KEY", "LURE_OPENAI_API_KEY")
 ENV_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
 HOST_PORT_RE = re.compile(r"^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?(/[a-z0-9._~/-]*)?$")
 # Paths the gateway allows on a provider's plain-HTTP model host. Ollama's
@@ -336,6 +340,10 @@ def _agent(data: dict[str, Any], fail) -> tuple[AgentSpec | None, str | None]:
     if not (isinstance(env, list) and all(isinstance(e, str) and ENV_NAME_RE.match(e)
                                           for e in env)):
         raise fail("agent.env must be a list of environment variable names (never values)")
+    lure_keys = sorted(set(env) & set(LURE_KEYS))
+    if lure_keys:
+        raise fail(f"agent.env names {', '.join(lure_keys)}, a key Lure itself uses: it never "
+                   f"goes into a sandbox. Pass a separate, spend-capped key as {AGENT_KEY}")
     allow = block.get("allow", [])
     if not (isinstance(allow, list) and all(isinstance(a, str) and HOST_PORT_RE.match(a.lower())
                                             for a in allow)):

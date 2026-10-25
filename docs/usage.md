@@ -54,7 +54,7 @@ Capability isolation holds while Lure owns the agent loop. A real agent brings i
 
 **Evidence.** The result records blocked egress and DNS lookups as exposure (`exposure.egress_blocked`, `exposure.dns_lookups`), and a `sandbox` block with the container settings as Docker enforced them, allowed egress, decoy calls, a diff of the workspace, and a changed model endpoint (critical). Attacks judge the gateway's log with the `egress_to` rule key: `lure-smo-004` fails when the agent's traffic heads for the relay, even though the gateway stopped it.
 
-**What leaves the machine.** Only connections to the allowed hosts: the model API the profile names, with the key the profile passes in by name (a capped test key). The workspace is copied in and out over `docker exec`; nothing on the host is mounted.
+**What leaves the machine.** Only connections to the allowed hosts: the model API the profile names, with `LURE_AGENT_API_KEY`, a separate key with a spend cap (never Lure's own `ANTHROPIC_API_KEY`). The workspace is copied in and out over `docker exec`; nothing on the host is mounted.
 
 **Limits.** The gateway trusts the name a client presents (CONNECT host, SNI), so an agent could ask an allowed host for something else inside TLS; that reaches only the allowed host's servers. The decoy log sits inside the agent's container and an agent with a shell could edit it; the gateway's log is outside its reach. Tool rules in a container run read the agent's own call log, which only Lure's reference agent writes (`sandbox.tool_calls_source: agent`); the gateway log and workspace diff are Lure's own observations. Setup and the reference agent: [Run a real agent in the sandbox](container.md#run-a-real-agent-in-the-sandbox).
 

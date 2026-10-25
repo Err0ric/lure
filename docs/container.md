@@ -100,12 +100,12 @@ agent:
   # limits: {memory: 512m, cpus: "1.0", pids: 128, workspace: 64m}
 ```
 
-[`profiles/example-ref-agent.yaml`](../profiles/example-ref-agent.yaml) uses Anthropic; [`profiles/example-ref-agent-local.yaml`](../profiles/example-ref-agent-local.yaml) uses Ollama on the host (`host.docker.internal:11434`), so nothing leaves the machine. Ollama's API is unauthenticated and can pull, create and delete models, so for `provider: ollama` over plain HTTP the gateway allows only `/api/chat` (`host:port/api/chat`; a CONNECT tunnel to it is refused, as it would hide the path). An `allow` entry can carry a path the same way. Pass only a capped test key: it is the one secret that goes into the container, and the model API accepts it for every endpoint, not only the one the agent uses.
+[`profiles/example-ref-agent.yaml`](../profiles/example-ref-agent.yaml) uses Anthropic; [`profiles/example-ref-agent-local.yaml`](../profiles/example-ref-agent-local.yaml) uses Ollama on the host (`host.docker.internal:11434`), so nothing leaves the machine. Ollama's API is unauthenticated and can pull, create and delete models, so for `provider: ollama` over plain HTTP the gateway allows only `/api/chat` (`host:port/api/chat`; a CONNECT tunnel to it is refused, as it would hide the path). An `allow` entry can carry a path the same way. The agent's key comes from `LURE_AGENT_API_KEY`, never `ANTHROPIC_API_KEY`: Lure refuses a profile whose `agent.env` names one of its own keys, and refuses to start a run when only `ANTHROPIC_API_KEY` is set. Create a separate key for sandbox runs, with a spend cap in the provider's console: it is the one secret that goes into the container, the agent under test holds it, and the model API accepts it for every endpoint the key allows, not only the one the agent uses.
 
 ### Run
 
 ```bash
-export LURE_AGENT_API_KEY=...   # a capped test key
+export LURE_AGENT_API_KEY=...   # a separate key with a spend cap, not ANTHROPIC_API_KEY
 lure sandbox run attacks/self_modification/lure-smo-004.yaml \
   --profile profiles/example-ref-agent.yaml --repeat 3
 lure sandbox run attacks/ --profile profiles/example-ref-agent-local.yaml

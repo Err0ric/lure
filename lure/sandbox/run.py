@@ -37,7 +37,7 @@ from typing import Any
 from lure.attacks import Attack
 from lure.exposure import OrgPolicy
 from lure.judge.rules import Verdict, judge
-from lure.profiles import Profile
+from lure.profiles import AGENT_KEY, Profile
 from lure.runner import STOP_COMPLETED, STOP_ERROR, RunResult
 from lure.sandbox import evidence
 from lure.sandbox.docker import Limits, Sandbox, SandboxSpec
@@ -208,6 +208,25 @@ def run_in_sandbox(attack: Attack, profile: Profile, prompt: str, *, gateway_ima
         profile=profile_record)
     result.sandbox = sandbox_record
     return result
+
+
+def key_problem(profile: Profile, environ=os.environ) -> str | None:
+    """Why the sandbox must not start for want of the agent's model key, or
+    None. An Anthropic agent reads LURE_AGENT_API_KEY only: Lure's own
+    ANTHROPIC_API_KEY never goes into a container, even when it is the only
+    key set."""
+    if profile.agent.provider != "anthropic":
+        return None
+    if AGENT_KEY not in profile.agent.env:
+        return (f"agent.env must name {AGENT_KEY}: the reference agent reads its model key "
+                "from it")
+    if environ.get(AGENT_KEY):
+        return None
+    if environ.get("ANTHROPIC_API_KEY"):
+        return (f"{AGENT_KEY} is not set; only ANTHROPIC_API_KEY is. Lure never passes its own "
+                "key into a sandbox, because the agent under test can use it for anything the "
+                f"key allows. Set {AGENT_KEY} to a separate key with a spend cap")
+    return f"{AGENT_KEY} is not set: set it to a separate key with a spend cap"
 
 
 def missing_env(profile: Profile) -> list[str]:

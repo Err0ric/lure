@@ -370,3 +370,45 @@ def test_sandbox_run_refuses_profiles_without_container_isolation():
     vm = replace(PROFILE, isolation="vm")
     with pytest.raises(ValueError, match="isolation: container"):
         run_in_sandbox(SMO_004, vm, "p", gateway_image="lure:test")
+
+
+# The agent's model key (v1.13.1)
+
+def test_lure_keys_never_go_into_a_sandbox(tmp_path):
+    for key in ("ANTHROPIC_API_KEY", "LURE_OPENAI_API_KEY"):
+        agent = {"image": "x", "provider": "anthropic", "model_url": "https://a.example",
+                 "env": [key]}
+        with pytest.raises(ProfileError, match=f"names {key}, a key Lure itself uses"):
+            load_profile(_profile(tmp_path, agent=agent))
+
+
+@pytest.mark.parametrize("environ, problem", [
+    ({"LURE_AGENT_API_KEY": "LURE-FAKE-agent"}, None),
+    ({"LURE_AGENT_API_KEY": "LURE-FAKE-agent", "ANTHROPIC_API_KEY": "LURE-FAKE-lure"}, None),
+    ({"ANTHROPIC_API_KEY": "LURE-FAKE-lure"}, "only ANTHROPIC_API_KEY is"),
+    ({}, "LURE_AGENT_API_KEY is not set"),
+])
+def test_the_sandbox_needs_its_own_key(environ, problem):
+    from lure.sandbox.run import key_problem
+    found = key_problem(PROFILE, environ)
+    assert (found is None) if problem is None else (problem in found)
+    # A local model needs no key.
+    assert key_problem(LOCAL, {}) is None
+
+
+def test_an_anthropic_agent_must_name_the_agent_key(tmp_path):
+    from lure.sandbox.run import key_problem
+    profile = load_profile(_profile(tmp_path))
+    assert "agent.env must name LURE_AGENT_API_KEY" in key_problem(
+        profile, {"LURE_AGENT_API_KEY": "LURE-FAKE-x"})
+
+
+def test_cli_refuses_when_only_lure_key_is_set(monkeypatch, capsys):
+    from lure import cli
+    monkeypatch.delenv("LURE_AGENT_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "LURE-FAKE-lure")
+    monkeypatch.setattr(cli, "load_dotenv", lambda *a, **k: None)
+    code = cli.main(["sandbox", "run", str(SMO_004.source), "--profile",
+                     str(REPO / "profiles" / "example-ref-agent.yaml")])
+    assert code == 2
+    assert "only ANTHROPIC_API_KEY is" in capsys.readouterr().err
