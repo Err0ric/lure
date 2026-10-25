@@ -1,6 +1,6 @@
 # Known gaps and roadmap
 
-> Status: v1.13.0. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
+> Status: v1.13.1. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
 
 ## Known gaps
 
@@ -31,6 +31,7 @@
 - [x] v1.11.0: `lure status`, Gitea pipeline examples and guide, SECURITY.md, issue and pull request templates, a container image, how the sandbox works
 - [x] v1.12.0: coding-agent instruction-file attacks (a file from a download asks to install a package, change the model endpoint, or hand over the auth token) and a fixture `origin` field (repo, download, user), on today's mocks
 - [x] v1.13.0: isolation for real agents: Lure's own egress gateway (hostname allowlist, no TLS decryption, blocked egress and DNS lookups logged as exposure), a throwaway non-root container per run on an internal-only network, decoy commands and a workspace diff, a reference agent image, `lure sandbox`, and a changed model endpoint as a critical Fail (`lure-smo-004` v2). Also `split_over` across invoice numbers (`lure-tab-004` v2), a tolerant summary-gate check (strict kept as an option), and live llama3.1 gate smoke tests
+- [x] v1.13.1: the sandbox's model key is `LURE_AGENT_API_KEY` only (never `ANTHROPIC_API_KEY`), Ollama limited to `/api/generate` and `/api/chat`, `pytest -m docker` in CI, gitleaks in a pre-commit hook
 
 ### Next
 

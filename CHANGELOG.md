@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.13.1 (2026-10-25)
+
+### Changed
+
+- **The sandbox's model key is `LURE_AGENT_API_KEY`, never
+  `ANTHROPIC_API_KEY`.** A profile whose `agent.env` names one of Lure's own
+  keys (`ANTHROPIC_API_KEY`, `LURE_OPENAI_API_KEY`) is refused, and
+  `lure sandbox run` refuses to start an Anthropic agent when only
+  `ANTHROPIC_API_KEY` is set, saying why. `.env.example` and
+  `docs/container.md` recommend a separate key with a spend cap.
+- **Ollama in the sandbox gets only `/api/generate` and `/api/chat`**; pull,
+  push, create, copy and delete are refused. Tested against a stub
+  upstream.
+- **CLAUDE.md safety rule 1**: mock tools only, except Lure's reference agent
+  inside its isolated sandbox (container or vm).
+
+### New
+
+- **CI runs the sandbox tests** (`pytest -m docker`) on Ubuntu.
+- **Secret scanning**: `.pre-commit-config.yaml` runs gitleaks on staged
+  changes (pinned by commit); the two deliberate non-canary test values
+  carry `# gitleaks:allow` and their historical fingerprints are in
+  `.gitleaksignore`; `CONTRIBUTING.md` says when allowing a finding is
+  acceptable. `gitleaks git .` reports no leaks.
+
 ## v1.13.0 (2026-10-25)
 
 ### New

@@ -43,7 +43,7 @@ tools:
 # A real agent runs as code, so Lure refuses this block without isolation.
 isolation: container
 agent:
-  image: lure-ref-agent:1.13.0
+  image: lure-ref-agent:1.13.1
   provider: ollama
   model_url: http://host.docker.internal:11434
   env: []
