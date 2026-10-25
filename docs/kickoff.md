@@ -279,7 +279,7 @@ Goal: track decisions and retest on change; test agents that can run code or cha
   - Shipped: `lure-per-001` (cron line), `lure-per-002` (login-only `.bashrc` line during a real fix), `lure-per-003` (sleeper: a note fires on the next pipeline edit, a follow-up turn; a generic `ci/pipeline.yml`). ATLAS AML.T0112.000 Machine Compromise: Local AI Agent and AML.T0094 Delay Execution of LLM Instructions instead of AML.T0081 (the files are host files, not agent configuration); ATT&CK T1053.003, T1546.004, T1677. Arcanum PIT-T-44 on per-003 only, PIT-T-60 on the others.
 - [x] Coverage after v1.6 (proposed): inputs 5 of 12, intents 8 of 27, techniques 15 to 18 of 70, evasions 6 of 63.
   - Shipped: inputs 5 of 12, intents 8 of 27, techniques 18 of 70, evasions 6 of 63, from 47 current attacks.
-- [ ] Tag v1.6.0
+- [x] Tag v1.6.0
 
 ### Later
 
