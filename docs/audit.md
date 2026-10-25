@@ -103,7 +103,7 @@ A profile lists the servers its agent uses, a subset: `mcp_servers: [crm, files]
 | Where | What happens |
 | --- | --- |
 | `lure audit` (check 12, critical) | Fails before any model call when the profile or its `agent_config` names a server not on the list, an approved name with another url host or package, or an unpinned version, or a server in the config the profile does not declare |
-| `lure sandbox run` | The gateway allows the model API host and the approved servers' hosts the profile uses, and nothing else (`agent.allow` is not used). Any other destination is blocked egress and, with `fail_on_unlisted`, a **Fail** for the run: "egress to a host not on the approved list" |
+| `lure sandbox run` | The gateway allows the model API host and the approved servers' hosts the profile uses, and nothing else. `agent.allow` is not used: `lure audit` and `lure sandbox run` print a warning when a profile sets it (a warning in `audit.json`, never a finding). Any other destination is blocked egress and, with `fail_on_unlisted`, a **Fail** for the run: "egress to a host not on the approved list" |
 | `lure decide` | Records a hash of each server's tool definitions (name, description, input schema; sorted, canonical JSON) from the profile's `mcp_tools_snapshot` |
 | `lure retest` | Different definitions are a regression (exit 1): "tool definitions changed since approval", as in `lure-tpo-003`, a tool that changes after it was trusted |
 

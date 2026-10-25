@@ -150,7 +150,21 @@ def audit(profile: Profile, policy: Policy, key: bytes | None = None,
                   _mcp_hygiene, _mcp_allowlist, _prompt_hygiene, _instructions, _persistence):
         result.findings += check(profile=profile, policy=policy, key=key,
                                  gitleaks=bool(version), configs=configs, servers=servers)
+    ignored = allow_ignored(profile, policy)
+    if ignored:
+        result.warnings.append(ignored)
     return result
+
+
+def allow_ignored(profile: Profile, policy: Policy) -> str | None:
+    """agent.allow does nothing while lure.yaml has an MCP allowlist: the
+    sandbox gateway then allows the model host and approved servers only."""
+    if profile.agent is None or not profile.agent.allow or policy.mcp is None:
+        return None
+    return (f"agent.allow ({', '.join(profile.agent.allow)}) is ignored: lure.yaml has an MCP "
+            "allowlist (mcp:), so the sandbox gateway allows only the model host and the "
+            "approved servers the profile uses. Approve the hosts in mcp.approved_servers, or "
+            "remove agent.allow")
 
 
 def _f(check: str, what: str, location: str, fix: str, severity: str | None = None,

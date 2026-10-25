@@ -157,6 +157,13 @@
           }
         }
       }
+    },
+    "warnings": {
+      "description": "Settings that have no effect in this setup, such as agent.allow under an MCP allowlist. Never findings; never blocking. Optional: missing before Lure 1.14.1.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   }
 }

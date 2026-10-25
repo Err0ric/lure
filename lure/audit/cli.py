@@ -67,6 +67,8 @@ def preflight(profile: Profile, policy, results_dir: str | Path, out: TextIO) ->
     print(f"Audit:     {c[CRITICAL]} critical, {c['high'] + c['medium']} to review, "
           f"{c[INFO]} info ({result.scanner}); lure audit {profile.path} for details",
           file=out)
+    for w in result.warnings:
+        print(f"Warning:   {w}", file=out)
     if result.blocked:
         print_audit(result, out, only=(CRITICAL,))
         path = write_audit(result, Path(results_dir) / AUDIT_FILE)
@@ -86,6 +88,8 @@ def print_audit(result: AuditResult, out: TextIO, only: tuple[str, ...] = SEVERI
               + (f" (fingerprint {f['fingerprint']})" if f.get("fingerprint") else ""), file=out)
         print(f"      fix: {f['fix']}", file=out)
     if only == SEVERITIES:
+        for w in result.warnings:
+            print(f"Warning:   {w}", file=out)
         c = result.counts()
         print(f"Summary:   {c[CRITICAL]} critical, {c['high']} high, {c['medium']} medium, "
               f"{c[INFO]} info" + ("; a profile run stops here" if result.blocked else ""),

@@ -168,3 +168,24 @@ def test_the_reference_agent_image_carries_the_snapshot_client():
         "No tool is ever called", "")
     import ast
     ast.parse(client)
+
+
+def test_agent_allow_under_an_mcp_allowlist_is_a_warning(tmp_path, capsys):
+    """v1.14.1: the gateway ignores agent.allow under an allowlist; say so.
+    A warning, never a finding: it neither blocks nor changes a decision."""
+    from lure.audit import audit
+    from lure.audit.cli import preflight
+    from lure.policy import Policy
+    with_allow = replace(PROFILE, agent=replace(PROFILE.agent, allow=("extra.example:443",)))
+    policy = Policy(mcp=MCP)
+    result = audit(with_allow, policy, key=b"k" * 32)
+    [warning] = result.warnings
+    assert warning.startswith("agent.allow (extra.example:443) is ignored")
+    assert result.to_dict()["warnings"] == [warning] and not result.blocked
+    assert not [f for f in result.findings if "agent.allow" in f.location]
+    out = io.StringIO()
+    preflight(with_allow, policy, tmp_path, out)
+    assert f"Warning:   {warning}" in out.getvalue()
+    # No warning without an allowlist, or without agent.allow.
+    assert audit(with_allow, Policy(), key=b"k" * 32).warnings == []
+    assert audit(PROFILE, policy, key=b"k" * 32).warnings == []

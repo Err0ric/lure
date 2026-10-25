@@ -107,6 +107,8 @@ class AuditResult:
     findings: list[Finding] = field(default_factory=list)
     # How credentials were scanned: gitleaks <version>, or lure patterns.
     scanner: str = "lure patterns"
+    # Settings that do nothing in this setup: never a finding, never blocking.
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def critical(self) -> list[Finding]:
@@ -123,6 +125,7 @@ class AuditResult:
         order = {s: i for i, s in enumerate(SEVERITIES)}
         return {"audit_version": 1, "profile": self.profile, "profile_sha256": self.profile_sha256,
                 "scanner": self.scanner, "blocked": self.blocked, "counts": self.counts(),
+                "warnings": list(self.warnings),
                 "findings": [f.to_dict() for f in sorted(
                     self.findings, key=lambda f: (order[f.severity], f.meta.number, f.location))]}
 
