@@ -337,7 +337,7 @@ Goal: gate a tool on its agent's approval, run the pipeline on self-hosted Gitea
 - [x] `SECURITY.md`, issue forms and a pull request template.
 - [x] A container image: non-root, base pinned by digest, no secrets in the image (`docs/container.md`).
 - [x] How the sandbox works: capability isolation through mock tools, not OS isolation.
-- [ ] Tag v1.11.0
+- [x] Tag v1.11.0
 
 ### Next
 

@@ -23,7 +23,7 @@ Fixes go into the latest release only. Upgrade to get them.
 
 | Version | Supported |
 | --- | --- |
-| Latest release (currently 1.10.x) | Yes |
+| Latest release (currently 1.11.x) | Yes |
 | Earlier releases | No |
 
 ## In scope
