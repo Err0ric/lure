@@ -315,7 +315,7 @@ Goal: two more scenario packs, so HR and sales agents are tested on their own wo
   - New IDs: AML.T0036 (ATLAS 2026.09), T1213.004 and T1565.001 (attack.mitre.org, 2026-10-25). T1213.004 (CRM software) instead of the parent T1213.
 - [x] Example profiles `example-hr-agent.yaml` and `example-sales-agent.yaml`.
 - [x] Coverage after v1.9: inputs 7 of 12 (new PIT-N-04), intents 9 of 27 (new PIT-I-07), techniques 21 of 70 (new PIT-T-38), evasions 9 of 63, from 66 current attacks.
-- [ ] Tag v1.9.0
+- [x] Tag v1.9.0
 
 ### Later
 
