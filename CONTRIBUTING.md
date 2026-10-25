@@ -217,7 +217,7 @@ A category is a folder under `attacks/`; nothing in the code lists them.
    - a guardrail in `GUARDRAILS` in `lure/report/exec_summary.py`, used when
      the category is the weakest area.
 3. Add `tests/test_<prefix>_library.py` like the existing library tests.
-4. Add the category to the attack library table in `README.md`.
+4. Add the category to the attack library table in `docs/attack-library.md`.
 
 Policies can enable it right away: `categories: [<category>]` in `lure.yaml`.
 
@@ -265,7 +265,7 @@ Exposure lives in `lure/exposure.py`.
    old results.
 3. Keep exit codes as they are: 0 pass, 1 policy fail, 2 bad input or run
    error.
-4. Document it in `lure.example.yaml` and the README policy section; change
+4. Document it in `lure.example.yaml` and the policy section of `docs/usage.md`; change
    the shipped `lure.yaml` only if the default should change.
 5. Test parsing, the error message for a bad value, and evaluation in
    `tests/test_policy.py`, and the exit code in `tests/test_exit_codes.py`.

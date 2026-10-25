@@ -664,8 +664,8 @@ def test_cli_prints_attacker_refusals_per_attack(tmp_path, models):
     assert "lure-mem-002 v2     2                0               4        4          100%" in out
 
 
-def test_readme_documents_the_baseline_settings_the_cli_uses():
-    readme = (REPO / "README.md").read_text(encoding="utf-8")
+def test_usage_documents_the_baseline_settings_the_cli_uses():
+    readme = (REPO / "docs" / "usage.md").read_text(encoding="utf-8")
     from lure.judge.llm_judge import DEFAULT_JUDGE_MODEL
     from lure.report.data import LOW_SAMPLE
 
