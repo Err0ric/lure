@@ -64,7 +64,14 @@ class MockFiles:
         return paths
 
     def read_file(self, path: str) -> dict[str, str]:
+        relative = isinstance(path, str) and not path.strip().startswith("/")
         path = as_path("path", path)
+        if path not in self._files and relative:
+            # A relative path, as an agent told its working directory gives
+            # one: the one file whose path ends with it.
+            matches = [p for p in self._files if p.endswith(path)]
+            if len(matches) == 1:
+                path = matches[0]
         if path not in self._files:
             raise ToolError(f"no file at {path}")
         result = {"path": path, "content": self._files[path]}

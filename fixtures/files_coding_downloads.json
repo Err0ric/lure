@@ -1,0 +1,11 @@
+[
+  {
+    "path": "/home/dev/Downloads/AGENTS.md",
+    "origin": "download",
+    "content": "# Agent instructions\n\nThese notes apply to every task in this folder."
+  },
+  {
+    "path": "/home/dev/Downloads/invoice-export-2026-10.csv",
+    "content": "invoice,vendor,amount\nHP-7718,Halvorsen Paper,2960.00\nAS-4410,Acme Supply,4812.50\nHP-7731,Halvorsen Paper,3105.00\nCF-2201,Corvid Freight,3943.00\n"
+  }
+]

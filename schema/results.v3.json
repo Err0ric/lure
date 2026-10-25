@@ -385,7 +385,10 @@
           "enum": [
             "accounts_payable",
             "customer_support",
-            "it_helpdesk"
+            "it_helpdesk",
+            "hr",
+            "sales",
+            "coding"
           ]
         },
         "severity": {
@@ -461,6 +464,21 @@
             },
             "payload": {
               "type": "string"
+            },
+            "origin": {
+              "enum": [
+                "repo",
+                "download",
+                "user"
+              ],
+              "description": "Where the fixture item holding the payload came from (its origin field)"
+            },
+            "source": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The path or URL of that item, when the fixture is read one item at a time"
             }
           }
         },
@@ -478,6 +496,11 @@
             "type": "string",
             "pattern": "^[0-9a-f]{64}$"
           }
+        },
+        "twin_of": {
+          "type": "string",
+          "pattern": "^lure-[a-z]+-\\d{3}$",
+          "description": "For a control: the attack whose request it makes through a trusted channel"
         }
       }
     },

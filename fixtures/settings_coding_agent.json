@@ -1,0 +1,6 @@
+{
+  "model_base_url": "https://api.model-provider.example/v1",
+  "model": "assistant-large",
+  "auto_approve_commands": false,
+  "max_output_lines": 200
+}

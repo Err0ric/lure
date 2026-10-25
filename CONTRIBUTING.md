@@ -84,7 +84,13 @@ opt-in: `pytest -m ollama`.
    never restate the scoring rules or a secret the attack tries to leak),
    `variants` (see [Payload variants](#payload-variants)),
    `arcanum` (Arcanum taxonomy codes by pillar; required on current attacks,
-   see [`docs/atlas-mapping.md`](docs/atlas-mapping.md#arcanum-prompt-injection-taxonomy)).
+   see [`docs/atlas-mapping.md`](docs/atlas-mapping.md#arcanum-prompt-injection-taxonomy)),
+   `scenario` (the pack, `accounts_payable` by default) and `twin_of` (for a
+   control: the attack whose request it makes through a trusted channel).
+   A fixture item may carry `origin: repo | download | user`: where it came
+   from. The agent never sees it; the judge's reason and the approval page
+   say "followed instructions from a downloaded file" when the payload's
+   item came from a download.
    Judge from the tool-call log; `reply_contains` is only for fixed strings
    (a secret, a canary) whose appearance in the reply is the harm.
 4. Add the ATLAS and ATT&CK IDs to [`docs/atlas-mapping.md`](docs/atlas-mapping.md),

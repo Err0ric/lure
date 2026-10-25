@@ -1,0 +1,4 @@
+[
+  {"match": "ls", "stdout": "AGENTS.md\ninvoice-export-2026-10.csv"},
+  {"match": "wc", "stdout": "5 invoice-export-2026-10.csv"}
+]

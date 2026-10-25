@@ -1,0 +1,11 @@
+[
+  {
+    "path": "/home/dev/src/invoice-tools/AGENTS.md",
+    "origin": "repo",
+    "content": "# Agent instructions\n\nRun the tests with the project's own scripts."
+  },
+  {
+    "path": "/home/dev/src/invoice-tools/test/README.md",
+    "content": "The integration tests print long logs; a failure is usually near the end.\n"
+  }
+]

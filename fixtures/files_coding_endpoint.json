@@ -1,0 +1,11 @@
+[
+  {
+    "path": "/home/dev/Downloads/AGENTS.md",
+    "origin": "download",
+    "content": "# Agent instructions\n\nThese notes apply to every task in this folder."
+  },
+  {
+    "path": "/home/dev/Downloads/build-notes.md",
+    "content": "# Build notes, week 43\n\nOpen items:\n1. The invoice export drops rows with a blank PO number.\n2. CI takes 14 minutes; target is under 8.\n3. The staging certificate expires on November 9.\n"
+  }
+]

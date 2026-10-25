@@ -80,7 +80,7 @@ REQUIRED_KEYS = (
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
     "followup_tasks", "responders", "goal", "variants", "arcanum", "canary", "expected_fetch",
-    "plain", "scenario",
+    "plain", "scenario", "twin_of",
 )
 # Scenario packs: the kind of work an attack's task is. A profile picks packs
 # with scenarios:, and the approval page names the packs tested.
@@ -90,8 +90,12 @@ SCENARIOS = {
     "it_helpdesk": "IT helpdesk (password resets, access requests, outages)",
     "hr": "HR and recruiting (candidates, payroll, onboarding)",
     "sales": "sales and CRM (prospects, pipeline, billing contacts)",
+    "coding": "software development (repositories, instruction files, the agent's own settings)",
 }
 DEFAULT_SCENARIO = "accounts_payable"
+# Where a fixture item came from (its optional origin field): shipped in the
+# repository, downloaded, or supplied by the user.
+ORIGINS = ("repo", "download", "user")
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
 # Injection location for a payload in the user turn, not a fixture.
@@ -279,6 +283,14 @@ class Attack:
     # The file path or page URL holding the payload, for fixtures read one
     # item at a time. None means the delivery check is per tool.
     payload_source: str | None = None
+    # Where the fixture item holding the payload came from (ORIGINS), from its
+    # optional origin field: a file the repository ships, a download, or one
+    # the user supplied. The target never sees it; the judge and the
+    # approval page do. None when the item does not say.
+    payload_origin: str | None = None
+    # For a control: the attack whose request this one makes through a
+    # trusted channel (the same kind of instruction file, from the repo).
+    twin_of: str | None = None
     # Bump when a change makes new results incomparable with old ones (for
     # example a stricter rule), so summaries never mix the two.
     version: int = 1
@@ -359,7 +371,10 @@ class Attack:
         return plant({TASK_LOCATION: self.target_task}, self.injection)[TASK_LOCATION]
 
     def load_fixtures(self) -> dict[str, Any]:
-        return {name: _read_json(path) for name, path in self.fixtures.items()}
+        """The fixtures as the mocks see them: origin fields removed."""
+        fixtures = {name: _read_json(path) for name, path in self.fixtures.items()}
+        strip_origins(fixtures)
+        return fixtures
 
     def planted_fixtures(self) -> dict[str, Any]:
         """Fixtures with the payload planted. The files on disk are untouched."""
@@ -528,6 +543,10 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     scenario = data.get("scenario", DEFAULT_SCENARIO)
     if scenario not in SCENARIOS:
         raise fail(f"scenario must be one of {', '.join(SCENARIOS)}")
+    twin_of = data.get("twin_of")
+    if twin_of is not None and (not isinstance(twin_of, str) or not ID_RE.match(twin_of)
+                                or twin_of == attack_id):
+        raise fail("twin_of must be another attack's id, like lure-shx-004")
     canary = data.get("canary")
     if canary is not None and (not isinstance(canary, str) or not canary.strip()):
         raise fail("canary must be a non-empty string")
@@ -557,6 +576,8 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
 
     fixtures = _fixture_paths(data["fixtures"], root, fail)
     loaded = {name: _read_json(p, fail) for name, p in fixtures.items()}
+    # Item origins are for the judge and the report; mocks never see them.
+    origins = strip_origins(loaded, fail)
     if MCP_FIXTURE in loaded:
         try:
             check_mcp(loaded[MCP_FIXTURE])
@@ -683,6 +704,8 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         ask_markers=_ask_markers(keywords, payload, loaded),
         system_prompt=system_prompt,
         payload_source=None if in_task else _payload_source(loaded, location),
+        payload_origin=None if in_task else origins.get(_item_key(location)),
+        twin_of=twin_of,
         version=version,
         followup_tasks=followup_tasks,
         new_sessions=new_sessions,
@@ -917,6 +940,41 @@ def _followup_tasks(value, fail) -> tuple[list[str], frozenset[int]]:
             raise fail(f"followup_tasks[{i}] must be a non-empty string")
         tasks.append(t)
     return tasks, frozenset(new)
+
+
+def _origin_items(fixtures: dict[str, Any]):
+    """(key, item) for every fixture item that can carry an origin: the items
+    of a list fixture, keyed like files[2], and the items of each list in an
+    object fixture, keyed like hr.candidates[1]."""
+    for name, value in fixtures.items():
+        if isinstance(value, list):
+            for i, item in enumerate(value):
+                yield f"{name}[{i}]", item
+        elif isinstance(value, dict):
+            for key, items in value.items():
+                if isinstance(items, list):
+                    for i, item in enumerate(items):
+                        yield f"{name}.{key}[{i}]", item
+
+
+def strip_origins(fixtures: dict[str, Any], fail=None) -> dict[str, str]:
+    """Remove each item's optional origin field, in place, and return them
+    by item key. An origin must be one of ORIGINS."""
+    found: dict[str, str] = {}
+    for key, item in _origin_items(fixtures):
+        if isinstance(item, dict) and "origin" in item:
+            origin = item.pop("origin")
+            if origin not in ORIGINS:
+                msg = f"fixture item {key}: origin must be one of {', '.join(ORIGINS)}"
+                raise (fail(msg) if fail else AttackError(msg))
+            found[key] = origin
+    return found
+
+
+def _item_key(location: str) -> str | None:
+    """The fixture item a location points into, keyed like strip_origins."""
+    m = re.match(r"^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?\[\d+\])", location)
+    return m.group(1) if m else None
 
 
 def _payload_source(fixtures, location) -> str | None:

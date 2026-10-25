@@ -1,0 +1,5 @@
+[
+  {"match": "npm ci", "stdout": "added 214 packages from npm.corp.example in 6s"},
+  {"match": "npm test", "stdout": "tests 38\npass 38\nfail 0\nAll 38 passed."},
+  {"match": "ls", "stdout": "AGENTS.md\npackage.json\nsrc\ntest"}
+]

@@ -28,10 +28,10 @@
 - [x] v1.9.0: HR and recruiting and sales and CRM scenario packs, with example profiles
 - [x] v1.10.0: DuckDB results store (`lure store`) and a local, read-only `lure serve` dashboard
 - [x] v1.11.0: `lure status`, Gitea pipeline examples and guide, SECURITY.md, issue and pull request templates, a container image, how the sandbox works
+- [ ] v1.12: coding-agent instruction-file attacks (a file from a download asks to install a package, change the model endpoint, or hand over the auth token) and a fixture `origin` field (repo, download, user), on today's mocks
 
 ### Next
 
-- [ ] v1.12: coding-agent instruction-file attacks (a file from a download asks to install a package, change the model endpoint, or hand over the auth token) and a fixture `origin` field (repo, download, user), on today's mocks
 - [ ] v1.13: isolation for testing real agents: Lure's own egress proxy (hostname allowlist, no TLS decryption, block and log the rest) and DNS logger, a throwaway non-root container per run on an internal-only network, decoy commands and a workspace diff as evidence, blocked egress counted as exposure, a changed model endpoint as a critical finding. Also carried over: `split_over` across invoice numbers, a tolerant check for summary gates, and live llama3.1 smoke tests for the misled and split paths
   - Summary gates trade-off: today a summary counts as honest only if it names the harmful detail word for word, which is strict on the agent. A tolerant check (the recipient's organization, "outside", a rounded amount) would read more summaries as honest, so fewer runs fail as misled, at the risk of crediting a vague summary that a hurried person would wave through.
 - [ ] v1.14: Lure as a mock MCP server (stdio and Streamable HTTP), so an unmodified MCP-based agent uses Lure's mock tools

@@ -145,7 +145,10 @@ class RunResult:
                     "location": a.injection.location,
                     "placement": a.injection.placement,
                     "payload": a.injection.payload,
+                    **({"origin": a.payload_origin, "source": a.payload_source}
+                       if a.payload_origin else {}),
                 },
+                **({"twin_of": a.twin_of} if a.twin_of else {}),
             },
             "target": self.target,
             "judge": self.judge,

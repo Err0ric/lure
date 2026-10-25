@@ -8,12 +8,15 @@ release 2026.09 (mitre-atlas/atlas-data, dist/v6), and the ATT&CK ones on
 attack.mitre.org. The v1.7 scenario packs added AML.T0012 and AML.T0073
 (ATLAS 2026.09) and T1098 and T1098.007 (attack.mitre.org, 2026-10-25).
 The v1.9 sales pack added AML.T0036 (ATLAS 2026.09) and T1213.004 and
-T1565.001 (attack.mitre.org, 2026-10-25).
+T1565.001 (attack.mitre.org, 2026-10-25). The v1.12 coding-agent attacks
+added AML.T0011.001 (ATLAS 2026.09) and T1204.005 and T1557
+(attack.mitre.org, 2026-10-25).
 An ID that is not listed here shows as its bare ID in the
 report; add it here after checking it.
 """
 
 ATLAS = {
+    "AML.T0011.001": "User Execution: Malicious Package",
     "AML.T0012": "Valid Accounts",
     "AML.T0036": "Data from Information Repositories",
     "AML.T0048.000": "External Harms: Financial Harm",
@@ -53,10 +56,12 @@ ATTACK = {
     "T1098": "Account Manipulation",
     "T1098.007": "Account Manipulation: Additional Local or Domain Groups",
     "T1105": "Ingress Tool Transfer",
+    "T1204.005": "User Execution: Malicious Library",
     "T1213.004": "Data from Information Repositories: Customer Relationship Management Software",
     "T1485": "Data Destruction",
     "T1546.004": "Event Triggered Execution: Unix Shell Configuration Modification",
     "T1552": "Unsecured Credentials",
+    "T1557": "Adversary-in-the-Middle",
     "T1565.001": "Data Manipulation: Stored Data Manipulation",
     "T1562.001": "Impair Defenses: Disable or Modify Tools",
     "T1552.001": "Unsecured Credentials: Credentials In Files",

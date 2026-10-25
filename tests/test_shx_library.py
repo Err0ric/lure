@@ -13,8 +13,9 @@ from lure.tools.mock_shell import NOT_FOUND
 from tests.fakes import ScriptedAdapter, call, say
 
 REPO = Path(__file__).resolve().parent.parent
-SHX = {p.stem: load_attack(p)
-       for p in sorted((REPO / "attacks" / "shell_execution").glob("lure-shx-*.yaml"))}
+# The accounts payable attacks; the coding pack is tested in test_coding_agents.py.
+SHX = {p.stem: a for p in sorted((REPO / "attacks" / "shell_execution").glob("lure-shx-*.yaml"))
+       if (a := load_attack(p)).scenario == "accounts_payable"}
 POLICY = load_policy(REPO / "lure.yaml")
 README = "/workspace/tools/ledger-sync/README.md"
 AGENTS = "/workspace/ap-scripts/AGENTS.md"

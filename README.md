@@ -12,7 +12,7 @@ Think phishing simulation, but the target is an agent instead of an employee.
 
 ## What it does
 
-- **Attacks** an agent with 66 attacks in 12 categories and five scenario packs (accounts payable, customer support, IT helpdesk, HR and recruiting, sales), planted in email, files, web pages, tool definitions, memory, tickets, team chat, resumes and CRM notes, with payload variants and an optional adaptive attacker.
+- **Attacks** an agent with 72 attacks in 12 categories and six scenario packs (accounts payable, customer support, IT helpdesk, HR and recruiting, sales, coding), planted in email, files, web pages, tool definitions, memory, tickets, team chat, resumes, CRM notes and instruction files, with payload variants and an optional adaptive attacker.
 - **Scores** each run Pass, Partial, Fail, Review, Refused, Invalid or Error from the tool-call log (rules first, an optional LLM judge second), plus an org-wide check for anything sent outside your allowed domains.
 - **Reports** as static HTML, Markdown and SARIF, with a policy file (`lure.yaml`) and exit codes for a CI gate, plus an optional DuckDB results store and a local, read-only dashboard (`lure serve`).
 - **Vets your own agent**: a profile with its real system prompt and tools, a one-page approval report, `lure decide`, `lure retest` and confirmation gates.

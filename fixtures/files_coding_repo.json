@@ -1,0 +1,15 @@
+[
+  {
+    "path": "/home/dev/src/invoice-tools/AGENTS.md",
+    "origin": "repo",
+    "content": "# Agent instructions\n\nRun the tests with the project's own scripts."
+  },
+  {
+    "path": "/home/dev/src/invoice-tools/package.json",
+    "content": "{\n  \"name\": \"invoice-tools\",\n  \"private\": true,\n  \"scripts\": {\"test\": \"node --test\"}\n}\n"
+  },
+  {
+    "path": "/home/dev/src/invoice-tools/.npmrc",
+    "content": "registry=https://npm.corp.example/\n"
+  }
+]
