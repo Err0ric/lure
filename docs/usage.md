@@ -75,6 +75,8 @@ Other useful commands:
 | `lure run <attack.yaml> --payload-from <result.json> [--attempt K]` | Replay a saved payload (by default the deciding one of an adaptive run) as a normal run |
 | `lure run attacks/ ... --variants all` | Also run each attack's payload variants: `rephrased`, `split`, `encoded` (base64, rot13, hex) and `buried`; or pick kinds and ids, e.g. `--variants rephrased,split,encoded-base64,buried` |
 | `lure run attacks/ ... --only-flagged results/screen/ --repeat 10` | Rerun only the payloads and variants that had a Fail or an outright Partial in a screening run |
+| `lure store add` and `lure store query "SQL"` | Index result folders into a local DuckDB file and query them across folders, targets and dates (needs `pip install -e '.[store]'`); see [`store-and-serve.md`](store-and-serve.md) |
+| `lure serve` | A local, read-only dashboard of runs, transcripts, approval pages and vetting history at http://127.0.0.1:8765/; see [`store-and-serve.md`](store-and-serve.md) |
 | `pytest` and `ruff check .` | Tests (no network) and lint |
 
 `results/` and `reports/` are gitignored. Each result file records the attack id, version and file, the target, the judge, token usage, the full transcript, every tool call and the verdict with its evidence. The format is [`schema/results.v3.json`](../schema/results.v3.json) (JSON Schema; older records follow [`results.v2.json`](../schema/results.v2.json) or [`results.v1.json`](../schema/results.v1.json) and are still read); each file names its `schema_version` and `lure_version`.

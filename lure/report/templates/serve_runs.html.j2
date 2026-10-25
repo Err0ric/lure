@@ -1,0 +1,46 @@
+{% extends "serve_base.html.j2" %}
+{% block title %}Runs{% endblock %}
+{% block body %}
+<h1>Runs</h1>
+<p class="muted">{{ "{:,}".format(total) }} run{{ "" if total == 1 else "s" }}{% if counts %}:
+{% for v, n in counts %}<span class="pill v-{{ v }}">{{ v }} {{ "{:,}".format(n) }}</span> {% endfor %}{% endif %}</p>
+<form class="filters" method="get" action="/runs">
+{% for key, label in [("target", "Target"), ("attack", "Attack"), ("category", "Category"), ("scenario", "Pack"), ("verdict", "Verdict"), ("profile", "Profile")] %}
+  <label>{{ label }}
+    <select name="{{ key }}">
+      <option value="">any</option>
+      {% for o in options[key] %}<option value="{{ o }}"{{ " selected" if filters.get(key) == o else "" }}>{{ o }}</option>{% endfor %}
+    </select>
+  </label>
+{% endfor %}
+  {% if filters.get("folder") %}<input type="hidden" name="folder" value="{{ filters.folder }}">{% endif %}
+  <button type="submit">Filter</button>
+  <a href="/runs">Clear</a>
+</form>
+{% if filters.get("folder") %}<p class="notice">Folder {{ filters.folder }}: <a href="/folder/report?path={{ filters.folder | q }}">report</a> · <a href="/folder/approval?path={{ filters.folder | q }}">approval page</a></p>{% endif %}
+<table class="grid">
+<thead><tr><th>Started</th><th>Attack</th><th>Pack</th><th>Target</th><th>Verdict</th><th>Profile</th><th>Folder</th></tr></thead>
+<tbody>
+{% for r in rows %}
+<tr>
+  <td class="small"><a href="/run/{{ r.id }}">{{ r.started_at | when or "run " ~ r.id }}</a></td>
+  <td><a href="/attack/{{ r.attack_id | q }}">{{ r.attack_id }}</a> <span class="muted small">v{{ r.attack_version }}{% if r.variant_id %} · {{ r.variant_id }}{% endif %}</span></td>
+  <td class="small">{{ r.scenario }}</td>
+  <td class="small">{{ r.target }}</td>
+  <td><span class="pill v-{{ r.verdict }}">{{ r.verdict }}{% if r.partial_kind %} ({{ r.partial_kind | replace("_", " ") }}){% endif %}{% if r.detected %} · detected{% endif %}</span>{% if r.exposed %} <span class="pill v-Fail">exposure</span>{% endif %}</td>
+  <td class="small">{% if r.profile %}<a href="/profile/{{ r.profile | q }}">{{ r.profile }}</a>{% endif %}</td>
+  <td class="small"><a href="/runs?folder={{ r.folder | q }}">{{ r.folder.rsplit("/", 2)[-2:] | join("/") }}</a></td>
+</tr>
+{% else %}
+<tr><td colspan="7" class="muted">No runs match. Index results with <code>lure store add</code>.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% if pages > 1 %}
+<div class="pager">
+  {% if page > 0 %}<a href="/runs?{{ query }}&amp;page={{ page }}">Newer</a>{% endif %}
+  <span class="muted">Page {{ page + 1 }} of {{ pages }}</span>
+  {% if page + 1 < pages %}<a href="/runs?{{ query }}&amp;page={{ page + 2 }}">Older</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

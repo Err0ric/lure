@@ -317,12 +317,18 @@ Goal: two more scenario packs, so HR and sales agents are tested on their own wo
 - [x] Coverage after v1.9: inputs 7 of 12 (new PIT-N-04), intents 9 of 27 (new PIT-I-07), techniques 21 of 70 (new PIT-T-38), evasions 9 of 63, from 66 current attacks.
 - [x] Tag v1.9.0
 
+### v1.10
+
+Goal: query runs across folders, and browse runs, transcripts, approval pages and vetting history, all locally. No model calls.
+
+- [x] DuckDB results store (from v1.1), the optional `.[store]` extra: `lure store add`, `rebuild`, `query`. Tables runs, tool_calls, techniques, exposure, folders, retests, decisions; files keyed by path and SHA-256; the JSON files stay the source of truth. Times are stored as UTC.
+  - Every connection: extension autoinstall and autoload off, community and unsigned extensions off, an empty extension directory and repository, configuration locked. Indexing and `lure serve` also turn external access off. `lure store query` runs SELECT and EXPLAIN only, read-only; it may read local files.
+- [x] `lure serve` (from v1.1): standard library server on 127.0.0.1, GET and HEAD only. Pages Runs, Run, Attack, Profiles, Profile, and a folder's report and approval page built on request without writing files. Fixed queries only.
+  - Host header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS rebinding; else 421). CSP with no scripts and no remote images, nosniff, no-referrer, frame denial, no CORS headers. Everything escaped; nothing rendered as Markdown.
+- [x] Tests reach 127.0.0.1 only under the `loopback` marker; every other host stays blocked.
+- [ ] Tag v1.10.0
+
 ### Next
-
-#### v1.10
-
-- [ ] DuckDB results store (from v1.1): load result folders into one database so runs can be queried across folders, targets and dates.
-- [ ] `lure serve` (from v1.1): a local web dashboard to browse runs, transcripts, approval pages and vetting history.
 
 #### v1.11
 

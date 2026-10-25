@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased (v1.10)
+
+### New
+
+- **Results store** (`lure store`, the optional `.[store]` extra with
+  DuckDB). `lure store add [PATH...]` indexes run records, run manifests,
+  `retest.json` and decision logs into `results/lure.duckdb`: tables
+  `runs`, `tool_calls`, `techniques`, `exposure`, `folders`, `retests` and
+  `decisions`. Files are keyed by path and SHA-256, so re-adding skips
+  unchanged files, replaces changed ones and drops deleted ones. `lure
+  store rebuild` starts over from the files; `lure store query "SQL"` prints
+  a table or CSV. The JSON files stay the source of truth.
+- **`lure serve`**: a local, read-only dashboard at http://127.0.0.1:8765/
+  with Runs (filterable), Run (judgment, evidence, exposure, tool calls and
+  gates, transcript), Attack, Profiles and Profile (run folders, decisions,
+  retests and their conditions) pages, and a folder's report and approval
+  page built on request without writing files.
+- `docs/store-and-serve.md`.
+
+### Safety
+
+- DuckDB connections turn off extension autoinstall and autoload and
+  community and unsigned extensions, point the extension directory and
+  repository at an empty folder, and lock the configuration. Indexing and
+  `lure serve` also turn off external access. `lure store query` runs only
+  SELECT and EXPLAIN, on a read-only connection; it may read local files.
+- `lure serve` binds 127.0.0.1 only, answers GET and HEAD only, and refuses
+  a request whose `Host` is not `127.0.0.1:<port>` or `localhost:<port>`
+  (DNS rebinding). Every response sends a Content-Security-Policy with no
+  scripts and no remote images, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: no-referrer` and `X-Frame-Options: DENY`, and no CORS
+  headers. Pages use fixed queries; nothing in a request reaches SQL.
+  Transcripts and tool calls are escaped and never rendered as Markdown.
+
+### Changed
+
+- Tests may reach 127.0.0.1 under the new `loopback` marker; every other
+  host stays blocked. CI installs `.[dev,store]`.
+
 ## v1.9.0 (2026-10-25)
 
 ### New

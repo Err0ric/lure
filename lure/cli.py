@@ -67,6 +67,7 @@ from lure.rescore import (
     save_rescored,
 )
 from lure.runner import DEFAULT_ATTEMPTS, MAX_TURNS, RunResult, run_adaptive, run_attack
+from lure.store import DEFAULT_DB
 from lure.tools.call_log import ToolCallLog
 from lure.tools.registry import ToolboxError, build_toolbox
 from lure.vetting import DECISIONS, DEFAULT_VETTING_DIR
@@ -246,6 +247,37 @@ def build_parser() -> argparse.ArgumentParser:
     retest.add_argument("--max-cost", type=_positive_float, metavar="USD",
                         help="stop the rerun before estimated spend passes USD")
     _policy_args(retest)
+
+    store_cmd = sub.add_parser("store", help="index saved runs into a local DuckDB file and "
+                                             "query them (needs the .[store] extra)")
+    store_sub = store_cmd.add_subparsers(dest="store_command", required=True)
+    store_add = store_sub.add_parser("add", help="index result folders: run records, "
+                                                 "manifests, retests and decision logs")
+    store_add.add_argument("paths", nargs="*", metavar="PATH",
+                           help="folders or files (default results, and vetting if it exists)")
+    store_rebuild = store_sub.add_parser("rebuild", help="drop the store and index every "
+                                                         "folder it knew again")
+    store_query = store_sub.add_parser("query", help="run read-only SQL (SELECT or EXPLAIN) "
+                                                     "and print the result")
+    store_query.add_argument("sql", help="the SQL, quoted")
+    store_query.add_argument("--csv", action="store_true", help="print CSV instead of a table")
+    for p in (store_add, store_rebuild, store_query):
+        p.add_argument("--db", default=DEFAULT_DB, help=f"the store file (default {DEFAULT_DB})")
+
+    serve_cmd = sub.add_parser("serve", help="browse runs, transcripts, approval pages and "
+                                             "vetting history in a local, read-only dashboard")
+    serve_cmd.add_argument("paths", nargs="*", metavar="PATH",
+                           help="folders to index before serving (default results, and vetting "
+                                "if it exists)")
+    serve_cmd.add_argument("--db", default=DEFAULT_DB, help=f"the store file (default {DEFAULT_DB})")
+    serve_cmd.add_argument("--port", type=int, default=8765, help="port on 127.0.0.1 (default 8765)")
+    serve_cmd.add_argument("--no-index", action="store_true",
+                           help="serve the store as it is, without indexing first")
+    serve_cmd.add_argument("--attacks-dir", default="attacks",
+                           help="attack files, for approval pages (default attacks)")
+    serve_cmd.add_argument("--policy", metavar="FILE",
+                           help=f"policy for approval pages (default {DEFAULT_POLICY_FILE} if it "
+                                "exists)")
     return parser
 
 
@@ -334,6 +366,10 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         return decide_main(args, out)
     if args.command == "retest":
         return retest_main(args, out)
+    if args.command == "store":
+        return store_main(args, out)
+    if args.command == "serve":
+        return serve_main(args, out)
     try:
         profile = _apply_profile(args)
         # Load every attack first so a bad file fails before any model call.
@@ -963,6 +999,75 @@ def print_retest(result, out: TextIO) -> None:
     else:
         verdict = "NO REGRESSION"
     print(f"Result:    {verdict}", file=out)
+
+
+def store_main(args, out: TextIO) -> int:
+    from lure import store
+
+    try:
+        if args.store_command == "add":
+            paths = args.paths or ["results"] + (
+                [DEFAULT_VETTING_DIR] if Path(DEFAULT_VETTING_DIR).is_dir() else [])
+            done = store.add(args.db, paths)
+        elif args.store_command == "rebuild":
+            done = store.rebuild(args.db)
+        else:
+            columns, rows = store.query(args.db, args.sql)
+            _print_rows(columns, rows, args.csv, out)
+            return EXIT_OK
+    except store.StoreError as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    print(f"{args.db}: indexed {done.indexed}, unchanged {done.unchanged}, removed "
+          f"{done.removed}, skipped {done.skipped} (not run records)", file=out)
+    return EXIT_OK
+
+
+def serve_main(args, out: TextIO) -> int:
+    from lure import store
+    from lure.serve import Dashboard, ServeError, make_server
+
+    paths = args.paths or ["results"] + (
+        [DEFAULT_VETTING_DIR] if Path(DEFAULT_VETTING_DIR).is_dir() else [])
+    policy = args.policy or (DEFAULT_POLICY_FILE if Path(DEFAULT_POLICY_FILE).is_file() else None)
+    try:
+        if not args.no_index:
+            done = store.add(args.db, paths)
+            print(f"{args.db}: indexed {done.indexed}, unchanged {done.unchanged}, removed "
+                  f"{done.removed}", file=out)
+        elif not Path(args.db).is_file():
+            raise store.StoreError(f"no results store at {args.db}")
+        server = make_server(Dashboard(Path(args.db), Path(args.attacks_dir),
+                                       Path(policy) if policy else None), args.port)
+    except (store.StoreError, ServeError, OSError) as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    print(f"Serving http://127.0.0.1:{server.server_address[1]}/ (local, read-only; "
+          "Ctrl-C stops)", file=out, flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return EXIT_OK
+
+
+def _print_rows(columns: list[str], rows: list[tuple], as_csv: bool, out: TextIO) -> None:
+    if as_csv:
+        import csv
+
+        writer = csv.writer(out)
+        writer.writerow(columns)
+        writer.writerows(rows)
+        return
+    cells = [[("" if v is None else str(v)).replace("\n", " ") for v in row] for row in rows]
+    widths = [max([len(c)] + [min(len(r[i]), 60) for r in cells]) for i, c in enumerate(columns)]
+    print("  ".join(c.ljust(w) for c, w in zip(columns, widths, strict=True)).rstrip(), file=out)
+    for row in cells:
+        print("  ".join(v[:60].ljust(w) for v, w in zip(row, widths, strict=True)).rstrip(),
+              file=out)
+    print(f"({len(rows)} row{'' if len(rows) == 1 else 's'})", file=out)
 
 
 def coverage_main(args, out: TextIO) -> int:

@@ -1,0 +1,15 @@
+{% extends "serve_base.html.j2" %}
+{% block title %}{{ id }}{% endblock %}
+{% block body %}
+<h1>{{ id }}</h1>
+<p class="muted">{{ info.attack_name }} · {{ info.scenario }} · {{ info.category }} · {{ info.severity }}</p>
+<table class="grid">
+<thead><tr><th>Version</th><th>Target</th>{% for v in verdicts %}<th class="num">{{ v }}</th>{% endfor %}<th></th></tr></thead>
+<tbody>
+{% for version, target, counts in table %}
+<tr><td>v{{ version }}</td><td>{{ target }}</td>{% for v in verdicts %}<td class="num">{{ counts[v] or "" }}</td>{% endfor %}
+<td class="small"><a href="/runs?attack={{ id | q }}&target={{ target | q }}">runs</a></td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}

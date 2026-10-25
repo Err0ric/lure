@@ -1,0 +1,15 @@
+{% extends "serve_base.html.j2" %}
+{% block title %}Profiles{% endblock %}
+{% block body %}
+<h1>Profiles</h1>
+<p class="muted">Every agent profile in the store: its runs, decisions and retests.</p>
+<table class="grid">
+<thead><tr><th>Profile</th><th class="num">Runs</th><th class="num">Run folders</th><th>Last run</th><th>Last decision</th><th class="num">Decisions</th><th class="num">Retests</th></tr></thead>
+<tbody>
+{% for p in profiles %}
+<tr><td><a href="/profile/{{ p.profile | q }}">{{ p.profile }}</a></td><td class="num">{{ p.runs }}</td><td class="num">{{ p.folders }}</td>
+<td class="small">{{ p.last_run | when }}</td><td>{{ (p.last_decision or "none") | replace("-", " ") }}</td><td class="num">{{ p.decisions }}</td><td class="num">{{ p.retests }}</td></tr>
+{% else %}<tr><td colspan="7" class="muted">No profile runs indexed yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+{% endblock %}

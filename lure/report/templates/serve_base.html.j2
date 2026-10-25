@@ -1,0 +1,64 @@
+{# lure serve pages: the report design system plus a nav bar. No scripts. #}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Lure{% endblock %} · lure serve</title>
+{% include "_favicon.html.j2" %}
+{% include "_styles.html.j2" %}
+<style>
+.sheet { max-width: 80rem; }
+.nav { display: flex; gap: 1.25rem; align-items: baseline; margin: 0 0 1.75rem;
+       padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
+.nav .brand { font-weight: 700; color: var(--ink); text-decoration: none; margin-right: .5rem; }
+.nav a { color: var(--muted); text-decoration: none; }
+.nav a.on { color: var(--accent-ink); font-weight: 600; }
+.nav .local { margin-left: auto; color: var(--muted); font-size: .85rem; }
+table.grid { width: 100%; border-collapse: collapse; font-size: .9rem; }
+table.grid th, table.grid td { text-align: left; padding: .4rem .6rem;
+                               border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.grid th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+table.grid td.num, table.grid th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; padding: 0 .5rem; border-radius: 999px; font-size: .8rem;
+        font-weight: 600; border: 1px solid var(--rule-strong); white-space: nowrap; }
+h1 .pill { font: 600 1rem/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           vertical-align: middle; }
+.v-Fail { color: var(--fail-ink); border-color: var(--fail); }
+.v-Partial { color: var(--ink); border-color: var(--partial); }
+.v-Review { border-color: var(--review); }
+.v-Pass { color: var(--pass); border-color: var(--pass); }
+.v-Refused, .v-Invalid, .v-Error { color: var(--muted); }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+form.filters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: end;
+               margin: 0 0 1.25rem; font-size: .85rem; }
+form.filters label { display: flex; flex-direction: column; gap: .15rem; color: var(--muted); }
+form.filters select, form.filters button { font: inherit; padding: .25rem .4rem; }
+pre.block { background: var(--code-bg); padding: .75rem 1rem; border-radius: 4px;
+            overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+            font-size: .82rem; margin: .25rem 0 1rem; max-height: 28rem; overflow-y: auto; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1.25rem;
+         font-size: .9rem; margin: 0 0 1.5rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.turn { margin: 0 0 .75rem; }
+.turn .role { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em;
+              color: var(--muted); }
+.notice { border-left: 3px solid var(--accent); padding: .25rem .75rem; color: var(--ink-2);
+          font-size: .9rem; margin: 0 0 1.5rem; }
+.pager { display: flex; gap: 1rem; margin-top: 1rem; font-size: .9rem; }
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav class="nav">
+  <a class="brand" href="/runs">Lure</a>
+  <a href="/runs" class="{{ 'on' if nav == 'runs' else '' }}">Runs</a>
+  <a href="/profiles" class="{{ 'on' if nav == 'profiles' else '' }}">Profiles</a>
+  <span class="local">local, read-only</span>
+</nav>
+{% block body %}{% endblock %}
+</main>
+</body>
+</html>

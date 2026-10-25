@@ -19,6 +19,8 @@ lure = "lure.cli:main"
 [project.optional-dependencies]
 # rfc3339-validator lets jsonschema check the date-time format in tests.
 # pillow builds the brand images (scripts/make_brand.py); not needed to run Lure.
+# duckdb powers the optional results store and lure serve (lure store, lure serve).
+store = ["duckdb>=1.1"]
 dev = ["jsonschema>=4.23", "pytest>=8", "pillow>=11", "rfc3339-validator>=0.1.4", "ruff>=0.17"]
 
 [build-system]
@@ -38,4 +40,5 @@ testpaths = ["tests"]
 addopts = "-m 'not ollama'"
 markers = [
     "ollama: smoke test against a live local Ollama server (run with: pytest -m ollama)",
+    "loopback: may open sockets to 127.0.0.1 only (the lure serve tests)",
 ]

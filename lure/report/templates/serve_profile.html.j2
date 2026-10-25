@@ -1,0 +1,41 @@
+{% extends "serve_base.html.j2" %}
+{% block title %}{{ name }}{% endblock %}
+{% block body %}
+<h1>{{ name }}</h1>
+{% if approved %}<p class="notice">Last decision: <strong>{{ approved.decision | replace("-", " ") }}</strong> by {{ approved.decided_by }}, {{ approved.decided_at | when }}{% if approved.conditions %}, with {{ approved.conditions | length }} condition{{ "" if approved.conditions | length == 1 else "s" }}{% endif %}.</p>
+{% else %}<p class="notice">No approval recorded.</p>{% endif %}
+<h2>Runs</h2>
+<table class="grid">
+<thead><tr><th>Started</th><th>Target</th><th class="num">Runs</th><th class="num">Fail</th><th class="num">Partial</th><th class="num">Exposure</th><th>Profile hash</th><th>Pages</th></tr></thead>
+<tbody>
+{% for f in folders %}
+<tr><td class="small"><a href="/runs?folder={{ f.folder | q }}">{{ f.started | when }}</a></td><td class="small">{{ f.target }}</td>
+<td class="num">{{ f.runs }}</td><td class="num">{{ f.fails or "" }}</td><td class="num">{{ f.partials or "" }}</td><td class="num">{{ f.exposed or "" }}</td>
+<td class="small muted">{{ (f.sha or "")[:12] }}</td>
+<td class="small"><a href="/folder/report?path={{ f.folder | q }}">report</a>{% if f.profile_run %} · <a href="/folder/approval?path={{ f.folder | q }}">approval</a>{% endif %}</td></tr>
+{% else %}<tr><td colspan="8" class="muted">No runs indexed for this profile.</td></tr>{% endfor %}
+</tbody>
+</table>
+<h2>Decisions</h2>
+<table class="grid">
+<thead><tr><th>Date</th><th>Decision</th><th>By</th><th>Conditions</th><th>Run</th></tr></thead>
+<tbody>
+{% for d in decisions %}
+<tr><td class="small">{{ d.decided_at | when }}</td><td>{{ d.decision | replace("-", " ") }}</td><td class="small">{{ d.decided_by }}</td>
+<td class="small">{% for c in d.conditions %}<div>{{ c }}</div>{% endfor %}</td><td class="small muted">{{ d.run }}</td></tr>
+{% else %}<tr><td colspan="5" class="muted">No decisions recorded.</td></tr>{% endfor %}
+</tbody>
+</table>
+<h2>Retests</h2>
+<table class="grid">
+<thead><tr><th>Run</th><th>Baseline</th><th>Result</th><th>Conditions</th></tr></thead>
+<tbody>
+{% for t in retests %}
+<tr><td class="small"><a href="/runs?folder={{ t.folder | q }}">{{ t.folder.rsplit("/", 1)[-1] }}</a></td><td class="small muted">{{ t.baseline }}</td>
+<td>{% if t.regression %}<span class="pill v-Fail">regression</span>{% else %}<span class="pill v-Pass">no regression</span>{% endif %}
+{% if t.new_failures %}<div class="small">New failures: {{ t.new_failures | length }}</div>{% endif %}{% if t.fixed %}<div class="small">Fixed: {{ t.fixed | length }}</div>{% endif %}</td>
+<td class="small">{% for c in t.conditions %}<div>{% if c.verified %}<span class="pill v-Pass">verified</span>{% elif c.held %}<span class="pill v-Pass">held in Lure's test</span>{% else %}<span class="pill">open</span>{% endif %} {{ c.text }}</div>{% endfor %}</td></tr>
+{% else %}<tr><td colspan="4" class="muted">No retests.</td></tr>{% endfor %}
+</tbody>
+</table>
+{% endblock %}

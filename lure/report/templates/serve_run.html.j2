@@ -1,0 +1,40 @@
+{% extends "serve_base.html.j2" %}
+{% block title %}{{ run.attack_id }} run {{ run.id }}{% endblock %}
+{% block body %}
+<h1>{{ run.attack_id }} <span class="muted">v{{ run.attack_version }}</span> <span class="pill v-{{ run.verdict }}">{{ run.verdict }}{% if run.partial_kind %} ({{ run.partial_kind | replace("_", " ") }}){% endif %}</span></h1>
+<p class="muted">{{ run.attack_name }}</p>
+<dl class="kv">
+  <dt>Target</dt><dd>{{ run.target }}</dd>
+  <dt>Judge</dt><dd>{{ run.judge }}{% if run.llm_judged %} (LLM-judged){% endif %}</dd>
+  <dt>Pack</dt><dd>{{ run.scenario }} · {{ run.category }} · {{ run.severity }}</dd>
+  {% if run.variant_id %}<dt>Variant</dt><dd>{{ run.variant_id }} ({{ run.variant_kind }})</dd>{% endif %}
+  {% if run.profile %}<dt>Profile</dt><dd><a href="/profile/{{ run.profile | q }}">{{ run.profile }}</a></dd>{% endif %}
+  <dt>Started</dt><dd>{{ run.started_at | when }}</dd>
+  <dt>Folder</dt><dd><a href="/runs?folder={{ run.folder | q }}">{{ run.folder }}</a> · <a href="/folder/report?path={{ run.folder | q }}">report</a></dd>
+  <dt>File</dt><dd class="small">{{ run.path }}</dd>
+  {% if run.cost is not none %}<dt>Cost</dt><dd>{{ run.cost | money }}</dd>{% endif %}
+  <dt>Frameworks</dt><dd class="small">{% for t in techniques %}{{ t.technique }}{{ ", " if not loop.last }}{% endfor %}</dd>
+</dl>
+<h2>Judgment</h2>
+<p>{{ judgment.reason }}</p>
+{% if judgment.llm_judge %}<p class="small muted">LLM judge: {{ judgment.llm_judge.label }}. {{ judgment.llm_judge.justification }}</p>{% endif %}
+{% if judgment.evidence %}<pre class="block">{{ judgment.evidence | pretty }}</pre>{% endif %}
+{% if exposure %}
+<h2>Exposure</h2>
+<table class="grid"><thead><tr><th>Call</th><th>Tool</th><th>Outside domain</th></tr></thead><tbody>
+{% for e in exposure %}<tr><td>{{ e.idx }}</td><td>{{ e.tool }}</td><td>{{ e.domain }}</td></tr>{% endfor %}
+</tbody></table>
+{% endif %}
+<h2>Tool calls</h2>
+{% for c in calls %}
+<h3 class="small">{{ c.idx }}. {{ c.tool }}{% if c.alias %} <span class="muted">(as {{ c.alias }})</span>{% endif %}{% if c.gate %} <span class="pill">gate: {{ c.gate | replace("_", " ") }}</span>{% endif %}{% if c.failed %} <span class="pill v-Error">error</span>{% endif %}</h3>
+<pre class="block">{{ c.args | pretty }}</pre>
+<details><summary class="small muted">Result</summary><pre class="block">{{ c.result | pretty }}</pre></details>
+{% else %}<p class="muted">No tool calls.</p>{% endfor %}
+<h2>Transcript</h2>
+<p class="small muted">Attack text is shown as plain text, never rendered.</p>
+{% for m in transcript %}
+<div class="turn"><div class="role">{{ m.role }}</div><pre class="block">{{ m.text }}</pre></div>
+{% endfor %}
+{% if run.final_text %}<h2>Final reply</h2><pre class="block">{{ run.final_text }}</pre>{% endif %}
+{% endblock %}
