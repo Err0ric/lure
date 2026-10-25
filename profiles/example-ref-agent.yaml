@@ -43,7 +43,7 @@ tools:
 # A real agent runs as code, so Lure refuses this block without isolation.
 isolation: container
 agent:
-  image: lure-ref-agent:1.13.1
+  image: lure-ref-agent:1.13.2
   provider: anthropic
   model_url: https://api.anthropic.com
   env: [LURE_AGENT_API_KEY]

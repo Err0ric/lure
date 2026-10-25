@@ -367,6 +367,7 @@ Goal: isolation for testing real agents, and the three gate items carried over f
   - Shipped: `pytest -m ollama` runs both paths live. llama3.1:8b took the misled path (12 of 30 summary-gate runs, invented accounts) but never split a payment (10 runs). The smoke found two judge bugs, fixed: `amount_over` matched a call with no amount, and `lure rescore` dropped gate outcomes.
 - [x] Tag v1.13.0
 - [x] v1.13.1 patch: `LURE_AGENT_API_KEY` only for sandboxed agents (a run with only `ANTHROPIC_API_KEY` set is refused), Ollama held to `/api/generate` and `/api/chat`, the sandbox tests in CI, gitleaks on staged changes (pre-commit) and the two deliberate test values allowed; CLAUDE.md rule 1 names the reference agent as its one exception.
+- [x] v1.13.2 patch: the internal network's bridge has no host address (`gateway_mode_ipv4=isolated`, or `inhibit_ipv4`), closing a path from the agent to services on the Docker host; a Docker test with stub listeners on the host proves it.
 
 #### v1.14
 
