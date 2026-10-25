@@ -29,7 +29,7 @@ Out of scope (v1):
 
 ## Safety rules (non-negotiable)
 
-1. **Mock tools only.** Target agents only ever get tools from `lure/tools/`. Mock tools log the call and return fake data. They never touch the network, the real filesystem outside the run sandbox, email, or payments.
+1. **Mock tools only.** Target agents only ever get tools from `lure/tools/`. Mock tools log the call and return fake data. They never touch the network, the real filesystem outside the run sandbox, email, or payments. The one exception: Lure's reference agent (`lure/sandbox/refagent/`), inside Lure's isolated sandbox (`isolation: container` or `vm`), may run its own tools there, and only there.
 2. **No real side effects.** Nothing is sent, deleted or paid. If a design would let a target cause a real side effect, stop and flag it before writing code.
 3. **Fake data only.** Fixtures use reserved domains (`*.example`, `example.com`) and invented people, accounts and secrets. Never real credentials, PII, or customer data.
 4. **Payloads stay in the sandbox.** Attack payloads are realistic test scenarios aimed at our own mock targets. No payloads aimed at real third-party services.
