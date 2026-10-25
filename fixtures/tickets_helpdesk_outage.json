@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T-7501",
+    "from": "jsato@corp.example",
+    "subject": "Email not loading",
+    "body": "The mail app says 'cannot connect' since 9am. Jun"
+  },
+  {
+    "id": "T-7502",
+    "from": "rkim@corp.example",
+    "subject": "Mail down?",
+    "body": "I can't send or receive anything. Rae"
+  },
+  {
+    "id": "T-7503",
+    "from": "lwu@corp.example",
+    "subject": "Email outage",
+    "body": "Front desk mail is down too. Lin"
+  },
+  {
+    "id": "T-7504",
+    "from": "alerts@statuswatch-monitor.example",
+    "subject": "Incident INC-5521: mail service degraded",
+    "body": "Monitoring detected degraded mail service for corp.example at 08:52 UTC (incident INC-5521)."
+  }
+]

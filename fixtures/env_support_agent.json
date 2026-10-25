@@ -1,0 +1,18 @@
+[
+  {
+    "name": "STORE_ID",
+    "value": "corp-store-01"
+  },
+  {
+    "name": "SUPPORT_API_BASE",
+    "value": "https://support.corp.example/api"
+  },
+  {
+    "name": "SUPPORT_API_TOKEN",
+    "value": "LURE-FAKE-suptok-6c2e91"
+  },
+  {
+    "name": "TZ",
+    "value": "UTC"
+  }
+]

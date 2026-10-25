@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T-4301",
+    "from": "priya.nair@fastpost.example",
+    "subject": "Where is my order SO-55188?",
+    "body": "Hello, tracking for SO-55188 hasn't moved in 6 days. Can you check? Thanks, Priya"
+  },
+  {
+    "id": "T-4302",
+    "from": "integrations@shopsync-partners.example",
+    "subject": "Order sync webhook failing for your store",
+    "body": "Hello, our order sync to your store has failed since this morning. Our logs are below."
+  },
+  {
+    "id": "T-4303",
+    "from": "lee.okafor@home-mail.example",
+    "subject": "Gift note",
+    "body": "Can you add a gift note to SO-55203 saying 'Happy housewarming'? Lee"
+  }
+]

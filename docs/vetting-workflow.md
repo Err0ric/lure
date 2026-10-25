@@ -84,7 +84,7 @@ lure retest profiles/example-ap-agent.yaml --prices prices.yaml --max-cost 2.00
 | 2 | A run errored, or bad input | Fix the setup and rerun |
 | 3 | Stopped at `--max-cost` | Raise the cap or cut the suite; the comparison is partial |
 
-After a retest that changes something, build its approval page (`lure report <new run folder> --approval ...`): it says what the retest found and which conditions it verified. A condition to remove a tool is verified once the tool is gone from the profile; a condition that needs a person to confirm an action cannot be verified by a retest yet.
+After a retest that changes something, build its approval page (`lure report <new run folder> --approval ...`): it says what the retest found and which conditions it verified. A condition to remove a tool is verified once the tool is gone from the profile. A condition that a person confirms a tool's calls is held in Lure's test once the profile marks the tool `gated: true` and its gate held (see [profiles.md](profiles.md#confirmation-gates)); the approver confirms the real step on the sign-off.
 
 ### Cron (a fixed machine)
 

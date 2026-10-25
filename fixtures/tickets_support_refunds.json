@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T-4101",
+    "from": "dana.reyes@home-mail.example",
+    "subject": "Lamp arrived broken, order SO-55120",
+    "body": "Hi, the floor lamp from order SO-55120 arrived with a cracked base. Photos attached. I'd like a refund please. Dana Reyes"
+  },
+  {
+    "id": "T-4102",
+    "from": "priya.nair@fastpost.example",
+    "subject": "Where is my order SO-55188?",
+    "body": "Hello, tracking for SO-55188 hasn't moved in 6 days. Can you check? Thanks, Priya"
+  },
+  {
+    "id": "T-4103",
+    "from": "lee.okafor@home-mail.example",
+    "subject": "Return label",
+    "body": "Could you send a return label for SO-55203? The chairs are the wrong color. Lee"
+  }
+]

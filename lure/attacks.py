@@ -47,6 +47,8 @@ from lure.arcanum import problems as arcanum_problems
 from lure.tools import KNOWN_TOOLS
 from lure.tools import responders as responders_mod
 from lure.tools.mock_chat import check_chat
+from lure.tools.mock_customers import check_customers
+from lure.tools.mock_directory import check_directory
 from lure.tools.mock_email import FixtureError
 from lure.tools.mock_env import check_env
 from lure.tools.mock_http import url_key
@@ -54,6 +56,7 @@ from lure.tools.mock_mcp import check_mcp
 from lure.tools.mock_mcp import tool_names as mcp_tool_names
 from lure.tools.mock_settings import check_settings
 from lure.tools.mock_shell import check_shell
+from lure.tools.mock_tickets import check_tickets
 from lure.tools.registry import FIXTURE_OPTIONAL, MCP_FIXTURE, fixture_for
 from lure.tools.responders import Responder
 from lure.tools.sources import item_source
@@ -69,8 +72,16 @@ REQUIRED_KEYS = (
 OPTIONAL_KEYS = (
     "partial_if", "pass_if", "task_check", "required_tools", "system_prompt", "version",
     "followup_tasks", "responders", "goal", "variants", "arcanum", "canary", "expected_fetch",
-    "plain",
+    "plain", "scenario",
 )
+# Scenario packs: the kind of work an attack's task is. A profile picks packs
+# with scenarios:, and the approval page names the packs tested.
+SCENARIOS = {
+    "accounts_payable": "accounts payable (vendor email, invoices, payments)",
+    "customer_support": "customer support (tickets, refunds, account changes)",
+    "it_helpdesk": "IT helpdesk (password resets, access requests, outages)",
+}
+DEFAULT_SCENARIO = "accounts_payable"
 PLACEMENTS = ("append", "prepend", "replace")
 PAYLOAD_SEPARATOR = "\n\n"
 # Injection location for a payload in the user turn, not a fixture.
@@ -260,6 +271,8 @@ class Attack:
     expected_fetch: tuple[str, ...] = ()
     # One plain-language sentence for a non-technical reader (approval report).
     plain: str | None = None
+    # The scenario pack (SCENARIOS); attacks without one are accounts payable.
+    scenario: str = DEFAULT_SCENARIO
 
     @property
     def multi_turn(self) -> bool:
@@ -472,6 +485,9 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     if plain is not None and (not isinstance(plain, str) or not plain.strip()
                               or "\n" in plain.strip() or len(plain) > 200):
         raise fail("plain must be one line of at most 200 characters")
+    scenario = data.get("scenario", DEFAULT_SCENARIO)
+    if scenario not in SCENARIOS:
+        raise fail(f"scenario must be one of {', '.join(SCENARIOS)}")
     canary = data.get("canary")
     if canary is not None and (not isinstance(canary, str) or not canary.strip()):
         raise fail("canary must be a non-empty string")
@@ -507,7 +523,8 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         except FixtureError as e:
             raise fail(f"fixture {MCP_FIXTURE!r}: {e}") from None
     for name, check in (("env", check_env), ("chat", check_chat), ("shell", check_shell),
-                        ("agent_settings", check_settings)):
+                        ("agent_settings", check_settings), ("tickets", check_tickets),
+                        ("customers", check_customers), ("directory", check_directory)):
         if name in loaded:
             try:
                 check(loaded[name])
@@ -636,6 +653,7 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
         canary=canary,
         expected_fetch=expected_fetch,
         plain=" ".join(plain.split()) if plain else None,
+        scenario=scenario,
     )
 
 

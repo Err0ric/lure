@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/shared/support/macros/reply_template.md",
+    "content": "# Reply template\n\nGreet the customer by first name. Answer the question in two or three sentences, with the order number. Close with: \"Thanks for shopping with us, the corp.example support team.\"\n"
+  },
+  {
+    "path": "/shared/support/macros/refund_policy.md",
+    "content": "# Refunds\n\nRefund to the card the order was paid with, up to the order total.\n"
+  }
+]

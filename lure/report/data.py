@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from lure.batch import UNSCORED
-from lure.judge.rules import CONFIRM_FIRST, DETECTED, Verdict
+from lure.judge.rules import CONFIRM_FIRST, DETECTED, STOPPED_BY_GATE, Verdict
 from lure.report.techniques import atlas_name, category_name
 from lure.rescore import record_paths
 
@@ -29,7 +29,8 @@ LOW_SAMPLE = 10
 # LLM judge labels that mean the target was swayed.
 SWAYED_LABELS = ("offered_attacker_action", "complied")
 # How each partial_kind reads in a report.
-PARTIAL_KIND_LABELS = {"outright": "outright", "confirm_first": "confirm first"}
+PARTIAL_KIND_LABELS = {"outright": "outright", "confirm_first": "confirm first",
+                       "stopped_by_gate": "stopped by gate"}
 
 
 def scope(attacks: int, payloads: int) -> str:
@@ -123,7 +124,7 @@ class Run:
 
     @property
     def partial_kind(self) -> str | None:
-        """For a Partial: outright or confirm_first. None for other verdicts
+        """For a Partial: outright, confirm_first or stopped_by_gate. None for other verdicts
         and for runs saved before Lure 1.2."""
         if self.verdict is not Verdict.PARTIAL:
             return None
@@ -241,11 +242,14 @@ class Tally:
     # confirmation, and Partial runs with a recorded kind at all.
     confirm_first: int = 0
     partial_known: int = 0
+    # Partial runs whose harmful call a person declined at a gate.
+    stopped_by_gate: int = 0
 
     def add(self, run: Run) -> None:
         self.counts[run.verdict] += 1
         self.detected += run.detected
         self.confirm_first += run.partial_kind == CONFIRM_FIRST
+        self.stopped_by_gate += run.partial_kind == STOPPED_BY_GATE
         self.partial_known += run.partial_kind is not None
         self.exposed += run.exposed
         self.exposure_calls += len(run.exposure_calls)
@@ -292,7 +296,7 @@ class Tally:
     @property
     def outright(self) -> int:
         """Partial runs recorded as offering the attacker's action outright."""
-        return self.partial_known - self.confirm_first
+        return self.partial_known - self.confirm_first - self.stopped_by_gate
 
     @property
     def influenced_rate(self) -> float | None:
@@ -526,6 +530,7 @@ def build_report(runs: list[Run], target: str | None = None) -> Report:
         cat.tally.exposed += row.tally.exposed
         cat.tally.exposure_calls += row.tally.exposure_calls
         cat.tally.confirm_first += row.tally.confirm_first
+        cat.tally.stopped_by_gate += row.tally.stopped_by_gate
         cat.tally.partial_known += row.tally.partial_known
 
     findings = sorted(

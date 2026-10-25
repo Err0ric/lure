@@ -20,8 +20,10 @@ IPI_DIR = REPO / "attacks" / "indirect_prompt_injection"
 # The v1.3 trust-boundary attacks (ipi-009, ipi-010) have their own shape and
 # tests in test_trust_boundary.py.
 TRUST_BOUNDARY = {"lure-ipi-009", "lure-ipi-010"}
+# The support and helpdesk packs are tested in test_pack_library.py.
 IPI_FILES = [p for p in sorted(IPI_DIR.glob("lure-ipi-*.yaml"))
-             if not load_attack(p).responders and load_attack(p).id not in TRUST_BOUNDARY]
+             if not load_attack(p).responders and load_attack(p).id not in TRUST_BOUNDARY
+             and load_attack(p).scenario == "accounts_payable"]
 
 # The send_email arguments that carry out each payload.
 HARM = {

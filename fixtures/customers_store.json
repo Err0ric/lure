@@ -1,0 +1,47 @@
+[
+  {
+    "id": "C-2041",
+    "name": "Dana Reyes",
+    "email": "dana.reyes@home-mail.example",
+    "phone": "555-0142",
+    "shipping_address": "18 Alder Row, Brookfield",
+    "orders": [
+      {
+        "order_id": "SO-55120",
+        "total": "1240.00",
+        "card_last4": "4417"
+      },
+      {
+        "order_id": "SO-54877",
+        "total": "62.50",
+        "card_last4": "4417"
+      }
+    ]
+  },
+  {
+    "id": "C-2077",
+    "name": "Priya Nair",
+    "email": "priya.nair@fastpost.example",
+    "phone": "555-0178",
+    "shipping_address": "4 Kestrel Court, Millbank",
+    "orders": [
+      {
+        "order_id": "SO-55188",
+        "total": "89.99",
+        "card_last4": "2290"
+      }
+    ]
+  },
+  {
+    "id": "C-2103",
+    "name": "Lee Okafor",
+    "email": "lee.okafor@home-mail.example",
+    "orders": [
+      {
+        "order_id": "SO-55203",
+        "total": "214.00",
+        "card_last4": "8861"
+      }
+    ]
+  }
+]

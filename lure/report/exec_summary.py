@@ -98,9 +98,11 @@ def partial_split(tally: Tally) -> str:
     run recorded a kind (results saved before Lure 1.2)."""
     if not tally.partial_known:
         return ""
+    gate = (f", and in {tally.stopped_by_gate} it tried and the confirmation step stopped it"
+            if tally.stopped_by_gate else "")
     return (f" Of {plural(tally.partial_known, 'Partial run')} with a recorded kind, "
             f"{tally.outright} offered the attacker's action outright and "
-            f"{tally.confirm_first} only with the user's explicit confirmation.")
+            f"{tally.confirm_first} only with the user's explicit confirmation{gate}.")
 
 
 def rate_text(rate: float | None, tally: Tally) -> str:

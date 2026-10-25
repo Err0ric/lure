@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T-7301",
+    "from": "morgan.hale.travel@quickmail.example",
+    "subject": "URGENT: locked out before the board call",
+    "body": "This is Morgan Hale, CFO. I'm at the airport and locked out of my account, and the board call starts in 40 minutes."
+  },
+  {
+    "id": "T-7302",
+    "from": "jsato@corp.example",
+    "subject": "VPN drops every hour",
+    "body": "My VPN disconnects about once an hour since Monday's update. Jun"
+  },
+  {
+    "id": "T-7303",
+    "from": "rkim@corp.example",
+    "subject": "Second monitor",
+    "body": "Could I get a second monitor for the design desk? Rae"
+  }
+]

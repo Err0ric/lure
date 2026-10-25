@@ -46,6 +46,8 @@
 .signoff .line { display: grid; grid-template-columns: 7.5rem 1fr; align-items: end; gap: 0.5rem; margin: 0.9rem 0 0; }
 .signoff .line span:last-child { border-bottom: 1px solid var(--ink-2); min-height: 1.4rem; }
 .signoff .notes span:last-child { min-height: 4.2rem; }
+.signoff .attest-text { margin: 0.2rem 0 0; font-size: 0.85em; }
+.pressure { color: var(--fail-ink); }
 .foot { margin-top: 1rem; color: var(--muted); font-size: 0.8125rem; }
 @media print {
   @page { margin: 11mm 13mm; }
@@ -95,7 +97,7 @@
   <dl class="access">
     {% for group, tools in page.tools.items() %}
     <dt>{{ group }}</dt>
-    <dd>{% for t in tools %}{{ t.capability }} <span class="tool">({{ t.name }}{% if t.essential %}, essential{% endif %})</span>{% if not loop.last %}; {% endif %}{% endfor %}</dd>
+    <dd>{% for t in tools %}{{ t.capability }} <span class="tool">({{ t.name }}{% if t.essential %}, essential{% endif %}{% if t.gated %}, a person confirms each call{% endif %})</span>{% if not loop.last %}; {% endif %}{% endfor %}</dd>
     {% endfor %}
     {% if page.third_party_tools %}<dt>Third-party tools</dt><dd>It loads tools from other providers (MCP or plugins)</dd>{% endif %}
   </dl>
@@ -103,12 +105,13 @@
 
 <section aria-labelledby="tested">
   <h2 id="tested">What was tested</h2>
-  <p class="lede">{{ page.tested_total }}, all accounts payable work: vendor email, invoices and payments.</p>
+  <p class="lede">{{ page.tested_total }}, from the scenario pack{% if page.packs|length != 1 %}s{% endif %} {{ page.packs|join("; ") }}.</p>
   <ul class="plainlist">
     {% for line in page.tested %}<li>{{ line }}</li>{% endfor %}
   </ul>
   {% if page.skipped %}<p class="lede">Not applicable to this agent: {% for a, r in page.skipped %}{{ a }} ({{ r }}){% if not loop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
   {% if page.assumption %}<p class="lede">{{ page.assumption }}</p>{% endif %}
+  {% if page.gate_note %}<p class="lede">{{ page.gate_note }}</p>{% endif %}
   {% if page.not_tested %}
   <p class="lede">Not tested, because the agent's own rules stopped the scenario before the attack arrived:</p>
   <ul class="plainlist">{% for a, p in page.not_tested %}<li>{{ p }} <span class="tool">({{ a }})</span></li>{% endfor %}</ul>
@@ -129,6 +132,15 @@
     {% endfor %}
   </ul>
   {% endif %}
+  {% if page.stopped %}
+  <p class="lede">Stopped by the confirmation step: it tried, a person declined, and nothing ran.</p>
+  <ul class="problems">
+    {% for s in page.stopped %}
+    <li><span class="tag">Stopped, {{ s.stopped }} of {{ s.runs }} run{% if s.runs != 1 %}s{% endif %}</span> {{ s.plain }}
+      <span class="what">{{ s.example }} <span class="tool">({{ s.label }})</span>{% if s.retries %} <b class="pressure">It asked again after a decline, {{ s.retries }} time{% if s.retries != 1 %}s{% endif %} in {{ s.retry_runs }} run{% if s.retry_runs != 1 %}s{% endif %}: pressure on the person confirming.</b>{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
   {% if page.notes %}
   <p class="lede">Asked first, which is the safe behaviour:</p>
   <ul class="plainlist">{% for n in page.notes %}<li>{{ n }}</li>{% endfor %}</ul>
@@ -140,7 +152,7 @@
   <h2 id="conditions">Suggested conditions</h2>
   <ul class="cond">
     {% for c in page.conditions %}
-    <li>{{ c.text }}<span class="status">{% if c.addresses %}Covers {{ c.addresses|join(", ") }}.{% else %}From the approved decision.{% endif %} {% if c.verified %}Verified by a retest{% if c.why %}: {{ c.why }}{% endif %}.{% elif c.why %}Not verified: {{ c.why }}.{% else %}Not yet verified: a retest after the change will check it.{% endif %}</span></li>
+    <li>{{ c.text }}<span class="status">{% if c.addresses %}Covers {{ c.addresses|join(", ") }}.{% else %}From the approved decision.{% endif %} {% if c.verified %}Verified by a retest{% if c.why %}: {{ c.why }}{% endif %}.{% elif c.held %}Held in Lure's test: {{ c.why }}. The real app's step is confirmed on sign-off.{% elif c.why %}Not verified: {{ c.why }}.{% else %}Not yet verified: a retest after the change will check it.{% endif %}</span></li>
     {% endfor %}
   </ul>
 </section>
@@ -157,6 +169,10 @@
     <div class="line"><span>Reviewed by</span><span></span></div>
     <div class="line"><span>Date</span><span></span></div>
   </div>
+  {% for name in page.gated %}
+  <div class="line attest"><span>Confirmed by</span><span></span></div>
+  <p class="attest-text">The confirmation step on {{ name }} exists in the live app, shows every field of each call, and the people confirming know to decline what they did not ask for.</p>
+  {% endfor %}
   <div class="line notes"><span>Notes</span><span></span></div>
 </section>
 

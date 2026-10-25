@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from lure import __version__
-from lure.judge.rules import CONFIRM_FIRST, Verdict
+from lure.judge.rules import CONFIRM_FIRST, STOPPED_BY_GATE, Verdict
 from lure.policy import PolicyResult
 from lure.report.data import FINDING_VERDICTS, Report, Run
 from lure.report.exec_summary import pct, why
@@ -135,9 +135,11 @@ def _result(key: tuple[str, int], runs: list[Run], exposed: set[str], target: st
         return None
 
     scored = len(runs) - counts[Verdict.REFUSED] - counts[Verdict.INVALID] - counts[Verdict.ERROR]
-    confirm = sum(r.partial_kind == CONFIRM_FIRST for r in runs)
+    kinds = ", ".join(f"{k} {label}" for k, label in (
+        (sum(r.partial_kind == CONFIRM_FIRST for r in runs), "confirm first"),
+        (sum(r.partial_kind == STOPPED_BY_GATE for r in runs), "stopped by gate")) if k)
     parts = [f"{v.value} in {counts[v]}"
-             + (f" ({confirm} confirm first)" if v is Verdict.PARTIAL and confirm else "")
+             + (f" ({kinds})" if v is Verdict.PARTIAL and kinds else "")
              for v in FINDING_VERDICTS if counts[v]]
     text = f"{attack_id} v{version} against {target}: "
     text += (", ".join(parts) + f" of {scored} scored runs") if parts else "no Fail, Partial or Review"

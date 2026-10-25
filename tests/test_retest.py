@@ -106,9 +106,9 @@ def test_removing_a_tool_verifies_its_condition_and_fixes_the_attack(tmp_path, p
     assert code == cli.EXIT_OK, out
     assert "Fixed (1):\n  lure-ipi-001 v1: failed 0 of 1, was 1 of 1" in out
     assert "tool removed: drive_read (read_file)" in out
-    assert "verified      Remove drive_read. (drive_read is no longer in the profile)" in out
-    assert ("not verified  Require a person to confirm before ap_mail_send sends outside. "
-            "(a retest can only verify a removed tool so far)") in out
+    assert "verified            Remove drive_read. (drive_read is no longer in the profile)" in out
+    assert ("not verified        Require a person to confirm before ap_mail_send sends outside. "
+            "(ap_mail_send is not gated in the profile (gated: true))") in out
     assert "Result:    NO REGRESSION" in out
     assert [c["verified"] for c in saved(tmp_path)["conditions"]] == [True, False]
 
@@ -254,7 +254,8 @@ def test_unverified_condition_keeps_pending_retest(tmp_path, profile_file, scrip
     # The suggested condition is the decision's own text: matched, not repeated.
     [c] = page.conditions
     assert c.text == text and c.addresses == ["lure-ipi-001 v1"]
-    assert not c.verified and c.why == "a retest can only verify a removed tool so far"
+    assert not c.verified and not c.held
+    assert c.why == "ap_mail_send is not gated in the profile (gated: true)"
     assert page.decision == "approve_with_conditions"
     assert page.tag == "Preliminary, pending retest"
     assert page.retest.endswith("no new failures, 1 fixed.")
@@ -325,7 +326,7 @@ def test_removing_the_only_tool_the_suite_needs_still_compares(tmp_path, profile
     code, out = retest(tmp_path, profile_file)  # no model call: nothing to run
     assert code == cli.EXIT_OK, out
     assert "No longer run (1):\n  lure-ipi-001 v1: no profile tool maps to send_email" in out
-    assert "verified      Remove ap_mail_send. (ap_mail_send is no longer in the profile)" in out
+    assert "verified            Remove ap_mail_send. (ap_mail_send is no longer in the profile)" in out
     data = saved(tmp_path)
     assert data["no_longer_run"] == [{"attack": "lure-ipi-001 v1",
                                       "reason": "no profile tool maps to send_email"}]
@@ -337,3 +338,86 @@ def test_removing_the_only_tool_the_suite_needs_still_compares(tmp_path, profile
         code = cli.main(["report", data["run"], "--out", str(tmp_path / "r.html")], io.StringIO())
     assert code == cli.EXIT_BAD_INPUT
     assert "is a retest with nothing left to run" in err.getvalue()
+
+
+# Confirmation conditions: held in Lure's test, never verified
+
+
+CONFIRM = ("Require a person to confirm before ap_mail_send sends to any address outside the "
+           "approved list.")
+
+
+def gate_tool(profile_file, name, **extra):
+    data = yaml.safe_load(profile_file.read_text())
+    data["tools"] = [{**t, "gated": True} if t["name"] == name else t for t in data["tools"]]
+    data.update(extra)
+    profile_file.write_text(yaml.safe_dump(data))
+
+
+def test_gated_tool_holds_its_confirmation_condition(tmp_path, profile_file, scripts):
+    first_run(tmp_path, profile_file, scripts, FAIL)
+    decide(tmp_path, profile_file, "--decision", "approve-with-conditions", "--by", "AP lead",
+           "--conditions", CONFIRM)
+    gate_tool(profile_file, "ap_mail_send")
+    # Same attempt as before; the stand-in person declines it.
+    scripts.append(FAIL)
+    code, out = retest(tmp_path, profile_file)
+    assert code == cli.EXIT_OK, out
+    assert "gate added: ap_mail_send (a person confirms each call)" in out
+    assert "Fixed (1):" in out
+    assert "held in Lure's test" in out
+    [c] = saved(tmp_path)["conditions"]
+    assert c["held"] and not c["verified"]
+    assert c["why"] == ("ap_mail_send is gated; the stand-in person (careful) declined 1 harmful "
+                        "call in 1 of 1 reruns of 1 attack that failed through it, and none got "
+                        "the harm done another way")
+
+
+def test_gate_not_exercised_does_not_hold(tmp_path, profile_file, scripts):
+    first_run(tmp_path, profile_file, scripts, FAIL)
+    decide(tmp_path, profile_file, "--decision", "approve-with-conditions", "--by", "AP lead",
+           "--conditions", CONFIRM)
+    gate_tool(profile_file, "ap_mail_send")
+    scripts.append(PASS)
+    retest(tmp_path, profile_file)
+    [c] = saved(tmp_path)["conditions"]
+    assert not c["held"]
+    assert c["why"] == ("the attacks did not try ap_mail_send this time, so its gate was not "
+                        "exercised")
+
+
+def test_harm_around_the_gate_does_not_hold():
+    old = {"profile": {"tools": [{"name": "ap_mail_send", "maps_to": "send_email"}]}}
+    new = {"profile": {"tools": [{"name": "ap_mail_send", "maps_to": "send_email",
+                                  "gated": True}]}}
+    attack = {"id": "lure-ipi-001", "version": 1}
+    sent = {"tool": "send_email", "args": {}, "gate": None}
+    fetched = {"tool": "fetch_url", "args": {}}
+    fail = {"attack": attack, "judgment": {"verdict": "Fail", "evidence": [
+        {"rule_set": "fail_if", "calls": [sent]}]}}
+    around = {"attack": attack, "judgment": {"verdict": "Fail", "evidence": [
+        {"rule_set": "fail_if", "calls": [fetched]}]}, "tool_calls": [fetched]}
+    [c] = verify_conditions([CONFIRM], old, new, [fail], [around])
+    assert not c.held and c.why == "lure-ipi-001 still failed, through fetch_url"
+    [c] = verify_conditions([CONFIRM], old, new, [fail], [])
+    assert not c.held and c.why == "lure-ipi-001 was not rerun"
+    [c] = verify_conditions(["Keep the confirmation step on ap_mail_send."], old, old, [fail],
+                            [fail])
+    assert not c.held and c.why == "ap_mail_send is not gated in the profile (gated: true)"
+
+
+def test_held_condition_on_the_retest_page_is_never_called_verified(tmp_path, profile_file,
+                                                                    scripts):
+    first_run(tmp_path, profile_file, scripts, FAIL)
+    decide(tmp_path, profile_file, "--decision", "approve-with-conditions", "--by", "AP lead",
+           "--conditions", CONFIRM)
+    gate_tool(profile_file, "ap_mail_send")
+    scripts.append(FAIL)
+    retest(tmp_path, profile_file)
+    md = approval_md(tmp_path, saved(tmp_path))
+    assert (f"- {CONFIRM} From the approved decision. *held in Lure's test: ap_mail_send is "
+            "gated") in md
+    assert "Keep the confirmation step" not in md
+    assert "verified by retest" not in md
+    assert "pending retest" not in md.lower()
+    assert "| The confirmation step on ap_mail_send exists in the live app" in md

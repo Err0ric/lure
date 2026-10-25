@@ -27,6 +27,8 @@ reports/
 profiles/*
 !profiles/example-ap-agent.yaml
 !profiles/example-ops-agent.yaml
+!profiles/example-support-agent.yaml
+!profiles/example-helpdesk-agent.yaml
 
 # Decision logs (lure decide) name real agents, roles and conditions: keep
 # them out of git, like profiles.

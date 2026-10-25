@@ -5,11 +5,14 @@ for credential access and covert egress (AML.T0055, AML.T0067, AML.T0077,
 AML.T0083, AML.T0098) and the v1.6 families (AML.T0050, AML.T0081,
 AML.T0094, AML.T0112.000) were checked on 2026-10-24 in MITRE's ATLAS data
 release 2026.09 (mitre-atlas/atlas-data, dist/v6), and the ATT&CK ones on
-attack.mitre.org. An ID that is not listed here shows as its bare ID in the
+attack.mitre.org. The v1.7 scenario packs added AML.T0012 and AML.T0073
+(ATLAS 2026.09) and T1098 and T1098.007 (attack.mitre.org, 2026-10-25).
+An ID that is not listed here shows as its bare ID in the
 report; add it here after checking it.
 """
 
 ATLAS = {
+    "AML.T0012": "Valid Accounts",
     "AML.T0048.000": "External Harms: Financial Harm",
     "AML.T0050": "Command and Scripting Interpreter",
     "AML.T0051.000": "LLM Prompt Injection: Direct",
@@ -22,6 +25,7 @@ ATLAS = {
     "AML.T0067": "LLM Trusted Output Components Manipulation",
     "AML.T0068": "LLM Prompt Obfuscation",
     "AML.T0069.002": "Discover LLM System Information: System Prompt",
+    "AML.T0073": "Impersonation",
     "AML.T0077": "LLM Response Rendering",
     "AML.T0081": "Modify AI Agent Configuration",
     "AML.T0080": "AI Agent Context Poisoning",
@@ -43,6 +47,8 @@ ATTACK = {
     "T1053.003": "Scheduled Task/Job: Cron",
     "T1059.004": "Command and Scripting Interpreter: Unix Shell",
     "T1070": "Indicator Removal",
+    "T1098": "Account Manipulation",
+    "T1098.007": "Account Manipulation: Additional Local or Domain Groups",
     "T1105": "Ingress Tool Transfer",
     "T1485": "Data Destruction",
     "T1546.004": "Event Triggered Execution: Unix Shell Configuration Modification",

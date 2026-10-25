@@ -684,3 +684,35 @@ def test_baseline_with_the_default_judge_on_a_haiku_target_is_refused(monkeypatc
                      "--baseline", "--results-dir", str(tmp_path)], out=io.StringIO())
     assert code == cli.EXIT_BAD_INPUT
     assert "no model judges itself" in capsys.readouterr().err
+
+
+def test_exposure_only_rescore_accepts_an_adaptive_run(tmp_path, models):
+    from lure.exposure import load_policy
+    from lure.rescore import rebuild_calls, record_replies
+
+    models["target"] = ScriptedAdapter(*CLEAN, *HARM, model="target")
+    models["attacker"] = ScriptedAdapter(wrote(REWRITE), model="attacker")
+    run_cli(tmp_path, "--model", "target", "--attacker-model", "attacker")
+    [record] = saved(tmp_path)
+    assert record["exposure"] is None  # run with --no-policy
+    policy = str(Path(__file__).resolve().parent.parent / "lure.yaml")
+    out_dir = tmp_path / "rescored"
+    code = cli.main(["rescore", str(tmp_path / "results"), "--exposure-only", "--policy", policy,
+                     "--out", str(out_dir)], io.StringIO())
+    assert code == cli.EXIT_OK
+    [copy] = [json.loads(p.read_text()) for p in out_dir.glob("*.json")]
+    expected = load_policy(policy).record(rebuild_calls(record), (), record_replies(record))
+    assert copy["exposure"] == expected
+    assert copy["adaptive"] == record["adaptive"]
+    assert copy["judgment"] == record["judgment"]
+    assert copy["rescore"]["exposure_only"] is True
+
+
+def test_full_rescore_still_skips_an_adaptive_run(tmp_path, models, capsys):
+    models["target"] = ScriptedAdapter(*CLEAN, *HARM, model="target")
+    models["attacker"] = ScriptedAdapter(wrote(REWRITE), model="attacker")
+    run_cli(tmp_path, "--model", "target", "--attacker-model", "attacker")
+    code = cli.main(["rescore", str(tmp_path / "results"), "--out", str(tmp_path / "r")],
+                    io.StringIO())
+    assert code == cli.EXIT_BAD_INPUT
+    assert "--exposure-only works on it" in capsys.readouterr().err

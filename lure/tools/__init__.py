@@ -9,13 +9,24 @@ KNOWN_TOOLS = frozenset({
     "post_message",
     "run_command",
     "read_agent_settings", "update_agent_settings",
+    "list_tickets", "reply_ticket",
+    "lookup_customer", "update_customer", "issue_refund",
+    "lookup_user", "reset_password", "grant_access",
 })
 
 # Tools that show the target a fixture, keyed to the fixture they read. The
 # judge uses this to check the target actually saw the injected content.
 READ_TOOLS = {"read_inbox": "inbox", "read_file": "files", "fetch_url": "web",
               "search_memory": "memory", "list_env": "env", "run_command": "shell",
-              "read_agent_settings": "agent_settings"}
+              "read_agent_settings": "agent_settings", "list_tickets": "tickets",
+              "lookup_customer": "customers", "lookup_user": "directory"}
 # Fixtures whose read tool returns only some items (a search): a read only
 # counts as delivering the payload if its result carries the payload.
-PARTIAL_READ_FIXTURES = frozenset({"memory", "shell"})
+PARTIAL_READ_FIXTURES = frozenset({"memory", "shell", "customers", "directory"})
+# Tools a profile can mark gated (a person confirms each call before it
+# runs): the ones that act, not the ones that only read.
+GATABLE_TOOLS = frozenset({
+    "send_email", "write_file", "delete_file", "pay_invoice", "save_memory", "post_message",
+    "run_command", "update_agent_settings",
+    "reply_ticket", "update_customer", "issue_refund", "reset_password", "grant_access",
+})

@@ -15,6 +15,10 @@ agent, use an organization-approved API account or a local model.
 `link_previews` (fetches links in the agent's chat posts to preview them).
 Unset means yes, the worst case. An attack whose harm needs one the app does
 not do is skipped with the reason.
+
+A tool marked `gated: true` stops for a person's confirmation before each
+call (see lure.gate); `confirmer` picks the stand-in for that person:
+careful (the default) or deny_all.
 """
 
 from __future__ import annotations
@@ -28,14 +32,15 @@ from typing import Any
 import yaml
 
 from lure.adapters import TARGETS
-from lure.attacks import PRIVATE_KEY_RE, SECRET_RE, Attack
+from lure.attacks import PRIVATE_KEY_RE, SCENARIOS, SECRET_RE, Attack
+from lure.gate import CAREFUL, CONFIRMERS, Gate
 from lure.judge.rules import Judgment, Verdict
-from lure.tools import KNOWN_TOOLS
+from lure.tools import GATABLE_TOOLS, KNOWN_TOOLS
 from lure.tools.registry import ToolAlias
 
 REQUIRED_KEYS = ("name", "target", "tools")
 OPTIONAL_KEYS = ("owner", "role", "model", "system_prompt", "system_prompt_file",
-                 "third_party_tools", "policy", "suites", "renders")
+                 "third_party_tools", "policy", "suites", "renders", "confirmer", "scenarios")
 RENDER_KEYS = ("images", "link_previews")
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 # What model APIs accept as a tool name.
@@ -59,6 +64,8 @@ class ProfileTool:
     # The agent cannot do its job without it: the approval report suggests
     # a confirmation step for it, never removing it.
     essential: bool = False
+    # A person confirms each call before it runs (lure.gate).
+    gated: bool = False
 
 
 @dataclass(frozen=True)
@@ -75,11 +82,19 @@ class Profile:
     third_party_tools: bool = False
     policy: Path | None = None
     suites: tuple[str, ...] | None = None  # None means every category
+    scenarios: tuple[str, ...] | None = None  # None means every scenario pack
     # images and link_previews: True, False, or None when not set (assumed True).
     renders: tuple[tuple[str, bool | None], ...] = (("images", None), ("link_previews", None))
+    confirmer: str = CAREFUL
 
     def rendering(self, key: str) -> bool | None:
         return dict(self.renders)[key]
+
+    @property
+    def gate(self) -> Gate | None:
+        """The gated Lure tools and who confirms, or None with no gate."""
+        gated = frozenset(t.maps_to for t in self.tools if t.gated)
+        return Gate(gated, self.confirmer) if gated else None
 
     @property
     def aliases(self) -> dict[str, ToolAlias]:
@@ -88,9 +103,13 @@ class Profile:
 
     def record(self, canary_appended: bool) -> dict[str, Any]:
         """What a result records about the profile it ran under."""
-        return {"name": self.name, "sha256": self.sha256, "prompt_source": "profile",
-                "canary_appended": canary_appended,
-                "tools": {t.name: t.maps_to for t in self.tools}}
+        found = {"name": self.name, "sha256": self.sha256, "prompt_source": "profile",
+                 "canary_appended": canary_appended,
+                 "tools": {t.name: t.maps_to for t in self.tools}}
+        if self.gate is not None:
+            found |= {"gated": [t.name for t in self.tools if t.gated],
+                      "confirmer": self.confirmer}
+        return found
 
 
 @dataclass(frozen=True)
@@ -170,13 +189,25 @@ def load_profile(path: str | Path) -> Profile:
     if not isinstance(renders, dict) or not set(renders) <= set(RENDER_KEYS) or not all(
             isinstance(v, bool) for v in renders.values()):
         raise fail("renders must be a mapping of images and link_previews to true or false")
+    scenarios = data.get("scenarios", "all")
+    if scenarios == "all":
+        scenarios = None
+    elif not (isinstance(scenarios, list) and scenarios
+              and all(s in SCENARIOS for s in scenarios)):
+        raise fail(f"scenarios must be all or a list of scenario packs: {', '.join(SCENARIOS)}")
+    confirmer = data.get("confirmer", CAREFUL)
+    if confirmer not in CONFIRMERS:
+        raise fail(f"confirmer must be one of {', '.join(CONFIRMERS)}")
+    if "confirmer" in data and not any(t.gated for t in tools):
+        raise fail("confirmer is set, but no tool is gated: mark a tool gated: true")
 
     return Profile(name=name, path=path, sha256=digest.hexdigest(), target=data["target"],
                    system_prompt=prompt.strip(), tools=tools, model=data.get("model"),
                    owner=data.get("owner"), role=data.get("role"),
                    third_party_tools=third_party, policy=policy,
                    suites=tuple(suites) if suites else None,
-                   renders=tuple((k, renders.get(k)) for k in RENDER_KEYS))
+                   renders=tuple((k, renders.get(k)) for k in RENDER_KEYS),
+                   confirmer=confirmer, scenarios=tuple(scenarios) if scenarios else None)
 
 
 def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
@@ -185,13 +216,16 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
     tools, names, mapped = [], set(), set()
     for i, item in enumerate(value):
         where = f"tools[{i}]"
-        if not isinstance(item, dict) or set(item) - {"essential"} != {"name", "description",
-                                                                          "maps_to"}:
-            raise fail(f"{where} needs name, description and maps_to (and optionally essential)")
+        if not isinstance(item, dict) or set(item) - {"essential", "gated"} != {
+                "name", "description", "maps_to"}:
+            raise fail(f"{where} needs name, description and maps_to (and optionally essential "
+                       "and gated)")
         name, description, maps_to = item["name"], item["description"], item["maps_to"]
-        essential = item.get("essential", False)
+        essential, gated = item.get("essential", False), item.get("gated", False)
         if not isinstance(essential, bool):
             raise fail(f"{where}: essential must be true or false")
+        if not isinstance(gated, bool):
+            raise fail(f"{where}: gated must be true or false")
         if not isinstance(name, str) or not TOOL_NAME_RE.match(name):
             raise fail(f"{where}: name must be 1 to 64 letters, digits, _ or -")
         if not isinstance(description, str) or not description.strip():
@@ -207,23 +241,30 @@ def _tools(value: Any, fail) -> tuple[ProfileTool, ...]:
             raise fail(f"{where}: two tools map to {maps_to}; list the one the agent uses")
         if name in KNOWN_TOOLS and name != maps_to:
             raise fail(f"{where}: {name!r} is another Lure tool's name; it cannot map to {maps_to}")
+        if gated and maps_to not in GATABLE_TOOLS:
+            raise fail(f"{where}: only a tool that acts can be gated, not {maps_to}; gatable: "
+                       f"{', '.join(sorted(GATABLE_TOOLS))}")
         names.add(name)
         mapped.add(maps_to)
-        tools.append(ProfileTool(name, " ".join(description.split()), maps_to, essential))
+        tools.append(ProfileTool(name, " ".join(description.split()), maps_to, essential, gated))
     return tuple(tools)
 
 
 def select(profile: Profile, attacks: list[Attack]) -> tuple[list[Attack], list[Skipped]]:
     """The attacks this agent can be tested with, and why the others are
-    left out: a category outside the profile's suites, a Lure tool no
-    profile tool maps to, or third-party tools the agent does not load."""
+    left out: a scenario pack or category outside the profile's, a Lure
+    tool no profile tool maps to, or third-party tools the agent does not
+    load."""
     mapped = {t.maps_to for t in profile.tools}
     chosen, skipped = [], []
     for attack in attacks:
         builtin = [t for t in attack.tools if t in KNOWN_TOOLS]
         third_party = [t for t in attack.tools if t not in KNOWN_TOOLS]
         missing = [t for t in builtin if t not in mapped]
-        if profile.suites is not None and attack.category not in profile.suites:
+        if profile.scenarios is not None and attack.scenario not in profile.scenarios:
+            skipped.append(Skipped(attack, f"scenario pack {attack.scenario} is not in the "
+                                           "profile's scenarios"))
+        elif profile.suites is not None and attack.category not in profile.suites:
             skipped.append(Skipped(attack, f"category {attack.category} is not in the "
                                            "profile's suites"))
         elif missing:

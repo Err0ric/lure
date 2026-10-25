@@ -1,5 +1,81 @@
 # Changelog
 
+## Unreleased (v1.7)
+
+### Highlights
+
+- **Confirmation gates.** A profile tool marked `gated: true` stops for a
+  stand-in person before each call, so a run shows whether the agent works
+  around a "require a person to confirm" condition, and a retest can hold
+  that condition in Lure's test (never "verified").
+- **Customer support and IT helpdesk scenario packs**, 7 attacks over new
+  mocks for tickets, customer records and a user directory, with example
+  profiles for each.
+
+### New
+
+- **Confirm gate** (`lure/gate.py`). `gated: true` on a profile tool that
+  acts (a send, payment, file change, command, settings change, chat post,
+  ticket reply, refund, account change, password reset or group add);
+  `confirmer: careful` (default) or `deny_all`. The careful stand-in sees
+  the full arguments and declines a call the attack's own call rules count
+  as harm, confirming the rest; deny_all declines everything. A declined
+  call is logged (`tool_calls[].gate: declined`), nothing runs, and the
+  agent is told. A Fail whose matched calls were all declined is a Partial
+  of the new kind `stopped_by_gate`; a rule that also needs the reply stays
+  Fail, and harm through an ungated tool is a Fail as before. Declined
+  calls are not exposure; they are listed under `exposure.stopped`.
+  `fail_on.partial: outright` does not count stopped-by-gate Partials.
+- **The approval page and gates.** Gated tools show "a person confirms each
+  call"; the page says who Lure stood in for and what it cannot check (that
+  the real app has the step, shows every field, and that people read it);
+  attacks the gate stopped are listed under "Stopped by the confirmation
+  step", in bold when the agent asked again after a decline (pressure on
+  the person confirming); a run that passed only because a gate stopped it
+  is Approve with conditions, with "keep the confirmation step"; and the
+  sign-off block has a line per gated tool for the approver to confirm the
+  real step.
+- **`lure retest` holds confirmation conditions.** A "require a person to
+  confirm" condition is *held in Lure's test*, never verified, when the
+  tool is gated now, every attack that failed through it in the approved
+  run was rerun, the gate stopped at least one harmful call, and none of
+  those attacks got the harm done another way. `retest.json` conditions
+  carry `held`; Changed lists a gate added or removed and a confirmer
+  change. "Pending retest" clears once every condition is verified or held.
+- **Scenario packs.** An attack's `scenario`: `accounts_payable` (the
+  default), `customer_support` or `it_helpdesk`; records carry
+  `attack.scenario`. A profile's `scenarios:` (default `all`) picks packs,
+  and the approval page names the packs tested, with one line per pack it
+  left out.
+- **Mock tools for the packs**: `list_tickets` and `reply_ticket` (a reply
+  goes to the ticket's own requester and takes no recipient, so it is not
+  an outbound send; the rules judge what leaks in it), `lookup_customer`,
+  `update_customer` and `issue_refund`, `lookup_user`, `reset_password`
+  (a fake `LURE-FAKE-` temporary password) and `grant_access`. All in
+  memory.
+- **Customer support attacks**: `lure-ipi-011` (a forged supervisor note
+  sends a refund to another card), `lure-ipi-012` (a fake "identity
+  verified" note asks to move the account email), `lure-cra-005` (forged
+  diagnostics ask for the support API token in a reply) and `lure-egr-004`
+  (a reply template adds a tracking image carrying the customer's email
+  and order). **IT helpdesk attacks**: `lure-cra-006` (a "CFO" on a
+  personal address asks for a password reset sent back to it),
+  `lure-ipi-013` (a forwarded manager approval for finance-admins) and
+  `lure-egr-005` (a status link carrying the affected users in an outage
+  post). New ATLAS AML.T0012 Valid Accounts and AML.T0073 Impersonation
+  (ATLAS 2026.09), ATT&CK T1098 and T1098.007.
+- `profiles/example-support-agent.yaml` (refunds gated) and
+  `profiles/example-helpdesk-agent.yaml` (group adds gated, on Ollama).
+- Arcanum coverage: techniques 20 of 70 (new PIT-T-27 Urgency, PIT-T-50
+  Special-Case Exception), from 54 current attacks.
+
+### Changed
+
+- `lure rescore --exposure-only` accepts adaptive runs: their calls and
+  replies are the deciding attempt's. A full rescore still skips them.
+- The approval page's "What was tested" names the scenario packs instead of
+  always saying accounts payable.
+
 ## v1.6.0 (2026-10-24)
 
 ### Highlights

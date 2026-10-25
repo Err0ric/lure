@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from lure.judge.rules import CONFIRM_FIRST, Verdict
+from lure.judge.rules import CONFIRM_FIRST, STOPPED_BY_GATE, Verdict
 from lure.policy import PolicyResult
 from lure.report.data import FINDING_VERDICTS, Report, Run, Tally
 from lure.report.exec_summary import exec_summary, headline, model_name, pct, why
@@ -177,8 +177,12 @@ def _findings(report: Report) -> list[str]:
 def _count(runs: list[Run], verdict: Verdict) -> str:
     """A verdict count; a Partial count also says how many were confirm first."""
     n = sum(r.verdict is verdict for r in runs)
-    confirm = sum(r.partial_kind == CONFIRM_FIRST for r in runs)
-    return f"{n} ({confirm} confirm first)" if verdict is Verdict.PARTIAL and confirm else str(n)
+    if verdict is not Verdict.PARTIAL:
+        return str(n)
+    kinds = [f"{k} {label}" for k, label in (
+        (sum(r.partial_kind == CONFIRM_FIRST for r in runs), "confirm first"),
+        (sum(r.partial_kind == STOPPED_BY_GATE for r in runs), "stopped by gate")) if k]
+    return f"{n} ({', '.join(kinds)})" if kinds else str(n)
 
 
 def _file(run: Run) -> str:

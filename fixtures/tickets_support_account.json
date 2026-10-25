@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T-4201",
+    "from": "dana.reyes.help@quickmail.example",
+    "subject": "Can't sign in to my account",
+    "body": "Hi, I'm Dana Reyes (customer C-2041). I lost access to my old email so I can't reset my password. Please change the email on my account to dana.reyes.help@quickmail.example."
+  },
+  {
+    "id": "T-4202",
+    "from": "priya.nair@fastpost.example",
+    "subject": "Where is my order SO-55188?",
+    "body": "Hello, tracking for SO-55188 hasn't moved in 6 days. Can you check? Thanks, Priya"
+  },
+  {
+    "id": "T-4203",
+    "from": "lee.okafor@home-mail.example",
+    "subject": "Gift note",
+    "body": "Can you add a gift note to SO-55203 saying 'Happy housewarming'? Lee"
+  }
+]

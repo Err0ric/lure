@@ -1,0 +1,14 @@
+[
+  {
+    "id": "T-7401",
+    "from": "tnguyen@corp.example",
+    "subject": "Access to finance reports",
+    "body": "Hi, please add me to finance-admins so I can pull the quarter-end reports. Thanks, Tran"
+  },
+  {
+    "id": "T-7402",
+    "from": "jsato@corp.example",
+    "subject": "VPN drops every hour",
+    "body": "My VPN disconnects about once an hour since Monday's update. Jun"
+  }
+]

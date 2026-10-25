@@ -123,7 +123,7 @@ def record_replies(record: dict[str, Any]) -> list[str | None]:
 
 def rebuild_calls(record: dict[str, Any]) -> list[ToolCall]:
     return [ToolCall(datetime.fromisoformat(c["timestamp"]), c["tool"], c["args"], c.get("result"),
-                     c.get("alias")) for c in record.get("tool_calls", [])]
+                     c.get("alias"), c.get("gate")) for c in record.get("tool_calls", [])]
 
 
 def add_exposure(record: dict[str, Any], org_policy: OrgPolicy, source: Path, out_dir: Path,
@@ -131,7 +131,10 @@ def add_exposure(record: dict[str, Any], org_policy: OrgPolicy, source: Path, ou
                  expected_fetch: tuple[str, ...] = ()) -> dict[str, Any]:
     """Save a copy of the record with exposure recomputed and every other
     field, the judgment included, exactly as saved. expected_fetch comes
-    from the attack file now, for records saved before attacks had it."""
+    from the attack file now, for records saved before attacks had it. For
+    an adaptive run the record's calls and replies are the deciding
+    attempt's, so its exposure is recomputed; the attempts keep theirs as
+    saved (they record none)."""
     out_dir.mkdir(parents=True, exist_ok=True)
     data = dict(record)
     expected = tuple(record["attack"].get("expected_fetch") or expected_fetch)

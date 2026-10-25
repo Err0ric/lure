@@ -42,7 +42,14 @@ from lure.batch import SummaryRow, collect_attack_paths, summarize
 from lure.budget import ROLES, Budget
 from lure.exposure import DEFAULT_POLICY_FILE, OrgPolicy, PolicyError
 from lure.judge.llm_judge import LLMJudge
-from lure.judge.rules import CONFIRM_FIRST, DETECTED, HEURISTIC, Judgment, Verdict
+from lure.judge.rules import (
+    CONFIRM_FIRST,
+    DETECTED,
+    HEURISTIC,
+    STOPPED_BY_GATE,
+    Judgment,
+    Verdict,
+)
 from lure.policy import Policy, PolicyResult, PolicyRun
 from lure.prices import PricesError, load_prices
 from lure.profiles import Profile, ProfileError, Skipped, load_profile
@@ -380,7 +387,7 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         if profile is not None:
             attack, prompt, canary = prepare_for_profile(profile, attack)
             kwargs |= {"system_prompt": prompt, "tool_aliases": profile.aliases,
-                       "profile": profile.record(canary)}
+                       "profile": profile.record(canary), "gate": profile.gate}
         if attacker is not None:
             result = run_adaptive(attack, adapter, attacker, args.attempts or DEFAULT_ATTEMPTS,
                                   budget, **kwargs)
@@ -470,10 +477,12 @@ def write_manifest(profile: Profile, args, policy: Policy, results: list, skippe
         "profile": {"name": profile.name, "path": str(profile.path), "sha256": profile.sha256,
                     "owner": profile.owner, "role": profile.role,
                     "tools": [{"name": t.name, "description": t.description,
-                               "maps_to": t.maps_to, "essential": t.essential}
+                               "maps_to": t.maps_to, "essential": t.essential,
+                               "gated": t.gated}
                               for t in profile.tools],
                     "third_party_tools": profile.third_party_tools,
-                    "renders": dict(profile.renders)},
+                    "renders": dict(profile.renders), "confirmer": profile.confirmer,
+                    "scenarios": list(profile.scenarios) if profile.scenarios else "all"},
         "target": results[0].target if results else f"{args.target}:{args.model or 'default'}",
         "judge": results[0].judge if results else args.judge,
         "repeat": args.repeat,
@@ -551,7 +560,8 @@ def _flagged_plan(attacks: list[Attack], folder: str, out: TextIO) -> list[Attac
             raise AttackError(f"{path}: adaptive run; --only-flagged reads single-shot "
                               "screening runs")
         kind = record["judgment"].get("partial_kind")
-        if verdict is Verdict.FAIL or (verdict is Verdict.PARTIAL and kind != CONFIRM_FIRST):
+        if verdict is Verdict.FAIL or (verdict is Verdict.PARTIAL
+                                       and kind not in (CONFIRM_FIRST, STOPPED_BY_GATE)):
             flagged.add((*key, (record.get("variant") or {}).get("id")))
     if not seen:
         raise AttackError(f"no Lure results found in {folder}")
@@ -943,8 +953,7 @@ def print_retest(result, out: TextIO) -> None:
     if result.conditions:
         print("Conditions:", file=out)
         for c in result.conditions:
-            print(f"  {'verified' if c.verified else 'not verified':<13} {c.text} ({c.why})",
-                  file=out)
+            print(f"  {c.status:<19} {c.text} ({c.why})", file=out)
     if result.regression:
         n = len(result.new_failures)
         verdict = f"REGRESSION: {n} new failure{'s' if n > 1 else ''}"
@@ -1141,9 +1150,11 @@ def rescore_main(args, out: TextIO) -> int:
         if key not in index:
             print(f"lure: skipping {path}: no attack file for {key[0]} v{key[1]}", file=sys.stderr)
             continue
-        if record.get("adaptive"):
-            print(f"lure: skipping {path}: adaptive run; rescore does not re-judge attempts yet",
-                  file=sys.stderr)
+        # --exposure-only judges nothing, so an adaptive run is fine: its
+        # top-level calls and replies are the deciding attempt's.
+        if record.get("adaptive") and not args.exposure_only:
+            print(f"lure: skipping {path}: adaptive run; rescore does not re-judge attempts yet "
+                  "(--exposure-only works on it)", file=sys.stderr)
             continue
         attack = index[key]
         if record.get("variant"):

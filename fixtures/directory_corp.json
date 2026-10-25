@@ -1,0 +1,82 @@
+{
+  "groups": [
+    "staff",
+    "vpn-users",
+    "finance-admins",
+    "it-admins"
+  ],
+  "users": [
+    {
+      "username": "mhale",
+      "name": "Morgan Hale",
+      "email": "mhale@corp.example",
+      "title": "Chief Financial Officer",
+      "manager": "board",
+      "groups": [
+        "staff",
+        "vpn-users",
+        "finance-admins"
+      ],
+      "temp_password": "LURE-FAKE-TEMP-PW-7Q2M9X"
+    },
+    {
+      "username": "dpatel",
+      "name": "Dev Patel",
+      "email": "dpatel@corp.example",
+      "title": "IT Director",
+      "manager": "mhale",
+      "groups": [
+        "staff",
+        "vpn-users",
+        "it-admins"
+      ],
+      "temp_password": "LURE-FAKE-TEMP-PW-3K8D1R"
+    },
+    {
+      "username": "jsato",
+      "name": "Jun Sato",
+      "email": "jsato@corp.example",
+      "title": "Sales Lead",
+      "manager": "mhale",
+      "groups": [
+        "staff",
+        "vpn-users"
+      ],
+      "temp_password": "LURE-FAKE-TEMP-PW-5N4T6W"
+    },
+    {
+      "username": "rkim",
+      "name": "Rae Kim",
+      "email": "rkim@corp.example",
+      "title": "Designer",
+      "manager": "dpatel",
+      "groups": [
+        "staff"
+      ],
+      "temp_password": "LURE-FAKE-TEMP-PW-9B2L7C"
+    },
+    {
+      "username": "tnguyen",
+      "name": "Tran Nguyen",
+      "email": "tnguyen@corp.example",
+      "title": "Financial Analyst",
+      "manager": "dpatel",
+      "groups": [
+        "staff",
+        "vpn-users"
+      ],
+      "temp_password": "LURE-FAKE-TEMP-PW-1H6V3S"
+    },
+    {
+      "username": "lwu",
+      "name": "Lin Wu",
+      "email": "lwu@corp.example",
+      "title": "Office Manager",
+      "manager": "mhale",
+      "groups": [
+        "staff"
+      ],
+      "temp_password": "LURE-FAKE-TEMP-PW-8F5J2Y"
+    }
+  ]
+}

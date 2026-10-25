@@ -12,6 +12,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+# A gated call's outcome (lure.gate): a person confirmed it and it ran, or
+# declined it and nothing ran.
+CONFIRMED = "confirmed"
+DECLINED = "declined"
+DECLINED_RESULT = {"status": "declined",
+                   "note": "The person did not confirm this action, so it did not run."}
+
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
@@ -26,6 +33,8 @@ class ToolCall:
     # The name the target called the tool by, when a profile renamed it.
     # `tool` stays the canonical Lure name the judge's rules use.
     alias: str | None = None
+    # For a call to a gated tool: confirmed or declined. None otherwise.
+    gate: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = {
@@ -36,6 +45,8 @@ class ToolCall:
         }
         if self.alias is not None:
             data["alias"] = self.alias
+        if self.gate is not None:
+            data["gate"] = self.gate
         return data
 
 
@@ -46,15 +57,18 @@ class ToolCallLog:
     # Set by the toolbox around a call to an aliased tool: the name the
     # target used, recorded with the call.
     alias: str | None = None
+    # Set by the toolbox around a confirmed call to a gated tool.
+    gate: str | None = None
 
     def record(self, tool: str, args: dict[str, Any], result: Any = None,
-               alias: str | None = None) -> ToolCall:
+               alias: str | None = None, gate: str | None = None) -> ToolCall:
         call = ToolCall(
             timestamp=self.clock(),
             tool=tool,
             args=copy.deepcopy(args),
             result=copy.deepcopy(result),
             alias=alias if alias is not None else self.alias,
+            gate=gate if gate is not None else self.gate,
         )
         self._calls.append(call)
         return call

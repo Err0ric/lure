@@ -35,6 +35,7 @@ from lure.attacker import Attacker, Attempt
 from lure.attacks import Attack
 from lure.budget import Budget
 from lure.exposure import OrgPolicy
+from lure.gate import Gate
 from lure.judge.llm_judge import LLMJudge
 from lure.judge.rules import (
     CONFIRM_FIRST,
@@ -132,6 +133,7 @@ class RunResult:
                 "file": a.file,
                 "name": a.name,
                 "category": a.category,
+                "scenario": a.scenario,
                 "severity": a.severity,
                 "atlas": a.atlas,
                 "attack": a.attack,
@@ -192,16 +194,20 @@ def run_attack(
     org_policy: OrgPolicy | None = None,
     tool_aliases: dict[str, ToolAlias] | None = None,
     profile: dict[str, Any] | None = None,
+    gate: Gate | None = None,
 ) -> RunResult:
     """One run. With a profile (its record() block), the run is the
-    profiled agent's: an Invalid run whose setup step it skipped says so."""
+    profiled agent's: an Invalid run whose setup step it skipped says so.
+    With a gate, its tools stop for the stand-in person's confirmation."""
     started_at = clock()
     fixtures_sha256 = attack.fixture_hashes()
     system_prompt = system_prompt or attack.system_prompt or DEFAULT_SYSTEM_PROMPT
     tasks = [attack.planted_task(), *attack.followup_tasks]
     log = ToolCallLog(clock=clock)
+    gated = ({"gated": gate.tools, "confirm": gate.confirm_for(attack)}
+             if gate is not None else {})
     toolbox = build_toolbox(attack.tools, attack.planted_fixtures(), log, attack.responders,
-                            tool_aliases)
+                            tool_aliases, **gated)
     transcript: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
 
     turns = 0
