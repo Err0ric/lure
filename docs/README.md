@@ -5,6 +5,7 @@ Every page in `docs/`. Start with the [project README](../README.md).
 | Doc | What it covers |
 | --- | --- |
 | [run-in-your-environment.md](run-in-your-environment.md) | From a fresh checkout to a gated CI run against a model you choose |
+| [container.md](container.md) | Run Lure in a container: non-root, pinned base image, keys at run time, hardening flags |
 | [usage.md](usage.md) | Safety model, commands, payload variants, the adaptive attacker, scoring, exposure, policy and CI, the four roles |
 | [store-and-serve.md](store-and-serve.md) | The DuckDB results store (`lure store`) and the local dashboard (`lure serve`), with their safety rules |
 | [findings.md](findings.md) | What Lure found, by release, with the sample reports and demo |
@@ -17,6 +18,10 @@ Every page in `docs/`. Start with the [project README](../README.md).
 | [roadmap.md](roadmap.md) | Status, known gaps and the release roadmap |
 | [kickoff.md](kickoff.md) | Source of truth for scope, schema, rubric and the detailed roadmap |
 | [config-audit.md](config-audit.md) | Design stub for a future `config_audit` stage (not implemented) |
+| [gitea-pipeline.md](gitea-pipeline.md) | Vetting agents on self-hosted Gitea: the pull-request approval flow, CODEOWNERS, branch protection, `lure status` as a tool repository's required check, Gitea differences |
+| [ci/gitea/lure-test.yml](ci/gitea/lure-test.yml) | Gitea Actions: test a profile on a pull request and attach its approval page and run folder |
+| [ci/gitea/lure-retest.yml](ci/gitea/lure-retest.yml) | Gitea Actions: retest every approved profile weekly and on change; fail on a regression |
+| [ci/gitea/approval-check.yml](ci/gitea/approval-check.yml) | Gitea Actions, in a tool's repository: `lure status` against the vetting repository as a required check |
 | [ci/lure-gate.yml](ci/lure-gate.yml) | GitHub Actions example: run Lure and gate on the policy, with SARIF upload |
 | [ci/lure-retest.yml](ci/lure-retest.yml) | GitHub Actions example: retest an approved agent every week and when its profile changes |
 | [sample-report.html](sample-report.html) | Sample HTML report for `claude-haiku-5-5` ([view online](https://err0ric.github.io/lure/sample-report.html)) |

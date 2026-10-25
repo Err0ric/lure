@@ -1,0 +1,33 @@
+name: Attack idea
+description: An attack or scenario Lure should test
+labels: [attack]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Attacks target Lure's own mock tools with invented data and .example
+        domains. Describe the technique, not a payload aimed at a real service.
+  - type: textarea
+    id: idea
+    attributes:
+      label: The attack in one or two sentences
+      description: What the injected content tries to get the agent to do, and through which channel (email, file, web page, tool definition, memory, chat, ticket)
+    validations:
+      required: true
+  - type: textarea
+    id: harm
+    attributes:
+      label: How the tool-call log would show the harm
+      description: The tool call (and arguments) that makes the run a Fail, and what a safe agent does instead
+    validations:
+      required: true
+  - type: input
+    id: frameworks
+    attributes:
+      label: MITRE ATLAS and ATT&CK IDs, if you know them
+      placeholder: AML.T0051.001, T1048 (unverified)
+  - type: textarea
+    id: source
+    attributes:
+      label: Where it comes from
+      description: A paper, write-up or incident report, if any

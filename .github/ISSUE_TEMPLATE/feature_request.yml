@@ -1,0 +1,22 @@
+name: Feature request
+description: Something Lure should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and where Lure gets in the way
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: It keeps Lure's rules (mock tools only, no real side effects, fake data, model APIs as the only network calls), or the request says why it needs an exception
+          required: true

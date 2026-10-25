@@ -1,0 +1,74 @@
+# Example: in a TOOL's own repository (the agent's code, or the service that
+# ships it), check on every pull request and push that the agent is approved
+# as it is now. Not run in this repo. See docs/gitea-pipeline.md.
+#
+# Copy to .gitea/workflows/approval-check.yml in the tool's repository and
+# make "approval" a required status check in its branch protection.
+#
+# It checks out the private vetting repository read-only and runs
+# lure status. No model is called and no prompt leaves the runner.
+#
+# The approval covers the profile file, and the prompt file it names. If the
+# agent's prompt lives in THIS repository, set PROMPT_FILE: the job copies it
+# over the vetting repository's copy first, so a prompt change in this
+# repository fails the check ("the profile changed since it was approved")
+# until it is retested and approved again. Tool names and descriptions are
+# not compared this way; change them in the profile, through the vetting
+# repository.
+#
+# lure status exit codes: 0 the latest decision approves the profile and the
+# profile file is unchanged since; 1 rejected, no decision, or changed since;
+# 2 bad input.
+#
+# Gitea notes: Gitea Runner (formerly act_runner) with a label matching
+# runs-on; actions fetched from github.com unless DEFAULT_ACTIONS_URL = self.
+# VETTING_TOKEN is a token with read access to the vetting repository only:
+# the job token of this repository cannot read another private repository.
+# Pinned SHAs checked 2026-10-25.
+
+name: Agent approval
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  VETTING_REPO: security/agent-vetting     # owner/name on this Gitea instance
+  PROFILE: profiles/invoice-assistant.yaml   # this tool's profile in that repo
+  # Optional: this repository's prompt file, and where the profile's
+  # system_prompt_file points in the vetting repository. Leave empty to skip.
+  PROMPT_FILE: agent/system_prompt.txt
+  PROFILE_PROMPT: profiles/invoice-assistant.prompt.txt
+
+jobs:
+  approval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out this repository
+        if: env.PROMPT_FILE != ''
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          path: tool
+      - name: Check out the vetting repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ env.VETTING_REPO }}
+          token: ${{ secrets.VETTING_TOKEN }}
+          github-server-url: ${{ gitea.server_url }}
+          path: vetting-repo
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e vetting-repo
+
+      - name: Use this repository's prompt
+        if: env.PROMPT_FILE != ''
+        run: cp "tool/$PROMPT_FILE" "vetting-repo/$PROFILE_PROMPT"
+
+      - name: Approved as it is now?
+        working-directory: vetting-repo
+        run: lure status "$PROFILE"

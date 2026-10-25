@@ -1,0 +1,48 @@
+name: Bug report
+description: Lure did something wrong (not a security issue; for those, see SECURITY.md)
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Remove real system prompts, API keys and customer data before you
+        paste anything. A vulnerability in Lure (a mock tool reaching a real
+        system, a network call other than a model API, a secret in results)
+        goes to the private report link instead.
+  - type: input
+    id: version
+    attributes:
+      label: Lure version
+      description: Output of `lure --version`
+      placeholder: lure 1.10.0
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: What you ran
+      description: The command, and the attack file or profile it used (example profiles, or a redacted copy of yours)
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened, and what you expected
+      description: For a wrong verdict, the run's result JSON (redacted) or its tool-call log helps most
+    validations:
+      required: true
+  - type: dropdown
+    id: target
+    attributes:
+      label: Target
+      options: [anthropic, ollama, openai-compatible, not relevant]
+    validations:
+      required: true
+  - type: checkboxes
+    id: redacted
+    attributes:
+      label: Checks
+      options:
+        - label: I removed real prompts, keys and customer data from everything above
+          required: true

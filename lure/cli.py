@@ -264,6 +264,12 @@ def build_parser() -> argparse.ArgumentParser:
     for p in (store_add, store_rebuild, store_query):
         p.add_argument("--db", default=DEFAULT_DB, help=f"the store file (default {DEFAULT_DB})")
 
+    status_cmd = sub.add_parser("status", help="is the profile approved as it is now? exit 0 "
+                                               "yes; 1 rejected, undecided or changed since")
+    status_cmd.add_argument("profile", help="the profile YAML to check")
+    status_cmd.add_argument("--vetting-dir", default=DEFAULT_VETTING_DIR,
+                            help=f"where decision logs live (default {DEFAULT_VETTING_DIR})")
+
     serve_cmd = sub.add_parser("serve", help="browse runs, transcripts, approval pages and "
                                              "vetting history in a local, read-only dashboard")
     serve_cmd.add_argument("paths", nargs="*", metavar="PATH",
@@ -370,6 +376,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         return store_main(args, out)
     if args.command == "serve":
         return serve_main(args, out)
+    if args.command == "status":
+        return status_main(args, out)
     try:
         profile = _apply_profile(args)
         # Load every attack first so a bad file fails before any model call.
@@ -891,6 +899,28 @@ def decide_main(args, out: TextIO) -> int:
     print(f"Run:       {run} (profile sha256 {record['profile_sha256'][:12]})", file=out)
     print(f"Logged:    {path} line {line}", file=out)
     return EXIT_OK
+
+
+def status_main(args, out: TextIO) -> int:
+    """lure status: exit 0 if the latest decision approves the profile as it
+    is now, 1 if it is rejected, undecided or changed since, 2 on bad input."""
+    from lure.vetting import VettingError, status
+
+    try:
+        profile = load_profile(args.profile)
+        result = status(profile, args.vetting_dir)
+    except (ProfileError, VettingError) as e:
+        print(f"lure: {e}", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    word = "approved" if result.ok else "not approved"
+    print(f"Status:    {profile.name} is {word}: {result.reason}", file=out)
+    d = result.decision
+    if d:
+        print(f"Decision:  {d.get('decision')} by {d.get('by')}, {str(d.get('decided_at'))[:10]}"
+              f" (run {d.get('run')})", file=out)
+        for c in d.get("conditions") or []:
+            print(f"  condition: {c}", file=out)
+    return EXIT_OK if result.ok else EXIT_POLICY_FAIL
 
 
 def retest_main(args, out: TextIO) -> int:

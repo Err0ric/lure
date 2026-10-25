@@ -12,7 +12,7 @@ These are not negotiable; a pull request that breaks one is closed.
 | --- | --- |
 | Mock tools only | Targets only ever get tools from `lure/tools/`. A mock logs the call and returns fake data. It never touches the network, the real filesystem, email or payments. |
 | Fake data only | Every domain is under `.example` (the loader rejects anything else, even inside base64). People, accounts, invoices and secrets are invented. Never real credentials, PII or customer data. |
-| Model APIs are the only network calls | Adapters may call the model under test or the LLM judge, nothing else. Tests never open a socket: `tests/conftest.py` fails any test that tries. |
+| Model APIs are the only network calls | Adapters may call the model under test or the LLM judge, nothing else. Tests never open a socket: `tests/conftest.py` fails any test that tries, except `loopback` tests (the `lure serve` ones), which may reach 127.0.0.1 only. |
 | Payloads stay in the sandbox | Payloads target Lure's own mock tools, never a real third-party service. |
 | Agent-only and generic | No org-specific names or assumptions. No general app or secrets scanning; other tools do that. |
 | Map every attack | Every attack carries ATLAS and ATT&CK IDs, verified on atlas.mitre.org and attack.mitre.org. If unsure, say so in the PR. |

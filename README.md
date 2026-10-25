@@ -23,6 +23,8 @@ Think phishing simulation, but the target is an agent instead of an employee.
 - **Fake data only.** Every domain is under `.example` and every secret is a `LURE-FAKE-` canary; people and accounts are invented.
 - **Model APIs are the only network calls.** Keys stay in `.env`, which is never committed. Full table: [`docs/usage.md`](docs/usage.md#safety-model).
 
+This is capability isolation through mock tools, not OS isolation: Lure owns the agent loop, and no tool it offers can reach a real system. [How the sandbox works](docs/usage.md#how-the-sandbox-works).
+
 ## Quickstart
 
 Needs Python 3.12 and an Anthropic API key, a local [Ollama](https://ollama.com) server, or an OpenAI-compatible endpoint.
@@ -42,6 +44,7 @@ From there to a gated CI run on a model you choose: [`docs/run-in-your-environme
 | Guide | What it covers |
 | --- | --- |
 | [Run Lure in your environment](docs/run-in-your-environment.md) | From a fresh checkout to a gated CI run |
+| [Run Lure in a container](docs/container.md) | Non-root image, pinned base, keys at run time |
 | [Usage](docs/usage.md) | Commands, payload variants, the adaptive attacker, scoring, exposure, policy and CI |
 | [Results store and dashboard](docs/store-and-serve.md) | `lure store` and `lure serve`: query runs across folders, browse them locally |
 | [What Lure found](docs/findings.md) | Published results by release, with the sample reports |
@@ -49,6 +52,7 @@ From there to a gated CI run on a model you choose: [`docs/run-in-your-environme
 | [Writing a profile](docs/writing-a-profile.md) | Step-by-step tutorial for vetting your own agent |
 | [Profiles](docs/profiles.md) | Profile reference, confirmation gates and the approval report |
 | [Weekly vetting workflow](docs/vetting-workflow.md) | Decide, retest on change and every week, track |
+| [Vetting on Gitea](docs/gitea-pipeline.md) | Pull-request approvals, CODEOWNERS, branch protection, `lure status` as a required check |
 | [ATLAS and ATT&CK mapping](docs/atlas-mapping.md) | Every ID, what uses it, and when it was checked |
 | [Known gaps and roadmap](docs/roadmap.md) | What is still open and what shipped when |
 | [All docs](docs/README.md) | One table of every page in `docs/` |

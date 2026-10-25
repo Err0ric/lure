@@ -1,0 +1,92 @@
+# Example: retest every approved agent weekly and when a profile or the policy
+# changes, on Gitea Actions. Fails on a regression. Not run in this repo.
+# See docs/gitea-pipeline.md.
+#
+# Copy to .gitea/workflows/lure-retest.yml in the PRIVATE vetting repository.
+# It needs, committed on purpose: profiles/<name>.yaml, the approved run folder
+# under results/<name>/, vetting/<name>/decisions.jsonl and prices.yaml.
+#
+# The job never records a decision and never commits. On a regression the
+# approver reads the new approval page from the artifact and decides again in
+# a pull request.
+#
+# lure retest exit codes: 0 no new failure, 1 a new failure against the
+# approved run, 2 a run errored or bad input, 3 stopped at --max-cost.
+#
+# Gitea notes: Gitea Runner (formerly act_runner) with a label matching
+# runs-on; actions fetched from github.com unless DEFAULT_ACTIONS_URL = self;
+# upload-artifact v3 (the official v4 stops on Gitea); no step summary.
+# Gitea's schedule also accepts @weekly. Pinned SHAs checked 2026-10-25.
+#
+# Local only: a profile with target: ollama is retested on Ollama, with the
+# judge its approved run used (from that run's manifest). Set LURE_OLLAMA_URL
+# to the Ollama server on your network and leave every hosted API key out.
+
+name: Lure retest
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"     # Mondays 06:00 UTC
+  push:
+    branches: [main]
+    paths:
+      - "profiles/**"
+      - "lure.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  retest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+
+      - name: Retest every approved profile
+        id: retest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # hosted profiles only
+          LURE_OLLAMA_URL: ${{ vars.LURE_OLLAMA_URL }}          # local profiles
+        run: |
+          code=0
+          mkdir -p approval
+          for log in vetting/*/decisions.jsonl; do
+            [ -f "$log" ] || continue
+            name=$(basename "$(dirname "$log")")
+            profile="profiles/$name.yaml"
+            [ -f "$profile" ] || { echo "skip $name: no $profile"; continue; }
+            c=0
+            lure retest "$profile" --prices prices.yaml --max-cost 2.00 || c=$?
+            echo "$name: lure retest exit $c"
+            [ "$c" -gt "$code" ] && code=$c
+            run=$(ls -d "results/$name"/*/ 2>/dev/null | sort | tail -n 1 || true)
+            if [ -n "$run" ] && [ -f "${run}retest.json" ]; then
+              lure report "$run" --out "approval/$name-report.html" \
+                --approval "approval/$name-approval.html" || true
+              cp "${run}retest.json" "approval/$name-retest.json"
+            fi
+          done
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the retest pages
+        if: always()
+        uses: actions/upload-artifact@c6a3b2bd78b3985e4b2f15397fec357f0fd808de # v3.2.2-node20
+        with:
+          name: lure-retest
+          path: approval/
+          retention-days: 90
+
+      - name: Gate on the retest
+        if: always()
+        run: |
+          case "${{ steps.retest.outputs.code }}" in
+            0) echo "Lure: no new failure against any approved run" ;;
+            1) echo "Lure: a new failure against an approved run; the approver must decide again"; exit 1 ;;
+            3) echo "Lure: stopped at --max-cost; the comparison is partial"; exit 1 ;;
+            *) echo "Lure: a run errored or bad input; see the Retest step"; exit 2 ;;
+          esac

@@ -123,6 +123,8 @@ Runs live under `results/<name>/`, where `<name>` is the profile's `name:`.
 
 [`ci/lure-retest.yml`](ci/lure-retest.yml) runs `lure retest` every Monday, on every push that changes a profile or `lure.yaml`, and by hand. It fails the job on a regression and keeps the new run folder and approval page as a job artifact. It does not record decisions or commit run folders: the approver does that after reading the page, so every line in the decision log comes from a person.
 
+On a self-hosted Gitea, the same flow runs as reviewed pull requests, with `lure status` as each tool repository's required check: [gitea-pipeline.md](gitea-pipeline.md).
+
 After a job, the approver downloads the artifact, reads `approval.html`, and if they decide again, copies the run folder into `results/<name>/`, runs `lure decide ... --run results/<name>/<timestamp>` and commits both.
 
 ## 5. Track

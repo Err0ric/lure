@@ -1,0 +1,122 @@
+# Example: test an agent on Gitea Actions when a pull request changes its
+# profile, and attach the approval page for the approver. Not run in this repo.
+# See docs/gitea-pipeline.md.
+#
+# Copy to .gitea/workflows/lure-test.yml in the PRIVATE vetting repository
+# (Lure's files at its root, plus profiles/, vetting/ and prices.yaml committed
+# on purpose). Gitea reads .gitea/workflows/ first and uses .github/workflows/
+# only when .gitea/workflows/ does not exist.
+#
+# The job never records a decision. The artifact holds each approval page and
+# the run folder it was built from (results/<name>/<timestamp>/). The approver
+# reads the page, copies the run folder into the pull request, records the
+# decision with lure decide --run, and commits both; CODEOWNERS on vetting/
+# makes that commit their review.
+#
+# Gitea notes:
+# - Runs on Gitea Runner (formerly act_runner). runs-on must match a label
+#   your runner registered with; ubuntu-latest is the common default.
+# - Actions without a host are fetched from github.com (DEFAULT_ACTIONS_URL).
+#   On a network with no route out, mirror them to your instance and set
+#   DEFAULT_ACTIONS_URL = self, or use absolute https://<your-gitea>/... URLs.
+# - Pinned to commit SHAs of Node 20 releases (checked 2026-10-25). Use
+#   upload-artifact v3: the official v4 treats Gitea as GitHub Enterprise
+#   Server and stops. gitea.com/actions/gitea-upload-artifact is a v4 copy
+#   that allows Gitea.
+# - No step summary is written: older Gitea versions and runners do not show
+#   one. The approval page is the artifact.
+
+name: Lure test on profile change
+
+on:
+  pull_request:
+    paths:
+      - "profiles/**"
+
+permissions:
+  contents: read
+
+env:
+  # Where results land; one folder per profile run under it.
+  RESULTS: results
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0       # to diff the pull request against its base
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+
+      # Each profile the pull request adds or changes, skipping the examples.
+      - name: Changed profiles
+        id: changed
+        run: |
+          base="origin/${{ gitea.base_ref }}"
+          files=$(git diff --name-only --diff-filter=AM "$base"...HEAD -- 'profiles/*.yaml' \
+                  | grep -v '^profiles/example-' || true)
+          echo "files=$(echo $files)" >> "$GITHUB_OUTPUT"
+          echo "Profiles to test: ${files:-none}"
+
+      - name: Test each profile
+        id: test
+        if: steps.changed.outputs.files != ''
+        env:
+          # Option A, a hosted model: only the target's key, from the account
+          # approved for this agent's prompt. Scope it to this job.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Option B, local models only, so prompts never leave your network:
+          # give the profile target: ollama (or pass --target ollama --model
+          # below), point Lure at the Ollama server on your network, and use
+          # a local judge (a different model from the target). Leave
+          # ANTHROPIC_API_KEY out of this job entirely.
+          LURE_OLLAMA_URL: ${{ vars.LURE_OLLAMA_URL }}   # e.g. http://ollama.internal:11434
+        run: |
+          code=0
+          mkdir -p approval
+          for profile in ${{ steps.changed.outputs.files }}; do
+            name=$(basename "$profile" .yaml)
+            # Option A: hosted target, hosted judge (a different model).
+            lure run --profile "$profile" --repeat 3 \
+              --judge llm --judge-model claude-sonnet-5-5 \
+              --prices prices.yaml --max-cost 2.00 || c=$?
+            # Option B: everything on Ollama inside the network. No spend to
+            # cap; to keep --max-cost, list both models at 0 in prices.yaml.
+            # lure run --profile "$profile" --repeat 3 \
+            #   --target ollama --model llama3.1:8b \
+            #   --judge llm --judge-target ollama --judge-model llama3.1:70b || c=$?
+            [ "${c:-0}" -gt "$code" ] && code=${c:-0}; c=0
+            run=$(ls -d "$RESULTS/$name"/*/ 2>/dev/null | sort | tail -n 1 || true)
+            [ -n "$run" ] || { echo "$name: no run folder"; continue; }
+            lure report "$run" --out "approval/$name-report.html" \
+              --approval "approval/$name-approval.html" \
+              --approval-md "approval/$name-approval.md" || true
+            # The run folder lure decide needs, at the same path.
+            mkdir -p "approval/$RESULTS/$name"
+            cp -R "${run%/}" "approval/$RESULTS/$name/"
+          done
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the approval pages
+        if: always() && steps.changed.outputs.files != ''
+        uses: actions/upload-artifact@c6a3b2bd78b3985e4b2f15397fec357f0fd808de # v3.2.2-node20
+        with:
+          name: lure-approval
+          path: approval/
+          retention-days: 90
+
+      # lure run exit codes: 0 nothing failed the policy, 1 something did,
+      # 2 a run errored or bad input, 3 stopped at --max-cost.
+      - name: Result
+        if: always() && steps.changed.outputs.files != ''
+        run: |
+          case "${{ steps.test.outputs.code }}" in
+            0) echo "Lure: no run failed the policy; read the approval page before deciding" ;;
+            1) echo "Lure: a run failed the policy; see the approval page"; exit 1 ;;
+            3) echo "Lure: stopped at --max-cost; the results are partial"; exit 1 ;;
+            *) echo "Lure: a run errored or bad input; see the Test step"; exit 2 ;;
+          esac

@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- **`lure status <profile>`**: exit 0 when the latest decision in
+  `vetting/<name>/decisions.jsonl` is approve or approve-with-conditions and
+  its profile hash matches the profile file now (its `system_prompt_file`
+  included); exit 1 when the latest decision is a reject, there is no
+  decision, or the profile changed since, saying which; exit 2 on bad input.
+  For a tool repository's CI to gate on an approval held elsewhere.
+- **Gitea Actions examples** in `docs/ci/gitea/`: `lure-test.yml` (a pull
+  request that changes a profile is tested, and its approval page and run
+  folder attached), `lure-retest.yml` (every approved profile, weekly and on
+  a push to `profiles/` or `lure.yaml`; fails on a regression) and
+  `approval-check.yml` (in a tool's repository: `lure status` against the
+  vetting repository, optionally with the tool's own prompt file). Each
+  shows a local Ollama option for target and judge.
+- **`docs/gitea-pipeline.md`**: the pull-request approval flow, CODEOWNERS
+  (Go regular expressions on Gitea), branch protection, the approval check
+  as a required check next to a tool's other checks, and how Gitea Actions
+  differs from GitHub Actions.
+- **`SECURITY.md`**: private vulnerability reporting, supported versions,
+  and what counts (anything that breaks Lure's own safety rules) and what
+  does not (the attack payloads, model behavior).
+- **GitHub issue forms and a pull request template** (bug report with a
+  redaction check, attack idea, feature request; blank issues off, the
+  security link to private reporting).
+- **`Dockerfile`** and `docs/container.md`: a non-root image (uid 10001) on
+  `python:3.12-slim-trixie` pinned by digest, no secrets in the image or
+  the build context (`.dockerignore`), keys at run time, hardening flags,
+  and `--network none` for commands that call no model.
+- **How the sandbox works** (`docs/usage.md`): capability isolation through
+  mock tools, not OS isolation, and what that does and does not cover.
+
 ## v1.10.0 (2026-10-25)
 
 ### New

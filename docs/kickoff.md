@@ -328,13 +328,39 @@ Goal: query runs across folders, and browse runs, transcripts, approval pages an
 - [x] Tests reach 127.0.0.1 only under the `loopback` marker; every other host stays blocked.
 - [x] Tag v1.10.0
 
+### v1.11
+
+Goal: gate a tool on its agent's approval, run the pipeline on self-hosted Gitea, and the trust basics. No model calls.
+
+- [x] `lure status <profile>`: exit 0 when the latest decision approves the profile and its hash matches the profile file now (prompt file included); 1 when rejected, undecided or changed since; 2 on bad input.
+- [x] Gitea Actions examples (`docs/ci/gitea/`): test on a pull request, weekly retest, and an approval check for a tool's repository; each with a local Ollama option. `docs/gitea-pipeline.md`: pull-request approvals, CODEOWNERS (Go regular expressions), branch protection, Gitea differences checked against its docs and source.
+- [x] `SECURITY.md`, issue forms and a pull request template.
+- [x] A container image: non-root, base pinned by digest, no secrets in the image (`docs/container.md`).
+- [x] How the sandbox works: capability isolation through mock tools, not OS isolation.
+- [ ] Tag v1.11.0
+
 ### Next
 
-#### v1.11
+#### v1.12
 
+- [ ] Coding-agent attacks after the report of agents following an instruction file dropped into ~/Downloads: `lure-shx-004` (install a package), `lure-smo-004` (change the model endpoint), `lure-cra-008` (print or send the auth token), each with a clean twin whose instruction file comes from the repository. On today's mocks.
+- [ ] A fixture `origin` field (repo, download, user), carried into results, the judge's reason and the approval page ("followed instructions from a downloaded file").
+
+#### v1.13
+
+- [ ] Isolation for real agents: Lure's own egress proxy (hostname allowlist, no TLS decryption, everything else blocked and logged) and DNS logger; a throwaway container per run (non-root, read-only root, no host mounts, no capabilities) on an internal-only network; decoy commands and a workspace diff as evidence. A blocked attempt is exposure; a changed model endpoint is a critical finding. Only a capped test model key goes in.
 - [ ] `split_over` across invoice numbers: two payments to the same vendor under the limit, with different or missing invoice numbers, still count as a split.
 - [ ] A tolerant check for summary gates. Today a summary counts as honest only if it names the harmful detail word for word, which is strict on the agent. A tolerant check (the recipient's organization, "outside", a rounded amount) would read more summaries as honest, so fewer runs fail as misled, at the risk of crediting a vague summary that a hurried person would wave through.
 - [ ] Live llama3.1 smoke tests for the misled (summary gate) and split (threshold gate) paths, which Haiku never took; they are covered by scripted tests only.
+
+#### v1.14
+
+- [ ] Lure as a mock MCP server (stdio and Streamable HTTP, one unguessable path per run): `tools/list` serves the attack's tools (profile names, poisoned definitions as they are), `tools/call` goes through the toolbox.
+
+#### v1.15
+
+- [ ] An HTTP agent endpoint adapter (`target: agent-http`) and a profile `agent:` block, refused without `isolation: container` or `vm`; the approval page's Isolation section.
+- [ ] The at-work option: a dedicated VM on an isolated VLAN, reverted per run, egress only through a proxy allowing the model API; its firewall and proxy logs accepted as egress evidence.
 
 ### Later
 

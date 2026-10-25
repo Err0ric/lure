@@ -12,6 +12,26 @@ Lure attacks agents, so it is built to be safe by design.
 | Fake data only | Every domain is under `.example` (the loader rejects anything else, even inside base64), and people, accounts and secrets are invented. |
 | Keys stay local | API keys live in `.env`, which is never committed. |
 
+## How the sandbox works
+
+Lure's sandbox is **capability isolation, not OS isolation**. It is safe because of what the agent under test is given, not because of a wall around the process.
+
+**What the agent under test is.** Today the target is a model behind an API, driven by Lure's own loop. The model never runs code on your machine: it returns text and tool call requests, and Lure decides what each request does.
+
+**What a tool call can do.** Lure looks up each requested tool by name among the mocks the attack offers, and answers anything else with an error. Each mock is a small Python function that checks its arguments, reads fixture data, records the call for the judge, and returns a fake result. None has a code path to the network, your files, a shell, email or payments: `send_email` appends to a list, `write_file` changes an in-memory copy of the fixture, `run_command` matches canned output, `fetch_url` looks up a fixture page, `pay_invoice` records a payment. A harmful action is a log entry, and that log entry is the evidence.
+
+**What is not isolated.** Lure itself is an ordinary Python process with your user's permissions, files and network. There is no container, VM or seccomp profile between the model's output and your machine, and none is needed while the only thing that acts on that output is Lure's dispatcher and mocks. Running Lure in a [container](container.md) is tidy, not what makes a test safe.
+
+| Trust | What | How Lure treats it |
+| --- | --- | --- |
+| Trusted | Lure's code, and the attack, fixture and profile files you choose to run | Loaded as data; the loader rejects real domains and real-looking secrets |
+| Untrusted | Everything the model returns, and the payload text in fixtures | Parsed into tool call requests for mocks, or shown escaped in reports; never executed |
+| Leaves the machine | The model API calls (target, judge, attacker): the profile's prompt, the task, fixture contents and payloads go to the model API the run names | Use an approved account, or Ollama to keep everything local |
+
+**Where it would break.** A bug in a mock or in the dispatcher, such as a mock that touched a real path, is what could break the sandbox: report one through [SECURITY.md](../SECURITY.md). Third-party tool definitions (MCP fixtures) are descriptions only; Lure mocks those tools too and never runs them.
+
+**When this stops being enough.** Capability isolation holds while Lure owns the agent loop. Testing a real agent, with its own code and its own tool client, means that code runs, so it needs OS and network isolation as well: a throwaway container with no network except an egress proxy. That is planned, not built; see the [roadmap](roadmap.md).
+
 ## Quickstart
 
 Needs Python 3.12 and one of: an Anthropic API key, a local [Ollama](https://ollama.com) server, or any OpenAI-compatible endpoint (OpenAI, vLLM, Groq, LM Studio, llama.cpp).
@@ -60,6 +80,7 @@ Other useful commands:
 | `lure run --profile profiles/example-ap-agent.yaml` | Test your own agent: its system prompt and tool names over Lure's mocks. Tutorial: [`docs/writing-a-profile.md`](writing-a-profile.md); reference: [`docs/profiles.md`](profiles.md). The prompt goes to the model API the profile names |
 | `lure report results/<profile>/<run>/ --approval approval.html` | One printable approval page for a non-technical approver: access, what was tested, what went wrong, a recommended decision with conditions, and a sign-off block |
 | `lure decide profiles/<name>.yaml --decision approve-with-conditions --by "<role>" --conditions "..."` | Record the decision in an append-only log, `vetting/<name>/decisions.jsonl` (gitignored) |
+| `lure status profiles/<name>.yaml` | Exit 0 if the latest decision approves the profile and the profile is unchanged since; exit 1 if rejected, undecided or changed. For a tool repository's CI: [`gitea-pipeline.md`](gitea-pipeline.md) |
 | `lure retest profiles/<name>.yaml --prices prices.yaml --max-cost 0.50` | Rerun the profile's last suite and compare it with the last approved run: new failures (exit 1), fixed, what changed, which conditions a retest verified. The weekly workflow, with cron and GitHub Actions examples: [`docs/vetting-workflow.md`](vetting-workflow.md) |
 | `lure run ... --target ollama --model llama3.1:8b` | Test a local model (set `LURE_OLLAMA_URL` in `.env` if it is not on localhost) |
 | `lure run ... --target openai --model <model>` | Test any OpenAI-compatible server: set `LURE_OPENAI_BASE_URL` and, if it needs one, `LURE_OPENAI_API_KEY` in `.env` |

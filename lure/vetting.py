@@ -7,6 +7,10 @@ role), the conditions, the run folder it was based on and the profile hash
 that run tested. The file is append-only: a decision is never edited or
 removed, a later one supersedes it.
 
+lure status answers "may this agent run?" for a CI gate: yes only when
+the log's latest decision approves the agent and the profile file is still
+the one that decision was about (same SHA-256).
+
 lure retest reruns a profile's last suite (the attacks, versions, variants,
 repeat count and judge in its last run's manifest) and compares the new run
 with the run the last approve or approve-with-conditions decision was based
@@ -166,6 +170,55 @@ def last_approved(decisions: list[dict[str, Any]]) -> dict[str, Any] | None:
     does not remove it: a retest still compares with what was approved."""
     approved = [d for d in decisions if d["decision"] in APPROVED]
     return approved[-1] if approved else None
+
+
+# Status: may the agent run as it is now?
+
+APPROVED_STATE, REJECTED, UNDECIDED, CHANGED = "approved", "rejected", "undecided", "changed"
+
+
+@dataclass(frozen=True)
+class Status:
+    """The latest decision about a profile, and whether it still covers the
+    profile file as it is now."""
+
+    profile: str
+    state: str
+    sha256: str
+    decision: dict[str, Any] | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.state == APPROVED_STATE
+
+    @property
+    def reason(self) -> str:
+        d = self.decision or {}
+        if self.state == UNDECIDED:
+            return f"no decision recorded for {self.profile}"
+        if self.state == REJECTED:
+            return f"the latest decision rejects {self.profile}"
+        if self.state == CHANGED:
+            then = str(d.get("profile_sha256") or "none recorded")[:12]
+            return (f"the profile changed since it was approved (sha256 {then} then, "
+                    f"{self.sha256[:12]} now): retest it and record a new decision")
+        return f"{d.get('decision')}, and the profile is unchanged since (sha256 {self.sha256[:12]})"
+
+
+def status(profile: Profile, vetting_dir: str | Path) -> Status:
+    """Approved only when the log's last line is approve or
+    approve-with-conditions and its profile hash is the file's hash now. A
+    later reject, or any change to the profile (its prompt file included),
+    means it is not approved."""
+    decisions = read_decisions(vetting_dir, profile.name)
+    if not decisions:
+        return Status(profile.name, UNDECIDED, profile.sha256)
+    latest = decisions[-1]
+    if latest["decision"] not in APPROVED:
+        return Status(profile.name, REJECTED, profile.sha256, latest)
+    if latest.get("profile_sha256") != profile.sha256:
+        return Status(profile.name, CHANGED, profile.sha256, latest)
+    return Status(profile.name, APPROVED_STATE, profile.sha256, latest)
 
 
 # Retest: what to rerun

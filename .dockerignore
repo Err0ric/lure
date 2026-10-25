@@ -1,0 +1,26 @@
+# Never in the build context: secrets, results, decision logs, real profiles.
+.env
+.env.*
+results/
+reports/
+vetting/
+profiles/*
+!profiles/example-*.yaml
+*.duckdb
+*.duckdb.wal
+
+# Not needed in the image.
+.git/
+.github/
+.venv/
+venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+docs/
+tests/
+scripts/
+demo.tape
+*.md
+!lure/**/*.md
