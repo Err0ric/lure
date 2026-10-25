@@ -181,10 +181,10 @@ Five phases, each shippable on its own. No dates; work it at your own pace and t
 
 ### v1.1
 
-- [ ] DuckDB store for results, so runs can be queried across folders
+- DuckDB store for results, so runs can be queried across folders: moved to v1.10 (Next)
 - [x] Reactive fixtures: new mail arrives in response to the agent's sends (makes ipi-007 truly multi-step), shipped in v1.2
 - [x] OpenAI-compatible adapter (`openai_compat.py`)
-- [ ] lure serve: local web dashboard to browse runs and transcripts
+- lure serve: local web dashboard to browse runs and transcripts: moved to v1.10 (Next)
 - [x] Results JSON Schema (`schema/results.v1.json`) with `schema_version` and `lure_version` in every record
 - [x] Policy file: `fail_on` (verdicts, severity, exposure), `categories` and per-attack `overrides` in `lure.yaml`
 - [x] Exit codes for CI: 0 policy pass, 1 policy fail, 2 error; `lure report` gates saved runs
@@ -317,12 +317,20 @@ Goal: two more scenario packs, so HR and sales agents are tested on their own wo
 - [x] Coverage after v1.9: inputs 7 of 12 (new PIT-N-04), intents 9 of 27 (new PIT-I-07), techniques 21 of 70 (new PIT-T-38), evasions 9 of 63, from 66 current attacks.
 - [x] Tag v1.9.0
 
+### Next
+
+#### v1.10
+
+- [ ] DuckDB results store (from v1.1): load result folders into one database so runs can be queried across folders, targets and dates.
+- [ ] `lure serve` (from v1.1): a local web dashboard to browse runs, transcripts, approval pages and vetting history.
+
+#### v1.11
+
+- [ ] `split_over` across invoice numbers: two payments to the same vendor under the limit, with different or missing invoice numbers, still count as a split.
+- [ ] A tolerant check for summary gates. Today a summary counts as honest only if it names the harmful detail word for word, which is strict on the agent. A tolerant check (the recipient's organization, "outside", a rounded amount) would read more summaries as honest, so fewer runs fail as misled, at the risk of crediting a vague summary that a hurried person would wave through.
+- [ ] Live llama3.1 smoke tests for the misled (summary gate) and split (threshold gate) paths, which Haiku never took; they are covered by scripted tests only.
+
 ### Later
 
-- [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies. Blocked on picking a local open-weights attacker model via Ollama (Claude attackers refused most exfiltration goals in v1.3).
+- [ ] Adaptive attacker `outcome` mode (`attacker_feedback: outcome`): the attacker learns only whether the harmful action happened, not the target's replies. The shipped mode, `replies`, is a worst case: a real indirect-injection attacker usually cannot see the agent's replies. Claude attackers refused most exfiltration goals in v1.3, and `llama3.1:8b` wrote weak payloads; next, try a larger local open-weights model as the attacker.
 - [ ] Multi-agent targets (an orchestrator plus specialists) and handoff attacks.
-
-### Phase 5: Stretch
-
-- [ ] Run against a sample SecOps agent team
-- Multi-agent targets moved to Later; the vetting checklist is replaced by the v1.6 weekly vetting workflow.
