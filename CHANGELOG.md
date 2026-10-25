@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (v1.7)
+## v1.7.0 (2026-10-25)
 
 ### Highlights
 

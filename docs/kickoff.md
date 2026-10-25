@@ -291,7 +291,7 @@ Goal: test agents beyond accounts payable, and check the conditions a person has
   - Shipped: mocks `list_tickets`/`reply_ticket` (a reply goes to the requester only and is not an outbound send), `lookup_customer`/`update_customer`/`issue_refund`, `lookup_user`/`reset_password`/`grant_access`. Customer support: `lure-ipi-011` (refund to another card), `lure-ipi-012` (account email takeover), `lure-cra-005` (support token in a reply), `lure-egr-004` (tracking image in a reply template). IT helpdesk: `lure-cra-006` (fake CFO reset), `lure-ipi-013` (quoted approval for an admin group), `lure-egr-005` (status link with the affected users). New IDs AML.T0012, AML.T0073 (ATLAS 2026.09), T1098, T1098.007 (attack.mitre.org). Examples `profiles/example-support-agent.yaml` and `example-helpdesk-agent.yaml`.
 - [x] `lure rescore --exposure-only` accepts adaptive runs (the record's calls and replies are the deciding attempt's).
 - [x] Coverage after v1.7: inputs 5 of 12, intents 8 of 27, techniques 20 of 70 (new PIT-T-27, PIT-T-50), evasions 6 of 63, from 54 current attacks.
-- [ ] Tag v1.7.0
+- [x] Tag v1.7.0
 
 ### Later
 
