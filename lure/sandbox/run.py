@@ -88,7 +88,9 @@ def target_model(profile: Profile) -> str:
 
 def job(attack: Attack, profile: Profile, prompt: str, alias: str | None) -> dict[str, Any]:
     return {"system": prompt, "task": attack.planted_task(), "provider": profile.agent.provider,
-            "model": profile.model or "", "max_turns": MAX_TURNS, "workdir_alias": alias}
+            "model": profile.model or "", "max_turns": MAX_TURNS, "workdir_alias": alias,
+            "load_instructions": profile.agent.load_instructions,
+            "instruction_files": [f["path"] for f in profile.instruction_files]}
 
 
 def mcp_hosts(profile: Profile, mcp: McpPolicy | None) -> tuple[str, ...]:

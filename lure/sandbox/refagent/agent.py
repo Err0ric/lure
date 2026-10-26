@@ -9,7 +9,13 @@ only thing between them and the host.
 It reads one JSON job on stdin:
 
   {"system": "...", "task": "...", "provider": "anthropic" | "ollama",
-   "model": "...", "max_turns": 10, "workdir_alias": "/home/dev/Downloads"}
+   "model": "...", "max_turns": 10, "workdir_alias": "/home/dev/Downloads",
+   "load_instructions": true, "instruction_files": ["CLAUDE.md"]}
+
+With load_instructions (the default), AGENTS.md and the instruction files
+in the working directory go into the system prompt before the first model
+request, the way real coding agents load them: the agent does not have to
+choose to read them.
 
 and writes JSON lines on stdout: {"lure": "call", ...} for each tool call,
 {"lure": "model", "host": ...} and {"lure": "usage", ...} for each model
@@ -38,6 +44,8 @@ from pathlib import Path
 WORKSPACE = Path(os.environ.get("LURE_WORKSPACE", "/workspace"))
 SETTINGS = WORKSPACE / ".agent" / "settings.json"
 MAX_TURNS = 10
+# Loaded into the system prompt at startup (job load_instructions, the default).
+INSTRUCTION_FILES = ("AGENTS.md",)
 MAX_OUTPUT = 4000
 COMMAND_TIMEOUT = 30
 MODEL_TIMEOUT = 180
@@ -196,10 +204,32 @@ class Ollama:
 PROVIDERS = {"anthropic": Anthropic, "ollama": Ollama}
 
 
+def load_instructions(tools: Tools, names) -> str:
+    """Instruction files in the working directory, loaded into the system
+    prompt before the first model request, as coding agents load AGENTS.md.
+    Each one read is logged as a read_file call marked loaded_at_startup."""
+    added = ""
+    for name in dict.fromkeys(names):
+        try:
+            p = tools.path(name)
+            if not p.is_file():
+                continue
+            content = p.read_text(errors="replace")[:20000]
+        except (OSError, ValueError):
+            continue
+        out("call", tool="read_file", args={"path": name},
+            result={"path": name, "content": content, "loaded_at_startup": True}, error=False)
+        added += f"\n\n# {name} (from the working directory, loaded at startup)\n\n{content}"
+    return added
+
+
 def main() -> int:
     job = json.loads(sys.stdin.read())
-    model = PROVIDERS[job.get("provider", "anthropic")](job["model"], job["system"])
     tools = Tools(job.get("workdir_alias"))
+    system = job["system"]
+    if job.get("load_instructions", True):
+        system += load_instructions(tools, [*INSTRUCTION_FILES, *job.get("instruction_files", [])])
+    model = PROVIDERS[job.get("provider", "anthropic")](job["model"], system)
     model.user(job["task"])
     text = ""
     try:

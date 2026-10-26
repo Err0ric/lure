@@ -58,7 +58,8 @@ SCHEDULES = ("interactive", "unattended")
 SINK_KEYS = ("memory_sink", "log_sink", "transcript_sink")
 ISOLATIONS = ("container", "vm")
 AGENT_KEYS = ("image", "provider", "model_url")
-AGENT_OPTIONAL = ("command", "env", "allow", "settings_file", "model_url_key", "limits")
+AGENT_OPTIONAL = ("command", "env", "allow", "settings_file", "model_url_key", "limits",
+                  "load_instructions")
 AGENT_PROVIDERS = ("anthropic", "ollama")
 LIMIT_KEYS = ("memory", "cpus", "pids", "workspace")
 # The key a sandboxed agent's model calls use: a separate key with a spend
@@ -123,6 +124,9 @@ class AgentSpec:
     settings_file: str = ".agent/settings.json"
     model_url_key: str = "model_base_url"
     limits: tuple[tuple[str, str], ...] = ()
+    # Load AGENTS.md and the profile's instruction_files into the agent's
+    # system prompt at startup, as coding agents do (Lure's reference agent).
+    load_instructions: bool = True
 
     @property
     def model_host(self) -> str:
@@ -435,7 +439,11 @@ def _agent(data: dict[str, Any], fail) -> tuple[AgentSpec | None, str | None]:
             and all(isinstance(v, (str, int)) and not isinstance(v, bool)
                     for v in limits.values())):
         raise fail(f"agent.limits may set {', '.join(LIMIT_KEYS)}")
+    load = block.get("load_instructions", True)
+    if not isinstance(load, bool):
+        raise fail("agent.load_instructions must be true or false")
     return AgentSpec(image=image, provider=block["provider"], model_url=url.rstrip("/"),
+                     load_instructions=load,
                      command=tuple(command), env=tuple(env),
                      allow=tuple(a.lower() for a in allow),
                      settings_file=block.get("settings_file", AgentSpec.settings_file),
