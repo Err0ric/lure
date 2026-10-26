@@ -380,6 +380,7 @@ Goal: check an agent's setup before testing it, and hold its MCP servers to an a
 - [x] Tag v1.14.0
 - [x] v1.14.1 patch: a warning when `agent.allow` is set under an MCP allowlist, which makes the gateway ignore it.
 - [x] v1.14.2 patch: sandbox records name their model (`sandbox:<provider>:<model>`) so Lure can price them; `lure sandbox run --prices --max-cost` stops an agent mid-attack when the running total passes the cap.
+- [x] v1.14.3 patch: the reference agent loads AGENTS.md and `instruction_files` at startup (`agent.load_instructions`); a test-only vulnerable agent Fails smo-004 (blocked egress) and shx-004 (decoy) and Passes smo-005; long-context price tiers priced per request (`usage_requests`).
 
 #### v1.15
 

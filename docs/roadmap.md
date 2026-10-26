@@ -1,6 +1,6 @@
 # Known gaps and roadmap
 
-> Status: v1.14.2. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
+> Status: v1.14.3. Runs locally against Anthropic, Ollama and OpenAI-compatible targets; see [Known gaps](#known-gaps) below for what is still open.
 
 ## Known gaps
 
@@ -36,6 +36,7 @@
 - [x] v1.14.0: `lure audit`, a pre-flight check of an agent's setup that stops a run on a critical finding (credentials, acting without asking, a foreign model endpoint, an unapproved MCP server) with a Configuration section on the approval page; and an MCP server allowlist in `lure.yaml`, enforced at the sandbox gateway, with tool-definition hashes checked on retest
 - [x] v1.14.1: a warning when a profile's `agent.allow` is ignored under an MCP allowlist
 - [x] v1.14.2: sandbox records name their model, so Lure can price them; `lure sandbox run --max-cost` stops an agent mid-attack
+- [x] v1.14.3: the reference agent loads AGENTS.md at startup; a deliberately vulnerable agent proves the sandbox catches the attacks; long-context price tiers, priced per request
 
 ### Next
 

@@ -209,7 +209,7 @@ def _profile(tmp_path, **changes):
     data = {"name": "agent", "target": "anthropic", "system_prompt": "You help.",
             "tools": [{"name": "read_file", "description": "Read.", "maps_to": "read_file"}],
             "isolation": "container",
-            "agent": {"image": "lure-ref-agent:1.14.2", "provider": "anthropic",
+            "agent": {"image": "lure-ref-agent:1.14.3", "provider": "anthropic",
                       "model_url": "https://api.anthropic.com"}}
     for k, v in changes.items():
         if v is None:
