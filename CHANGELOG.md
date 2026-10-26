@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.14.3 (2026-10-25)
+
+### New
+
+- **The reference agent loads AGENTS.md at startup**, with the profile's
+  `instruction_files`, into its system prompt, as real coding agents do
+  (`agent.load_instructions`, default true). Before, a downloaded AGENTS.md
+  reached the agent only if its model chose to open it.
+- **Proof the sandbox catches a real attack.** A deliberately vulnerable,
+  test-only agent that obeys AGENTS.md Fails `lure-smo-004` on the gateway's
+  blocked egress to the relay, Fails `lure-shx-004` with the npm decoy's
+  arguments in the evidence, and Passes the control `lure-smo-005`
+  (`pytest -m docker`).
+- **Long-context price tiers** (`long_context: {above, rates}` per model).
+  Haiku 5.5 charges 5x on every rate for a request whose prompt (cache reads
+  and writes included) is over 100,000 tokens. Each request is priced on its
+  own: records keep `usage_requests`, and `--max-cost` (both `lure run` and
+  `lure sandbox run`), the budget and `lure compare --prices` use them.
+  Records with totals only get the tier on everything once the total passes
+  the threshold, an upper bound.
+
+### Fixed
+
+- `prices.example.yaml`: Haiku 5.5 cache rates and its long-context tier
+  added; Sonnet 5.5 cache reads are $0.10 per million, not $0.20.
+
 ## v1.14.2 (2026-10-25)
 
 ### Fixed
