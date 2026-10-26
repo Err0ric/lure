@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.14.2 (2026-10-25)
+
+### Fixed
+
+- **Sandbox runs could not be priced.** A sandbox record's target named the
+  agent's image (`sandbox:lure-ref-agent:1.14.0`), which no prices file
+  lists, so Lure's own cost estimates (`--prices`, `lure compare --prices`)
+  came out empty. The target is now `sandbox:<provider>:<model>`
+  (`sandbox:anthropic:claude-haiku-5-5`); the image stays in
+  `sandbox.agent_image`. An agent profile needs `model:`. The 1.14.1 run's
+  figure, 8,172 input and 1,619 output Haiku tokens at $0.10 and $0.50 per
+  million, $0.0016, was right; it had been worked out by hand.
+
+### New
+
+- **`lure sandbox run --prices FILE --max-cost USD`.** Each record gets its
+  estimated cost. Lure reads the agent's token counts as each model request
+  returns and, once the running total passes the cap, stops the agent's
+  processes mid-attack; the remaining attacks do not run. The stopped run is
+  an Error (`stop: max_cost`) unless a fail rule already matched; its
+  evidence is still collected; the command exits 3. A model missing from
+  the prices file is refused before any run.
+
 ## v1.14.1 (2026-10-25)
 
 ### Changed
