@@ -199,7 +199,7 @@ table.overall { max-width: 46rem; }
       <tr class="att">
         <td>Judge: {{ judge_name(u.model) }}</td><td>{{ u.runs }} replies</td>
         <td>{{ u.input|tokens }}</td><td>{{ u.output|tokens }}</td>
-        {% if comp.prices %}<td>{{ comp.prices.cost(u.model, u.tokens)|dollars }}</td>{% endif %}
+        {% if comp.prices %}<td>{{ u.cost(comp.prices)|dollars }}</td>{% endif %}
       </tr>
       {% else %}
       <tr class="att"><td>Judge: rules only</td><td colspan="{{ 4 if comp.prices else 3 }}" class="missing">No judge model calls</td></tr>

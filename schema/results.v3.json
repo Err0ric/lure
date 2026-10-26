@@ -46,6 +46,17 @@
       "description": "The target's token counts, summed over every turn. Empty when the provider does not report them.",
       "$ref": "#/$defs/usage"
     },
+    "usage_requests": {
+      "description": "Each model request's own token counts, in order (Lure 1.14.3+), so a long-context price tier is applied per request. Optional: missing when the target reported none.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
     "exposure": {
       "description": "Calls outside the org policy's allowed domains. null when no policy was used. Never changes the verdict.",
       "oneOf": [

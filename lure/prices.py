@@ -7,7 +7,7 @@ counts each model call reports.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -26,6 +26,9 @@ PRICE_FIELDS = {
     "cache_read_input_tokens": "cache_read",
 }
 INPUT_KEYS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+# A higher-priced tier for long prompts: models.<name>.long_context, with
+# `above` (prompt tokens) and the rates that replace the base ones.
+LONG_CONTEXT = "long_context"
 
 
 class PricesError(ValueError):
@@ -39,6 +42,9 @@ class Prices:
     source: str
     models: dict[str, dict[str, float]]
     as_of: str | None = None
+    # model name -> (prompt tokens above which a request pays the tier, the
+    # tier's rates). A rate the tier leaves out stays the base rate.
+    tiers: dict[str, tuple[int, dict[str, float]]] = field(default_factory=dict)
 
     def rates(self, model: str) -> dict[str, float] | None:
         """Rates for 'anthropic:claude-x' or 'claude-x', whichever way the
@@ -50,20 +56,49 @@ class Prices:
             return self.models[model_name(model)]
         return next((r for name, r in self.models.items() if model_name(name) == model), None)
 
-    def cost(self, model: str, usage: dict[str, int]) -> float | None:
-        """Dollars for this usage, or None if a needed rate is missing."""
+    def tier(self, model: str) -> tuple[int, dict[str, float]] | None:
+        for name in (model, model_name(model)):
+            if name in self.tiers:
+                return self.tiers[name]
+        return next((t for name, t in self.tiers.items() if model_name(name) == model), None)
+
+    def request_cost(self, model: str, usage: dict[str, int]) -> float | None:
+        """Dollars for one model request. Its prompt is all of its input
+        tokens (cache reads and writes included); over the tier's threshold
+        the whole request pays the tier's rates."""
         rates = self.rates(model)
         if rates is None:
             return None
-        total = 0.0
-        for key, n in usage.items():
-            if not n:
-                continue
-            rate = rates.get(PRICE_FIELDS.get(key, ""))
-            if rate is None:
-                return None
-            total += n * rate / 1_000_000
-        return total
+        tier = self.tier(model)
+        if tier is not None and sum(usage.get(k) or 0 for k in INPUT_KEYS) > tier[0]:
+            rates = {**rates, **tier[1]}
+        return _priced(rates, usage)
+
+    def cost(self, model: str, usage: dict[str, int],
+             requests: list[dict[str, int]] | None = None) -> float | None:
+        """Dollars for this usage, or None if a needed rate is missing.
+
+        With `requests` (each model request's own usage), each is priced on
+        its own, as the provider bills it. Without them only the totals are
+        known: for a model with a long-context tier whose total prompt is
+        over the threshold, the tier's rates are charged on everything, an
+        upper bound (records before Lure 1.14.3 keep only totals)."""
+        if requests:
+            costs = [self.request_cost(model, r) for r in requests]
+            return None if any(c is None for c in costs) else sum(costs)
+        return self.request_cost(model, usage)
+
+
+def _priced(rates: dict[str, float], usage: dict[str, int]) -> float | None:
+    total = 0.0
+    for key, n in usage.items():
+        if not n:
+            continue
+        rate = rates.get(PRICE_FIELDS.get(key, ""))
+        if rate is None:
+            return None
+        total += n * rate / 1_000_000
+    return total
 
 
 def load_prices(path: str | Path) -> Prices:
@@ -77,9 +112,12 @@ def load_prices(path: str | Path) -> Prices:
     if not isinstance(data, dict) or not isinstance(data.get("models"), dict) or not data["models"]:
         raise PricesError(f"{path}: needs a 'models' mapping of model name to rates")
     models: dict[str, dict[str, float]] = {}
+    tiers: dict[str, tuple[int, dict[str, float]]] = {}
     for name, rates in data["models"].items():
+        rates = dict(rates) if isinstance(rates, dict) else rates
         if not isinstance(rates, dict):
             raise PricesError(f"{path}: {name}: rates must be a mapping")
+        tier = rates.pop(LONG_CONTEXT, None) if isinstance(rates, dict) else None
         unknown = set(rates) - set(PRICE_FIELDS.values())
         if unknown:
             raise PricesError(f"{path}: {name}: unknown rate {', '.join(sorted(unknown))}; "
@@ -91,5 +129,23 @@ def load_prices(path: str | Path) -> Prices:
             if isinstance(v, bool) or not isinstance(v, (int, float)) or v < 0:
                 raise PricesError(f"{path}: {name}: {k} must be a number of at least 0")
         models[str(name)] = {k: float(v) for k, v in rates.items()}
+        if tier is not None:
+            tiers[str(name)] = _tier(tier, f"{path}: {name}: {LONG_CONTEXT}")
     as_of = data.get("as_of")
-    return Prices(str(path), models, str(as_of) if as_of is not None else None)
+    return Prices(str(path), models, str(as_of) if as_of is not None else None, tiers)
+
+
+def _tier(value, where: str) -> tuple[int, dict[str, float]]:
+    if not isinstance(value, dict) or "above" not in value:
+        raise PricesError(f"{where} needs above: (prompt tokens) and the rates that change")
+    above = value["above"]
+    if isinstance(above, bool) or not isinstance(above, int) or above < 1:
+        raise PricesError(f"{where}.above must be a whole number of tokens")
+    rates = {k: v for k, v in value.items() if k != "above"}
+    unknown = set(rates) - set(PRICE_FIELDS.values())
+    if unknown or not rates:
+        raise PricesError(f"{where}: rates must be some of {', '.join(PRICE_FIELDS.values())}")
+    for k, v in rates.items():
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or v < 0:
+            raise PricesError(f"{where}.{k} must be a number of at least 0")
+    return above, {k: float(v) for k, v in rates.items()}

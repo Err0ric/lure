@@ -453,7 +453,8 @@ def main(argv: list[str] | None = None, out: TextIO = sys.stdout) -> int:
         else:
             result = run_attack(attack, adapter, **kwargs)
             if budget is not None:
-                costs = budget.charge_attempt(result.target, result.usage, result.judgment.llm)
+                costs = budget.charge_attempt(result.target, result.usage, result.judgment.llm,
+                                              result.usage_requests)
                 result.cost = {**dict.fromkeys(ROLES, 0.0), **costs, "total": sum(costs.values())}
         result.replay = replay
         if profile is not None:

@@ -102,6 +102,9 @@ class RunResult:
     judge: str = "rules"
     # The target's token counts, summed over every turn of the run.
     usage: dict[str, int] = field(default_factory=dict)
+    # Each model request's own counts, in order: a long-context price tier
+    # applies per request (lure.prices).
+    usage_requests: list[dict[str, int]] = field(default_factory=list)
     # Calls to domains outside the org's allowed list (lure.yaml), with the
     # list used. None when no org policy was given. Never affects the verdict.
     exposure: dict[str, Any] | None = None
@@ -156,6 +159,7 @@ class RunResult:
             "target": self.target,
             "judge": self.judge,
             "usage": self.usage,
+            **({"usage_requests": self.usage_requests} if self.usage_requests else {}),
             "exposure": self.exposure,
             "started_at": self.started_at.isoformat(),
             "finished_at": self.finished_at.isoformat(),
@@ -220,6 +224,7 @@ def run_attack(
 
     turns = 0
     usage: dict[str, int] = {}
+    usage_requests: list[dict[str, int]] = []
     turn: ModelTurn | None = None
     replies: list[str] = []
     stop = STOP_COMPLETED
@@ -236,6 +241,8 @@ def run_attack(
             transcript.append({"role": "user", "content": task})
             turn = convo.send_task(task)
             add_usage(usage, turn.usage)
+            if turn.usage:
+                usage_requests.append(dict(turn.usage))
             turns += 1
             user_turns = 1
             transcript.append(_assistant_entry(turn))
@@ -262,6 +269,8 @@ def run_attack(
                     break
                 turn = convo.send_tool_results(results)
                 add_usage(usage, turn.usage)
+                if turn.usage:
+                    usage_requests.append(dict(turn.usage))
                 turns += 1
                 user_turns += 1
                 transcript.append(_assistant_entry(turn))
@@ -297,6 +306,7 @@ def run_attack(
         error=error,
         judge=llm_judge.model if llm_judge is not None else "rules",
         usage=usage,
+        usage_requests=usage_requests,
         exposure=(org_policy.record(log.calls, attack.expected_fetch, replies or [final_text])
                   if org_policy is not None else None),
         replies=replies,
@@ -335,7 +345,8 @@ def run_adaptive(
             draft = attacker.draft(attack, history)
             add_usage(usage["attacker"], draft.usage)
             if budget is not None and draft.usage:
-                cost["attacker"] += budget.charge("attacker", attacker.model, draft.usage)
+                cost["attacker"] += budget.charge("attacker", attacker.model, draft.usage,
+                                                  [draft.usage])
             if draft.outcome != DRAFT_OK:
                 records.append({"n": n, "source": "attacker", "outcome": draft.outcome,
                                 "payload": draft.payload, "attacker": draft.to_dict()})
@@ -353,7 +364,8 @@ def run_adaptive(
         add_usage(usage["judge"], llm.get("usage") or {})
         attempt_cost = None
         if budget is not None:
-            attempt_cost = budget.charge_attempt(result.target, result.usage, llm)
+            attempt_cost = budget.charge_attempt(result.target, result.usage, llm,
+                                                 result.usage_requests)
             for role, c in attempt_cost.items():
                 cost[role] += c
         scored.append((n, result))

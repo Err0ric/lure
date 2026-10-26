@@ -181,19 +181,18 @@ def run_in_sandbox(attack: Attack, profile: Profile, prompt: str, *, gateway_ima
     spec = spec_for(profile, agent_image, gateway_image, mcp)
     the_job = job(attack, profile, prompt, alias)
     model = target_model(profile)
-    running: dict[str, int] = {}
+    running = [0.0]
 
     def over_cap(line: bytes) -> bool:
-        """Count each model request's tokens as they arrive; True once the
-        batch's spend so far passes the cap."""
+        """Price each model request as its tokens arrive (a long-context
+        tier applies per request); True once the batch's spend so far
+        passes the cap."""
         if budget is None or budget.max_cost is None:
             return False
         for entry in evidence.json_lines(line.decode(errors="replace")):
             if entry.get("lure") == "usage":
-                for k, v in usage_of([entry]).items():
-                    running[k] = running.get(k, 0) + v
-        cost = budget.prices.cost(model, running) or 0.0
-        return budget.total + cost > budget.max_cost
+                running[0] += budget.prices.request_cost(model, usage_of([entry])) or 0.0
+        return budget.total + running[0] > budget.max_cost
 
     with sandbox_factory(spec) as sbx:
         sbx.seed(files)
@@ -206,9 +205,10 @@ def run_in_sandbox(attack: Attack, profile: Profile, prompt: str, *, gateway_ima
     lines = evidence.json_lines(done.stdout.decode(errors="replace"))
     log, reply, error, hosts = agent_log(lines, alias, clock)
     usage = usage_of(lines)
+    requests = [r for r in (usage_of([e]) for e in lines if e.get("lure") == "usage") if r]
     cost = None
     if budget is not None:
-        cost = {"target": budget.charge("target", model, usage)}
+        cost = {"target": budget.charge("target", model, usage, requests)}
         cost["total"] = cost["target"]
     if capped:
         budget.stopped = True
@@ -270,7 +270,7 @@ def run_in_sandbox(attack: Attack, profile: Profile, prompt: str, *, gateway_ima
         max_turns=MAX_TURNS,
         stop=STOP_MAX_COST if capped else STOP_ERROR if error else STOP_COMPLETED,
         final_text=reply, transcript=transcript, log=log, judgment=judgment, error=error,
-        usage=usage, exposure=exposure, replies=replies,
+        usage=usage, usage_requests=requests, exposure=exposure, replies=replies,
         fixtures_sha256=attack.fixture_hashes(), cost=cost,
         profile=profile_record)
     result.sandbox = sandbox_record

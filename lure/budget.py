@@ -32,8 +32,11 @@ class Budget:
         if missing:
             raise PricesError(f"{self.prices.source}: no price for {', '.join(missing)}")
 
-    def charge(self, role: str, model: str, usage: dict[str, int]) -> float:
-        cost = self.prices.cost(model, usage)
+    def charge(self, role: str, model: str, usage: dict[str, int],
+               requests: list[dict[str, int]] | None = None) -> float:
+        """Charge a role. With `requests`, each model request is priced on
+        its own (a long-context tier applies per request)."""
+        cost = self.prices.cost(model, usage, requests=requests)
         if cost is None:
             raise PricesError(f"{self.prices.source}: no price for {model} "
                               f"(or for one of {', '.join(sorted(usage))})")
@@ -41,12 +44,14 @@ class Budget:
         return cost
 
     def charge_attempt(self, target: str, usage: dict[str, int],
-                       judge_llm: dict | None = None) -> dict[str, float]:
+                       judge_llm: dict | None = None,
+                       requests: list[dict[str, int]] | None = None) -> dict[str, float]:
         """Charge one target run and its LLM judge call, if any. Counts as
         one attempt for the average. Returns the costs by role."""
-        costs = {"target": self.charge("target", target, usage)}
+        costs = {"target": self.charge("target", target, usage, requests)}
         if judge_llm and judge_llm.get("usage"):
-            costs["judge"] = self.charge("judge", judge_llm["model"], judge_llm["usage"])
+            costs["judge"] = self.charge("judge", judge_llm["model"], judge_llm["usage"],
+                                         [judge_llm["usage"]])
         self.attempts += 1
         return costs
 

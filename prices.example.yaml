@@ -7,11 +7,12 @@
 # from the tokens recorded in each run.
 #
 # Keys: input, output (required); cache_write, cache_read (needed only if
-# runs used prompt caching). Model names match the target or judge, with or
+# runs used prompt caching); long_context (optional): above, the prompt size
+# in tokens over which a request pays the higher rates listed under it. Model names match the target or judge, with or
 # without the provider prefix (claude-sonnet-5-5 or anthropic:claude-sonnet-5-5).
 # A local model (Ollama) can be listed at 0.
 
-as_of: 2026-10-23
+as_of: 2026-10-25
 
 models:
   claude-opus-5-5:
@@ -23,7 +24,17 @@ models:
     input: 2.00
     output: 10.00
     cache_write: 2.50   # 1.25x input, 5-minute cache
-    cache_read: 0.20
+    cache_read: 0.10    # 0.05x input
   claude-haiku-5-5:
-    input: 0.10        # prompts up to 100K tokens
+    input: 0.10        # prompts up to 100,000 tokens
     output: 0.50
+    cache_write: 0.125  # 1.25x input, 5-minute cache
+    cache_read: 0.01
+    # A request whose prompt (all its input tokens, cache reads and writes
+    # included) is over 100,000 tokens pays these instead, the whole request.
+    long_context:
+      above: 100000
+      input: 0.50
+      output: 2.50
+      cache_write: 0.625
+      cache_read: 0.05

@@ -41,10 +41,21 @@ class Usage:
     model: str
     tokens: Counter = field(default_factory=Counter)
     runs: int = 0
+    # Each model request's usage, so a long-context tier is priced per
+    # request. A record without them counts as one request.
+    requests: list[dict[str, int]] = field(default_factory=list)
 
-    def add(self, usage: dict[str, int]) -> None:
-        self.tokens.update({k: v for k, v in usage.items() if isinstance(v, int)})
+    def add(self, usage: dict[str, int], requests: list[dict[str, int]] | None = None) -> None:
+        clean = {k: v for k, v in usage.items() if isinstance(v, int)}
+        self.tokens.update(clean)
         self.runs += 1
+        if requests:
+            self.requests += requests
+        elif clean:
+            self.requests.append(clean)
+
+    def cost(self, prices: Prices) -> float | None:
+        return prices.cost(self.model, self.tokens, requests=self.requests)
 
     @property
     def input(self) -> int:
@@ -80,20 +91,20 @@ class Column:
         return {a.label: a for a in self.report.attacks}
 
     def target_cost(self, prices: Prices | None) -> float | None:
-        return prices.cost(self.target_usage.model, self.target_usage.tokens) if prices else None
+        return self.target_usage.cost(prices) if prices else None
 
     def judge_cost(self, prices: Prices | None) -> float | None:
         """None if any judge model used tokens and has no price."""
         if not prices:
             return None
-        costs = [prices.cost(u.model, u.tokens) for u in self.judge_usage]
+        costs = [u.cost(prices) for u in self.judge_usage]
         return None if None in costs else sum(costs)
 
     def attacker_cost(self, prices: Prices | None) -> float | None:
         """0 with no attacker; None if an attacker model has no price."""
         if not prices:
             return None
-        costs = [prices.cost(u.model, u.tokens) for u in self.attacker_usage]
+        costs = [u.cost(prices) for u in self.attacker_usage]
         return None if None in costs else sum(costs)
 
 
@@ -241,7 +252,7 @@ def _column(source: str, report: Report) -> Column:
         # An adaptive run spent tokens on every attempt, not only the one it mirrors.
         scored = [a for a in adaptive["attempts"] if "judgment" in a] if adaptive else [run.record]
         for attempt in scored:
-            target.add(attempt.get("usage") or {})
+            target.add(attempt.get("usage") or {}, attempt.get("usage_requests"))
             llm = attempt["judgment"].get("llm_judge") or {}
             if llm.get("usage"):
                 model = llm.get("model") or run.judge
