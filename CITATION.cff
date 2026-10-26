@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use Lure in your work, please cite it as below."
+type: software
+title: "Lure: an AI agent red teaming harness"
+abstract: >-
+  An open-source harness that attacks AI agents with prompt injection,
+  tool poisoning and tool-abuse scenarios, scores each run from the
+  tool-call log, and maps every result to MITRE ATLAS and ATT&CK.
+authors:
+  - alias: Err0ric
+version: 1.14.3
+date-released: 2026-10-25
+license: Apache-2.0
+repository-code: "https://github.com/Err0ric/lure"
+url: "https://err0ric.github.io/lure/"
+keywords:
+  - prompt injection
+  - AI agent red teaming
+  - tool poisoning
+  - MCP
+  - MITRE ATLAS
+  - MITRE ATT&CK
+  - LLM security

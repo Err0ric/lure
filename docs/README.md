@@ -9,6 +9,7 @@ Every page in `docs/`. Start with the [project README](../README.md).
 | [usage.md](usage.md) | Safety model, commands, payload variants, the adaptive attacker, scoring, exposure, policy and CI, the four roles |
 | [store-and-serve.md](store-and-serve.md) | The DuckDB results store (`lure store`) and the local dashboard (`lure serve`), with their safety rules |
 | [findings.md](findings.md) | What Lure found, by release, with the sample reports and demo |
+| [comparison.md](comparison.md) | Lure next to garak, promptfoo, PyRIT and AgentDojo, and where each is stronger |
 | [attack-library.md](attack-library.md) | Attack categories and their ATLAS techniques, scenario packs, confirmation gates, mock tools, multi-step attacks |
 | [writing-a-profile.md](writing-a-profile.md) | Step-by-step tutorial: vet your own agent, from profile to signed approval page |
 | [profiles.md](profiles.md) | Profile reference: tool mapping, confirmation gates, the approval report, decide and retest |

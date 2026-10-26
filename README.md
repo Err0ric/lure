@@ -2,7 +2,7 @@
 
 # Lure
 
-An open-source harness that attacks AI agents with prompt injection and tool-abuse scenarios, scores each run from the tool-call log, and maps every result to MITRE ATLAS and ATT&CK.
+An open-source AI agent red teaming harness: it attacks agents with prompt injection, MCP tool poisoning and tool-abuse scenarios, scores each run from the tool-call log, and maps every result to MITRE ATLAS and ATT&CK.
 
 Think phishing simulation, but the target is an agent instead of an employee.
 
