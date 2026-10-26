@@ -55,6 +55,10 @@ def add_parser(sub) -> None:
     run.add_argument("--policy", "--org-policy", dest="policy",
                      help="policy file (default lure.yaml if present)")
     run.add_argument("--no-policy", dest="no_policy", action="store_true")
+    run.add_argument("--prices", help="prices file (USD per million tokens) to estimate spend")
+    run.add_argument("--max-cost", type=float, metavar="USD",
+                     help="stop when the estimated spend passes this, mid-attack if need be "
+                          "(needs --prices)")
     sbx.add_parser("clean", help="remove leftover sandbox containers and networks")
     snap = sbx.add_parser("mcp-snapshot", help="fetch the approved remote MCP servers' tool "
                                                "definitions from inside the sandbox")
@@ -158,6 +162,7 @@ def _run(args, out: TextIO) -> int:
                            "isolated VM")
     if args.repeat < 1:
         raise ValueError("--repeat must be at least 1")
+    budget = _budget(args, profile)
     problem = key_problem(profile)
     if problem:
         raise ProfileError(problem)
@@ -190,10 +195,12 @@ def _run(args, out: TextIO) -> int:
     results = []
     for attack in attacks:
         for _ in range(args.repeat):
+            if budget is not None and budget.stopped:
+                break
             prepared, prompt, canary = prepare_for_profile(profile, attack)
             result = run_in_sandbox(prepared, profile, prompt, gateway_image=args.gateway_image,
                                     agent_image=agent_image, org_policy=policy.exposure,
-                                    mcp=policy.mcp,
+                                    mcp=policy.mcp, budget=budget,
                                     profile_record=profile.record(canary))
             result.save(results_dir)
             results.append(result)
@@ -207,7 +214,32 @@ def _run(args, out: TextIO) -> int:
                 print("Warning:   not removed: "
                       + ", ".join(result.sandbox["teardown"]["leftover"])
                       + " (lure sandbox clean)", file=out)
+    stopped = budget is not None and budget.stopped
+    if budget is not None:
+        print(file=out)
+        if stopped:
+            print(f"Stopped:   max cost ${budget.max_cost:.2f} reached; spent "
+                  f"${budget.total:.4f}; {len(results)} runs done", file=out)
+        else:
+            print(f"Spend:     ${budget.total:.4f} (target), estimated from recorded tokens at "
+                  f"the rates in {budget.prices.source}", file=out)
     gate = policy.gate([PolicyRun.from_result(r) for r in results])
     print(file=out)
     print_policy(gate, out)
-    return exit_code(gate, [r.judgment.verdict for r in results], False)
+    return exit_code(gate, [r.judgment.verdict for r in results], stopped)
+
+
+def _budget(args, profile):
+    """The spend tracker for --prices and --max-cost, checked before any run."""
+    from lure.budget import Budget
+    from lure.prices import PricesError, load_prices
+    from lure.sandbox.run import target_model
+    if args.max_cost is not None and args.max_cost <= 0:
+        raise ValueError("--max-cost must be above 0")
+    if args.max_cost is not None and not args.prices:
+        raise PricesError("--max-cost needs --prices")
+    if not args.prices:
+        return None
+    budget = Budget(load_prices(args.prices), args.max_cost)
+    budget.check_models([target_model(profile)])
+    return budget

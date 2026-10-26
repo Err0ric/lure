@@ -175,7 +175,7 @@ def test_the_sandbox_guide_commands_are_ones_the_cli_accepts():
             if command.startswith("lure sandbox"):
                 parser.parse_args(shlex.split(command)[1:])
                 found += 1
-    assert found == 5
+    assert found == 6
 
 
 def test_secret_scanning_is_pinned_and_fails_on_findings():

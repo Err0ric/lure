@@ -290,6 +290,20 @@ class FakeSandbox:
         self.job = json.loads(input)
         return subprocess.CompletedProcess(command, 1, self.stdout.encode(), b"")
 
+    def exec_stream(self, command, input, on_line, timeout=0):
+        """Hand the lines over one by one, as the real stream does; after
+        a stop, the rest never arrive (the agent was killed)."""
+        self.job = json.loads(input)
+        seen = []
+        self.stopped_after = None
+        for line in self.stdout.encode().splitlines(keepends=True):
+            seen.append(line)
+            if on_line(line):
+                self.stopped_after = len(seen)
+                break
+        return (subprocess.CompletedProcess(command, 1, b"".join(seen), b""),
+                self.stopped_after is not None)
+
     def snapshot(self):
         return self.after(self.seeded) if self.after else dict(self.seeded)
 
@@ -465,3 +479,93 @@ def test_cli_refuses_when_only_lure_key_is_set(monkeypatch, capsys):
                      str(REPO / "profiles" / "example-ref-agent.yaml")])
     assert code == 2
     assert "only ANTHROPIC_API_KEY is" in capsys.readouterr().err
+
+
+# Spend (v1.14.2)
+
+def _usage(i, o):
+    return {"lure": "usage", "input_tokens": i, "output_tokens": o}
+
+
+def test_a_sandbox_record_names_its_model_so_lure_can_price_it():
+    """v1.14.2: the target was sandbox:<image>, which no prices file names.
+    The 1.14.1 run's tokens price at the table's Haiku rates."""
+    from lure.prices import load_prices, model_name
+    fake = FakeSandbox(_lines(_usage(2332, 577), _usage(2287, 716), _usage(3553, 326),
+                              {"lure": "reply", "text": "Done."}), [])
+    result = _run(fake)
+    assert result.target == "sandbox:anthropic:claude-haiku-5-5"
+    prices = load_prices(REPO / "prices.example.yaml")
+    assert result.usage == {"input_tokens": 8172, "output_tokens": 1619}
+    cost = prices.cost(model_name(result.target), result.usage)
+    assert cost == pytest.approx(8172 * 0.10 / 1e6 + 1619 * 0.50 / 1e6)
+    assert round(cost, 4) == 0.0016
+    assert result.cost is None  # no budget given
+
+
+def _budgeted(fake, cap, spent=0.0):
+    from lure.budget import Budget
+    from lure.prices import load_prices
+    budget = Budget(load_prices(REPO / "prices.example.yaml"), cap)
+    budget.spent["target"] = spent
+    attack, prompt, canary = prepare(PROFILE, SMO_004)
+    result = run_in_sandbox(attack, PROFILE, prompt, gateway_image="lure:test",
+                            agent_image="agent:test", profile_record=PROFILE.record(canary),
+                            sandbox_factory=fake, budget=budget)
+    return result, budget
+
+
+def test_max_cost_stops_the_agent_mid_attack():
+    # Each request: 100,000 in and 20,000 out at Haiku rates = $0.02.
+    lines = _lines(_usage(100_000, 20_000),
+                   {"lure": "call", "tool": "list_files", "args": {}, "result": {}},
+                   _usage(100_000, 20_000),
+                   {"lure": "call", "tool": "read_file", "args": {"path": "AGENTS.md"},
+                    "result": {}},
+                   _usage(100_000, 20_000), {"lure": "reply", "text": "Done."})
+    fake = FakeSandbox(lines, [])
+    result, budget = _budgeted(fake, cap=0.03)
+    # Stopped at the second request's usage, before the rest arrived.
+    assert fake.stopped_after == 3
+    assert result.stop == "max_cost" and budget.stopped
+    assert result.judgment.verdict is Verdict.ERROR
+    assert "stopped at --max-cost $0.03" in result.error
+    assert result.cost["target"] == pytest.approx(0.04)
+    assert [c.tool for c in result.log.calls] == ["list_files"]
+
+
+def test_spend_from_earlier_runs_counts_toward_the_cap():
+    fake = FakeSandbox(_lines(_usage(100_000, 20_000), {"lure": "reply", "text": "Done."}), [])
+    result, budget = _budgeted(fake, cap=0.05, spent=0.04)
+    assert fake.stopped_after == 1 and result.stop == "max_cost"
+    assert budget.total == pytest.approx(0.06)
+
+
+def test_under_the_cap_the_run_completes_and_records_its_cost():
+    fake = FakeSandbox(_lines(_usage(1000, 100), {"lure": "reply", "text": "Done."}), [])
+    result, budget = _budgeted(fake, cap=0.50)
+    assert fake.stopped_after is None and result.stop == "completed" and not budget.stopped
+    assert result.cost == {"target": pytest.approx(0.00015), "total": pytest.approx(0.00015)}
+
+
+@pytest.mark.parametrize("extra, message", [
+    (["--max-cost", "0.5"], "--max-cost needs --prices"),
+    (["--prices", "prices.example.yaml", "--max-cost", "0"], "--max-cost must be above 0"),
+])
+def test_sandbox_max_cost_flags(monkeypatch, capsys, extra, message):
+    from lure import cli
+    monkeypatch.setenv("LURE_AGENT_API_KEY", "LURE-FAKE-agent-key-0000")
+    code = cli.main(["sandbox", "run", str(SMO_004.source), "--profile",
+                     str(REPO / "profiles" / "example-ref-agent.yaml"), *extra])
+    assert code == 2 and message in capsys.readouterr().err
+
+
+def test_a_model_missing_from_the_prices_file_is_refused_before_any_run(tmp_path, monkeypatch,
+                                                                          capsys):
+    from lure import cli
+    monkeypatch.setenv("LURE_AGENT_API_KEY", "LURE-FAKE-agent-key-0000")
+    prices = tmp_path / "prices.yaml"
+    prices.write_text("models:\n  claude-sonnet-5-5: {input: 2.0, output: 10.0}\n")
+    code = cli.main(["sandbox", "run", str(SMO_004.source), "--profile",
+                     str(REPO / "profiles" / "example-ref-agent.yaml"), "--prices", str(prices)])
+    assert code == 2 and "no price for anthropic:claude-haiku-5-5" in capsys.readouterr().err

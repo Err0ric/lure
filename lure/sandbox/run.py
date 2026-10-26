@@ -35,6 +35,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from lure.attacks import Attack
+from lure.budget import Budget
 from lure.exposure import OrgPolicy
 from lure.judge.rules import Verdict, judge
 from lure.policy import McpPolicy
@@ -45,6 +46,8 @@ from lure.sandbox.docker import Limits, Sandbox, SandboxSpec
 from lure.tools.call_log import ToolCallLog
 
 PATH_TOOLS = ("read_file", "write_file", "delete_file")
+# A run stopped mid-attack because the spend passed --max-cost.
+STOP_MAX_COST = "max_cost"
 MAX_TURNS = 10
 
 
@@ -72,6 +75,15 @@ def workspace(attack: Attack, profile: Profile) -> tuple[dict[str, bytes], str |
     settings[agent.model_url_key] = agent.model_url
     files[agent.settings_file] = (json.dumps(settings, indent=2) + "\n").encode()
     return files, alias
+
+
+def target_model(profile: Profile) -> str:
+    """provider:model, as the record's target names it (sandbox:<this>) and
+    as the prices file is looked up: anthropic:claude-haiku-5-5."""
+    if not profile.model:
+        raise ValueError(f"{profile.path.name}: an agent profile needs model: (the model its "
+                         "agent calls), for the record and for --prices")
+    return f"{profile.agent.provider}:{profile.model}"
 
 
 def job(attack: Attack, profile: Profile, prompt: str, alias: str | None) -> dict[str, Any]:
@@ -157,7 +169,7 @@ def agent_log(lines: list[dict[str, Any]], alias: str | None,
 
 def run_in_sandbox(attack: Attack, profile: Profile, prompt: str, *, gateway_image: str,
                    agent_image: str | None = None, org_policy: OrgPolicy | None = None,
-                   mcp: McpPolicy | None = None,
+                   mcp: McpPolicy | None = None, budget: Budget | None = None,
                    profile_record: dict[str, Any] | None = None,
                    sandbox_factory: Callable[[SandboxSpec], Sandbox] = Sandbox,
                    clock: Callable[[], datetime] = _utc_now) -> RunResult:
@@ -168,16 +180,41 @@ def run_in_sandbox(attack: Attack, profile: Profile, prompt: str, *, gateway_ima
     files, alias = workspace(attack, profile)
     spec = spec_for(profile, agent_image, gateway_image, mcp)
     the_job = job(attack, profile, prompt, alias)
+    model = target_model(profile)
+    running: dict[str, int] = {}
+
+    def over_cap(line: bytes) -> bool:
+        """Count each model request's tokens as they arrive; True once the
+        batch's spend so far passes the cap."""
+        if budget is None or budget.max_cost is None:
+            return False
+        for entry in evidence.json_lines(line.decode(errors="replace")):
+            if entry.get("lure") == "usage":
+                for k, v in usage_of([entry]).items():
+                    running[k] = running.get(k, 0) + v
+        cost = budget.prices.cost(model, running) or 0.0
+        return budget.total + cost > budget.max_cost
+
     with sandbox_factory(spec) as sbx:
         sbx.seed(files)
-        done = sbx.exec(list(profile.agent.command),
-                        input=json.dumps(the_job).encode())
+        done, capped = sbx.exec_stream(list(profile.agent.command),
+                                       json.dumps(the_job).encode(), over_cap)
         after = sbx.snapshot()
         decoys = sbx.decoys()
         events = sbx.gateway_events()
         enforced = sbx.enforced()
     lines = evidence.json_lines(done.stdout.decode(errors="replace"))
     log, reply, error, hosts = agent_log(lines, alias, clock)
+    usage = usage_of(lines)
+    cost = None
+    if budget is not None:
+        cost = {"target": budget.charge("target", model, usage)}
+        cost["total"] = cost["target"]
+    if capped:
+        budget.stopped = True
+        error = (f"stopped at --max-cost ${budget.max_cost:.2f}: spend reached "
+                 f"${budget.total:.4f} during this run")
+        reply = None
     if error is None and reply is None:
         error = (f"the agent exited with code {done.returncode} and no reply: "
                  + done.stderr.decode(errors="replace").strip()[-300:])
@@ -228,12 +265,13 @@ def run_in_sandbox(attack: Attack, profile: Profile, prompt: str, *, gateway_ima
         "teardown": sbx.teardown_record(),
     }
     result = RunResult(
-        attack=attack, target=f"sandbox:{spec.agent_image}", started_at=started,
+        attack=attack, target=f"sandbox:{model}", started_at=started,
         finished_at=clock(), turns=sum(1 for line in lines if line.get("lure") == "model"),
-        max_turns=MAX_TURNS, stop=STOP_ERROR if error else STOP_COMPLETED,
+        max_turns=MAX_TURNS,
+        stop=STOP_MAX_COST if capped else STOP_ERROR if error else STOP_COMPLETED,
         final_text=reply, transcript=transcript, log=log, judgment=judgment, error=error,
-        usage=usage_of(lines), exposure=exposure, replies=replies,
-        fixtures_sha256=attack.fixture_hashes(),
+        usage=usage, exposure=exposure, replies=replies,
+        fixtures_sha256=attack.fixture_hashes(), cost=cost,
         profile=profile_record)
     result.sandbox = sandbox_record
     return result

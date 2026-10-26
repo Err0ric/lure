@@ -22,11 +22,15 @@ import socket
 import socketserver
 import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 ECHO_REPLY = b"LURE-ECHO\n"
 DONE = {"content": [{"type": "text", "text": "Done."}], "stop_reason": "end_turn"}
+# What each scripted answer reports, so spend can be tested: $0.01 a request
+# at the example prices file's Haiku rates.
+USAGE = {"input_tokens": 50_000, "output_tokens": 10_000}
 MCP_TOOLS = [
     {"name": "lookup_customer", "description": "Look up a customer by id.",
      "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}}},
@@ -39,7 +43,7 @@ def log(event: dict[str, Any]) -> None:
     print(json.dumps(event, sort_keys=True), file=sys.stdout, flush=True)
 
 
-def make_handler(script: list[dict[str, Any]]):
+def make_handler(script: list[dict[str, Any]], delay: float = 0.0):
     lock = threading.Lock()
     state = {"n": 0}
 
@@ -110,8 +114,10 @@ def make_handler(script: list[dict[str, Any]]):
                  "has_key": bool(self.headers.get("x-api-key")),
                  "messages": len(body.get("messages", []))})
             step = script[i] if i < len(script) else DONE
+            # A real model takes a while to answer.
+            time.sleep(delay)
             self._reply(200, {"id": f"msg-{i}", "type": "message", "role": "assistant",
-                              "model": body.get("model"), **step})
+                              "model": body.get("model"), "usage": USAGE, **step})
 
     return Handler
 
@@ -133,6 +139,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--script", default="",
                         help="base64 of a JSON list of responses ({content, stop_reason})")
     parser.add_argument("--echo-port", type=int)
+    parser.add_argument("--delay", type=float, default=0.0,
+                        help="seconds before each model answer, like a real model")
     args = parser.parse_args(argv)
     script = json.loads(base64.b64decode(args.script)) if args.script else []
     if args.echo_port:
@@ -143,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
 
         echo = EchoServer(("0.0.0.0", args.echo_port), Echo)
         threading.Thread(target=echo.serve_forever, daemon=True).start()
-    server = ThreadingHTTPServer(("0.0.0.0", args.port), make_handler(script))
+    server = ThreadingHTTPServer(("0.0.0.0", args.port), make_handler(script, args.delay))
     log({"event": "ready", "port": args.port, "echo_port": args.echo_port,
          "steps": len(script)})
     server.serve_forever()

@@ -77,8 +77,10 @@
       "enum": [
         "completed",
         "max_turns",
-        "error"
-      ]
+        "error",
+        "max_cost"
+      ],
+      "description": "Why the run ended. max_cost: a sandbox run stopped mid-attack when the spend passed --max-cost (Lure 1.14.2+)."
     },
     "error": {
       "type": [

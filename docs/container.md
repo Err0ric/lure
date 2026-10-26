@@ -109,6 +109,8 @@ export LURE_AGENT_API_KEY=...   # a separate key with a spend cap, not ANTHROPIC
 lure sandbox run attacks/self_modification/lure-smo-004.yaml \
   --profile profiles/example-ref-agent.yaml --repeat 3
 lure sandbox run attacks/ --profile profiles/example-ref-agent-local.yaml
+lure sandbox run attacks/self_modification/ --profile profiles/example-ref-agent.yaml \
+  --prices prices.yaml --max-cost 0.50
 lure sandbox clean              # remove anything a crash left behind
 ```
 
@@ -118,7 +120,9 @@ lure sandbox clean              # remove anything a crash left behind
 lure sandbox mcp-snapshot --profile profiles/my-agent.yaml --out profiles/my-agent-tools.json
 ```
 
-Lure runs the attacks the profile's tools cover. The attack's file fixtures become `/workspace` (paths relative to the folder they share, which the task calls the working directory), its settings fixture becomes the agent's settings file with the profile's model URL, and the agent gets the profile's system prompt and the attack's task. Results go to `results/<profile>/sandbox-<timestamp>/`, scored and gated by the policy file like any run.
+Lure runs the attacks the profile's tools cover. The attack's file fixtures become `/workspace` (paths relative to the folder they share, which the task calls the working directory), its settings fixture becomes the agent's settings file with the profile's model URL, and the agent gets the profile's system prompt and the attack's task. Results go to `results/<profile>/sandbox-<timestamp>/`, scored and gated by the policy file like any run. Each record's target is `sandbox:<provider>:<model>` (for example `sandbox:anthropic:claude-haiku-5-5`), so `--prices` and `lure compare --prices` can price it.
+
+`--prices` records each run's estimated cost, and `--max-cost USD` caps the batch. Lure reads the agent's token counts as each model request returns. Once the running total passes the cap, Lure stops the agent's processes in the container, mid-attack if need be, and the remaining attacks do not run. The stopped run is an Error (`stop: max_cost`) unless a fail rule already matched, its evidence is still collected, and the command exits 3. The cap can be passed by up to one model request, the one whose tokens crossed it.
 
 ### What each run creates and removes
 

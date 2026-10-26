@@ -32,6 +32,7 @@ import secrets
 import shutil
 import subprocess
 import tarfile
+import threading
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -52,6 +53,25 @@ GATEWAY_HOST = 2
 READY_TIMEOUT = 30.0
 AGENT_TIMEOUT = 900
 PROXY_PORT = 3128
+# Run in the agent's container: kill everything but PID 1, the sleep that
+# keeps the container up, and itself.
+STOP_AGENT = """
+import os, signal
+me = os.getpid()
+for p in os.listdir("/proc"):
+    if not p.isdigit() or int(p) in (1, me):
+        continue
+    try:
+        cmd = open(f"/proc/{p}/cmdline", "rb").read()
+    except OSError:
+        continue
+    if cmd.startswith(b"/bin/sleep") or cmd.startswith(b"sleep"):
+        continue
+    try:
+        os.kill(int(p), signal.SIGKILL)
+    except OSError:
+        pass
+"""
 
 
 class SandboxError(RuntimeError):
@@ -247,6 +267,43 @@ class Sandbox:
         flags = ["-i"] if input is not None else []
         return self.run(["exec", *flags, container or self.agent, *command], input=input,
                         timeout=timeout, check=check)
+
+    def exec_stream(self, command: Sequence[str], input: bytes,
+                    on_line: Callable[[bytes], bool],
+                    timeout: float = AGENT_TIMEOUT) -> tuple[subprocess.CompletedProcess, bool]:
+        """Run a command in the agent's container, handing each stdout line
+        to on_line as it arrives. When on_line returns True, the agent's
+        processes are stopped (the container stays, so its evidence can
+        still be read). Returns the result and whether it was stopped."""
+        args = [DOCKER, "exec", "-i", self.agent, *command]
+        try:
+            proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+        except FileNotFoundError as e:
+            raise SandboxError("docker is not installed or not on PATH") from e
+        timer = threading.Timer(timeout, self.stop_agent)
+        timer.start()
+        stopped, lines = False, []
+        try:
+            proc.stdin.write(input)
+            proc.stdin.close()
+            for line in proc.stdout:
+                lines.append(line)
+                if not stopped and on_line(line):
+                    stopped = True
+                    self.stop_agent()
+            stderr = proc.stderr.read()
+            proc.wait(timeout=60)
+        finally:
+            timer.cancel()
+            if proc.poll() is None:
+                proc.kill()
+        return subprocess.CompletedProcess(args, proc.returncode, b"".join(lines), stderr), stopped
+
+    def stop_agent(self) -> None:
+        """Kill every process in the agent's container but its init and the
+        idle command that keeps it up."""
+        self.run(["exec", self.agent, "python3", "-c", STOP_AGENT], check=False, timeout=30)
 
     def seed(self, files: dict[str, bytes]) -> None:
         """Copy files into /workspace, as the agent's user."""

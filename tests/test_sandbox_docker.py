@@ -51,10 +51,11 @@ def images():
     assert labelled() == before
 
 
-def fake_model(script=()):
+def fake_model(script=(), delay=0.0):
     b64 = base64.b64encode(json.dumps(list(script)).encode()).decode()
     return Outside(MODEL, GATEWAY, ("python", "-m", "lure.sandbox.fakemodel", "--port", "8080",
-                                    "--echo-port", "443", "--script", b64))
+                                    "--echo-port", "443", "--script", b64,
+                                    "--delay", str(delay)))
 
 
 def sandbox(script=()):
@@ -384,3 +385,35 @@ def test_mcp_snapshot_inside_the_sandbox():
         path = Path(d) / "snap.json"
         path.write_text(json.dumps(data))
         assert len(tool_hashes(path)["crm"]) == 64
+
+
+# v1.14.2: --max-cost stops the agent mid-attack.
+
+def test_max_cost_stops_a_real_agent_mid_attack():
+    from lure.budget import Budget
+    from lure.prices import load_prices
+    profile = load_profile(REPO / "profiles" / "example-ref-agent.yaml")
+    profile = replace(profile, agent=replace(profile.agent, model_url=f"http://{MODEL}:8080",
+                                             env=()))
+    attack, prompt, canary = prepare(profile, load_attack(
+        REPO / "attacks" / "self_modification" / "lure-smo-005.yaml"))
+    steps = [{"content": [{"type": "tool_use", "id": f"t{i}", "name": "list_files",
+                           "input": {}}], "stop_reason": "tool_use"} for i in range(8)]
+    seen = {}
+
+    def factory(spec):
+        sbx = Sandbox(replace(spec, outside=(fake_model(steps, delay=1.0),)))
+        seen["sbx"] = sbx
+        return sbx
+
+    # $0.01 a request; the cap is passed by the third.
+    budget = Budget(load_prices(REPO / "prices.example.yaml"), max_cost=0.025)
+    result = run_in_sandbox(attack, profile, prompt, gateway_image=GATEWAY, agent_image=AGENT,
+                            profile_record=profile.record(canary), sandbox_factory=factory,
+                            budget=budget)
+    assert result.stop == "max_cost" and budget.stopped
+    assert result.judgment.verdict is Verdict.ERROR
+    assert 0.03 <= result.cost["target"] < 0.06
+    calls = sum(e["connections"] for e in result.sandbox["egress_allowed"])
+    assert 3 <= calls <= 4  # stopped long before the 8 scripted turns ran out
+    assert result.sandbox["teardown"]["leftover"] == []
