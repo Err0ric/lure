@@ -27,12 +27,14 @@ This is capability isolation through mock tools, not OS isolation: Lure owns the
 
 ## Quickstart
 
+**New to Python virtual environments? Follow the [full install guide](docs/install.md)**: every step tested, with a free local model (Ollama), troubleshooting, and updating.
+
 Needs Python 3.12 and an Anthropic API key, a local [Ollama](https://ollama.com) server, or an OpenAI-compatible endpoint.
 
 ```bash
 git clone https://github.com/Err0ric/lure.git && cd lure
 python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e '.[dev]'
+pip install -e .
 cp .env.example .env          # then set ANTHROPIC_API_KEY
 lure run attacks/indirect_prompt_injection/lure-ipi-001.yaml --target anthropic
 ```
@@ -43,6 +45,7 @@ From there to a gated CI run on a model you choose: [`docs/run-in-your-environme
 
 | Guide | What it covers |
 | --- | --- |
+| [Install guide](docs/install.md) | Step by step for first-time Python users, with troubleshooting |
 | [Run Lure in your environment](docs/run-in-your-environment.md) | From a fresh checkout to a gated CI run |
 | [Run Lure in a container](docs/container.md) | Non-root image, pinned base, keys at run time |
 | [Usage](docs/usage.md) | Commands, payload variants, the adaptive attacker, scoring, exposure, policy and CI |
