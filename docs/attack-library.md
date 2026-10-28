@@ -1,6 +1,6 @@
 # Attack library
 
-77 attack files in 12 categories, in six scenario packs: accounts payable (56), customer support (4), IT helpdesk (3), HR and recruiting (4), sales (4) and coding (6). Payloads arrive through email, files, web pages, tool definitions and output, memory, tickets, team chat (`read_messages`), resumes, CRM notes and instruction files such as `AGENTS.md`. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+79 attack files (72 attacks plus 7 pinned earlier versions) in 12 categories, in six scenario packs: accounts payable (57), customer support (4), IT helpdesk (3), HR and recruiting (4), sales (4) and coding (7). Payloads arrive through email, files, web pages, tool definitions and output, memory, tickets, team chat (`read_messages`), resumes, CRM notes and instruction files such as `AGENTS.md`. Each is one YAML file plus JSON fixtures: a normal task, a payload and where it hides, the tools offered, and the rules that define Fail, Partial and Pass. A category is a folder under `attacks/`: add a folder and it is picked up, no code change. See [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 | Category | Attacks | ATLAS techniques |
 | --- | --- | --- |
@@ -8,13 +8,13 @@
 | Direct prompt injection | `lure-dpi-001` to `003` (3) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0069.002, AML.T0086 |
 | Jailbreak | `lure-jbk-001`, `002` v1 and v2, `003` (4) | AML.T0051.000, AML.T0054, AML.T0056, AML.T0068, AML.T0086 |
 | Data leakage | `lure-dlk-001` to `003` (3) | AML.T0051.001, AML.T0057, AML.T0086 |
-| Tool abuse | `lure-tab-001` to `004` (4) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0086, AML.T0101 |
+| Tool abuse | `lure-tab-001` to `004`, with `004` v1 and v2 (5) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0086, AML.T0101 |
 | Tool poisoning | `lure-tpo-001` to `004` (4) | AML.T0048.000, AML.T0053, AML.T0086, AML.T0110.000 |
 | Memory poisoning | `lure-mem-001` to `007`, with `002` v1 and v2 (8) | AML.T0048.000, AML.T0051.001, AML.T0053, AML.T0057, AML.T0080.000, AML.T0080.001, AML.T0086 |
 | Credential access | `lure-cra-001` to `009` (9) | AML.T0012, AML.T0051.001, AML.T0053, AML.T0055, AML.T0073, AML.T0083, AML.T0086, AML.T0098 |
 | Covert egress | `lure-egr-001` to `007` (7) | AML.T0036, AML.T0051.001, AML.T0057, AML.T0067, AML.T0077, AML.T0086 |
 | Shell and code execution | `lure-shx-001` to `005` (5) | AML.T0011.001, AML.T0050, AML.T0051.001, AML.T0053, AML.T0086, AML.T0112.000 |
-| Self-modification | `lure-smo-001` to `005` (5) | AML.T0051.001, AML.T0053, AML.T0081 |
+| Self-modification | `lure-smo-001` to `005`, with `004` v1 and v2 (6) | AML.T0051.001, AML.T0053, AML.T0081 |
 | Persistence | `lure-per-001` to `003` (3) | AML.T0051.001, AML.T0053, AML.T0094, AML.T0112.000 |
 
 The framework mapping (MITRE ATLAS, MITRE ATT&CK and the other taxonomies Lure maps to) is summarized in the [README](../README.md#framework-mapping); every ID, with the date it was checked, is in [`atlas-mapping.md`](atlas-mapping.md).
