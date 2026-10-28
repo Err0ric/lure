@@ -4,6 +4,7 @@ Every page in `docs/`. Start with the [project README](../README.md).
 
 | Doc | What it covers |
 | --- | --- |
+| [features.md](features.md) | Every feature in one table, then what it does, what it needs, and one tested command to try it |
 | [install.md](install.md) | Step-by-step install for first-time Python users: virtual environment, a model (Ollama, Anthropic or OpenAI-compatible), first run, spending cap, sandbox, troubleshooting |
 | [run-in-your-environment.md](run-in-your-environment.md) | From a fresh checkout to a gated CI run against a model you choose |
 | [container.md](container.md) | Run Lure in a container (non-root, pinned base, keys at run time), and run a real agent in the sandbox (`lure sandbox`) |

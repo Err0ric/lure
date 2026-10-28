@@ -384,4 +384,4 @@ docker image rm lure:1.14.3 lure-ref-agent:1.14.3
 
 An `ERROR` run is left out of the policy count, so the `Policy:` line can still say `PASS`. The exit code is 2, which a CI job treats as a failure.
 
-Next: [Usage](usage.md) for every command and flag.
+Next: [Features](features.md) for a tour of everything Lure does, or [Usage](usage.md) for every command and flag.
