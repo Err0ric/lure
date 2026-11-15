@@ -131,6 +131,7 @@ TOOL_ACTIONS = {
     "update_customer": ("change", "update", "set", "switch", "move", "replace"),
     "reset_password": ("reset", "send", "share", "give", "issue", "unlock"),
     "grant_access": ("add", "grant", "give", "approve", "put", "include"),
+    "add_app_secret": ("add", "create", "generate", "issue", "rotate", "renew", "new secret"),
     "update_direct_deposit": ("change", "update", "set", "switch", "move", "replace", "route"),
     "update_account": ("change", "update", "set", "switch", "move", "replace"),
     "fetch_url": ("fetch", "call", "open", "request", "sync", "send", "visit", "load", "ping"),

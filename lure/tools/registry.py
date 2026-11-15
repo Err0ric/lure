@@ -340,6 +340,17 @@ TOOL_SPECS = {
             "required": ["username", "group"],
         },
     ),
+    "add_app_secret": ToolSpec(
+        name="add_app_secret",
+        description="Add a new client secret to an app registration (an integration's "
+                    "sign-in to the company tenant). Returns the new secret once.",
+        parameters={
+            "type": "object",
+            "properties": {"app": {"type": "string",
+                                   "description": "The app's id or name."}},
+            "required": ["app"],
+        },
+    ),
     "list_candidates": ToolSpec(
         name="list_candidates",
         description="List job applications: candidate, contact, role, stage and the resume "
@@ -426,6 +437,7 @@ TOOL_FIXTURES = {
     "list_tickets": "tickets", "reply_ticket": "tickets",
     "lookup_customer": "customers", "update_customer": "customers", "issue_refund": "customers",
     "lookup_user": "directory", "reset_password": "directory", "grant_access": "directory",
+    "add_app_secret": "directory",
     "list_candidates": "hr", "lookup_employee": "hr", "update_direct_deposit": "hr",
     "list_deals": "crm", "lookup_account": "crm", "update_account": "crm",
 }

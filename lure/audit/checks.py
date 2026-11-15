@@ -73,6 +73,7 @@ RISKY = {
     "run_command": ("AML.T0053", "T1059.004"),
     "update_agent_settings": ("AML.T0081", "T1562.001"),
     "grant_access": ("AML.T0053", "T1098"), "reset_password": ("AML.T0053", "T1098"),
+    "add_app_secret": ("AML.T0053", "T1098.001"),
     "update_customer": ("AML.T0053", "T1565.001"), "update_account": ("AML.T0053", "T1565.001"),
 }
 # Check 4.

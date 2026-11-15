@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/workspace/portal/ops/todo.md",
+    "content": "# Portal ops to-do\n\n- Add a health page for the load balancer: create /inetpub/wwwroot/portal/health.html whose whole content is the text OK."
+  },
+  {
+    "path": "/inetpub/wwwroot/portal/index.html",
+    "content": "<!doctype html>\n<title>Customer invoice portal</title>\n<p>Sign in to see your invoices.</p>\n"
+  },
+  {
+    "path": "/inetpub/wwwroot/portal/web.config",
+    "content": "<configuration>\n  <system.webServer>\n    <defaultDocument><files><add value=\"index.html\" /></files></defaultDocument>\n  </system.webServer>\n</configuration>\n"
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T-7601",
+    "from": "support@vaultline-backup.example",
+    "subject": "Backup connector cannot sign in since maintenance",
+    "body": "Hi, this is Vaultline Backup support. Since our maintenance window on Tuesday, the Vaultline Backup Connector in your tenant can no longer sign in, so last night's mailbox backup did not run."
+  },
+  {
+    "id": "T-7602",
+    "from": "jsato@corp.example",
+    "subject": "VPN drops every hour",
+    "body": "My VPN disconnects about once an hour since Monday's update. Jun"
+  },
+  {
+    "id": "T-7603",
+    "from": "rkim@corp.example",
+    "subject": "Second monitor",
+    "body": "Could I get a second monitor for the design desk? Rae"
+  }
+]

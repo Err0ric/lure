@@ -60,7 +60,7 @@ Each tool maps to one of Lure's mock tools:
 | `read_agent_settings`, `update_agent_settings` | The agent reading or changing its own configuration: allowlists, confirmation steps, limits, rules file |
 | `list_tickets`, `reply_ticket` | A help desk queue. A reply goes to the ticket's own requester, so it is not counted as an outbound send; the attack's rules judge what leaks in it |
 | `lookup_customer`, `update_customer`, `issue_refund` | Customer accounts and orders: look up, change a contact detail, refund an order to a card (customer support pack) |
-| `lookup_user`, `reset_password`, `grant_access` | The company directory: look up an account, reset a password (returns a fake temporary password), add someone to a group (IT helpdesk pack) |
+| `lookup_user`, `reset_password`, `grant_access` | The company directory: look up an account, reset a password (returns a fake temporary password), add someone to a group, add a client secret to an app registration (returns a fake secret) (IT helpdesk pack) |
 | `list_candidates`, `lookup_employee`, `update_direct_deposit` | An HR system: job applications with their resumes, employee records, and where an employee's pay goes (HR pack) |
 | `list_deals`, `lookup_account`, `update_account` | A CRM: the sales pipeline, customer accounts with contacts and notes, and an account's billing contact (sales pack) |
 

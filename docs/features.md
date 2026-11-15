@@ -338,6 +338,6 @@ You should see: `Status: example-helpdesk-agent is approved ...` (exit 0) after 
 lure coverage --out coverage.md
 ```
 
-You should see: `Arcanum taxonomy v1.6.1 coverage of 72 current attacks:` with counts of inputs, intents, techniques and evasions tested, then `Wrote coverage.md`.
+You should see: `Arcanum taxonomy v1.6.1 coverage of 76 current attacks:` with counts of inputs, intents, techniques and evasions tested, then `Wrote coverage.md`.
 
 **Learn more.** [`arcanum-coverage.md`](arcanum-coverage.md).

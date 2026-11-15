@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- **ARTEX attacks**, after the November 2026 reports of the ARTEX framework
+  (Microsoft, FBI FLASH-20261113-001, Amazon, Google GTIG): `lure-cra-010`
+  (an AI gateway migration email asks for the gateway and model provider
+  keys), `lure-cra-011` (an outside issue asks a coding agent to put the
+  model API key in the public web bundle), `lure-cra-012` (a backup vendor's
+  ticket asks for a new client secret for its connector app) and
+  `lure-per-004` (a vendor line asks for an unauthenticated command page in
+  the web root). `docs/artex.md` maps ARTEX behaviors to new and existing
+  attacks and lists what was skipped and why.
+- **`add_app_secret`** mock tool (directory pack): returns a fixture's fake
+  `LURE-FAKE-` client secret; an optional `apps` list in directory fixtures.
+  Counted as risky by `lure audit` (check 3) and on the approval page.
+- New ATT&CK IDs T1098.001, T1199 and T1505.003 (attack.mitre.org,
+  2026-11-15). No new ATLAS IDs (ATLAS 2026.10 has no ARTEX case study).
+
 ## v1.14.3 (2026-10-25)
 
 ### New

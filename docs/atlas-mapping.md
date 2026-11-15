@@ -2,7 +2,7 @@
 
 Every attack names the MITRE ATLAS techniques (`atlas:`, required) and ATT&CK techniques (`attack:`, may be empty) it exercises. Every result, report row, Markdown finding and SARIF rule carries the same IDs, copied from the attack file.
 
-All IDs below were checked on https://atlas.mitre.org/ and https://attack.mitre.org/ on 2026-10-23. IDs first used by the credential access and covert egress attacks (AML.T0055, AML.T0067, AML.T0077, AML.T0083, AML.T0098) were checked on 2026-10-24 in MITRE's ATLAS data release 2026.09 ([mitre-atlas/atlas-data](https://github.com/mitre-atlas/atlas-data), `dist/v6/ATLAS-2026.09.yaml`), and T1552, T1552.001 and T1552.005 on attack.mitre.org. The v1.7 scenario packs added AML.T0012 Valid Accounts and AML.T0073 Impersonation (ATLAS 2026.09) and T1098 and T1098.007 (attack.mitre.org, 2026-10-25). The v1.9 sales pack added AML.T0036 Data from Information Repositories (ATLAS 2026.09) and T1213.004 and T1565.001 (attack.mitre.org, 2026-10-25). ATLAS adds agent techniques often: re-check before publishing results, and when adding an ID.
+All IDs below were checked on https://atlas.mitre.org/ and https://attack.mitre.org/ on 2026-10-23. IDs first used by the credential access and covert egress attacks (AML.T0055, AML.T0067, AML.T0077, AML.T0083, AML.T0098) were checked on 2026-10-24 in MITRE's ATLAS data release 2026.09 ([mitre-atlas/atlas-data](https://github.com/mitre-atlas/atlas-data), `dist/v6/ATLAS-2026.09.yaml`), and T1552, T1552.001 and T1552.005 on attack.mitre.org. The v1.7 scenario packs added AML.T0012 Valid Accounts and AML.T0073 Impersonation (ATLAS 2026.09) and T1098 and T1098.007 (attack.mitre.org, 2026-10-25). The v1.9 sales pack added AML.T0036 Data from Information Repositories (ATLAS 2026.09) and T1213.004 and T1565.001 (attack.mitre.org, 2026-10-25). The ARTEX attacks ([`artex.md`](artex.md)) added T1098.001, T1199 and T1505.003 (attack.mitre.org, 2026-11-15) and no new ATLAS IDs (ATLAS data release 2026.10, checked 2026-11-15). ATLAS adds agent techniques often: re-check before publishing results, and when adding an ID.
 
 ## How mapping works
 
@@ -22,15 +22,15 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | ID | Name | Attacks |
 | --- | --- | --- |
 | AML.T0011.001 | User Execution: Malicious Package | lure-shx-004, lure-shx-005 |
-| AML.T0012 | Valid Accounts | lure-cra-006 |
+| AML.T0012 | Valid Accounts | lure-cra-006, lure-cra-012 |
 | AML.T0036 | Data from Information Repositories | lure-egr-007 |
 | AML.T0048.000 | External Harms: Financial Harm | lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-tab-001, lure-tpo-003 |
 | AML.T0050 | Command and Scripting Interpreter | lure-shx-001, lure-shx-002, lure-shx-003, lure-shx-004, lure-shx-005 |
 | AML.T0051.000 | LLM Prompt Injection: Direct | lure-dpi-001, lure-dpi-002, lure-dpi-003, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-jbk-003 |
-| AML.T0051.001 | LLM Prompt Injection: Indirect | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-006, lure-cra-007, lure-cra-008, lure-cra-009, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-egr-001, lure-egr-002, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-006, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-011, lure-ipi-012, lure-ipi-013, lure-ipi-014, lure-ipi-015, lure-ipi-016, lure-ipi-017, lure-ipi-018, lure-ipi-019, lure-mem-001, lure-mem-003, lure-mem-004, lure-mem-006, lure-mem-007, lure-per-001, lure-per-002, lure-per-003, lure-shx-001, lure-shx-002, lure-shx-003, lure-shx-004, lure-shx-005, lure-smo-001, lure-smo-002, lure-smo-003, lure-smo-004 v1, lure-smo-004 v2, lure-smo-005, lure-tab-001, lure-tab-002, lure-tab-003, lure-tab-004 v1, lure-tab-004 v2 |
-| AML.T0053 | AI Agent Tool Invocation | lure-cra-003, lure-cra-006, lure-ipi-011, lure-ipi-012, lure-ipi-013, lure-ipi-016, lure-ipi-017, lure-ipi-019, lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-mem-007, lure-per-001, lure-per-002, lure-per-003, lure-shx-001, lure-shx-002, lure-shx-003, lure-smo-001, lure-smo-002, lure-smo-003, lure-tab-001, lure-tab-002, lure-tab-003, lure-tab-004 v1, lure-tab-004 v2, lure-tpo-003 |
+| AML.T0051.001 | LLM Prompt Injection: Indirect | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-006, lure-cra-007, lure-cra-008, lure-cra-009, lure-cra-010, lure-cra-011, lure-cra-012, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-egr-001, lure-egr-002, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-006, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-011, lure-ipi-012, lure-ipi-013, lure-ipi-014, lure-ipi-015, lure-ipi-016, lure-ipi-017, lure-ipi-018, lure-ipi-019, lure-mem-001, lure-mem-003, lure-mem-004, lure-mem-006, lure-mem-007, lure-per-001, lure-per-002, lure-per-003, lure-per-004, lure-shx-001, lure-shx-002, lure-shx-003, lure-shx-004, lure-shx-005, lure-smo-001, lure-smo-002, lure-smo-003, lure-smo-004 v1, lure-smo-004 v2, lure-smo-005, lure-tab-001, lure-tab-002, lure-tab-003, lure-tab-004 v1, lure-tab-004 v2 |
+| AML.T0053 | AI Agent Tool Invocation | lure-cra-003, lure-cra-006, lure-cra-011, lure-cra-012, lure-ipi-011, lure-ipi-012, lure-ipi-013, lure-ipi-016, lure-ipi-017, lure-ipi-019, lure-mem-002 v1, lure-mem-002 v2, lure-mem-004, lure-mem-005, lure-mem-007, lure-per-001, lure-per-002, lure-per-003, lure-per-004, lure-shx-001, lure-shx-002, lure-shx-003, lure-smo-001, lure-smo-002, lure-smo-003, lure-tab-001, lure-tab-002, lure-tab-003, lure-tab-004 v1, lure-tab-004 v2, lure-tpo-003 |
 | AML.T0054 | LLM Jailbreak | lure-dpi-003, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-jbk-003 |
-| AML.T0055 | Unsecured Credentials | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-005, lure-cra-007, lure-cra-008, lure-cra-009 |
+| AML.T0055 | Unsecured Credentials | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-005, lure-cra-007, lure-cra-008, lure-cra-009, lure-cra-010, lure-cra-011 |
 | AML.T0056 | Extract LLM System Prompt | lure-dpi-001, lure-jbk-003 |
 | AML.T0057 | LLM Data Leakage | lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-egr-001, lure-egr-002, lure-egr-006, lure-ipi-008, lure-ipi-015, lure-ipi-018, lure-mem-006 |
 | AML.T0067 | LLM Trusted Output Components Manipulation | lure-egr-002 |
@@ -41,13 +41,13 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | AML.T0080.000 | AI Agent Context Poisoning: Memory | lure-mem-002 v1, lure-mem-002 v2, lure-mem-003, lure-mem-004, lure-mem-005, lure-mem-006, lure-mem-007 |
 | AML.T0080.001 | AI Agent Context Poisoning: Thread | lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-mem-001 |
 | AML.T0081 | Modify AI Agent Configuration | lure-smo-001, lure-smo-002, lure-smo-003, lure-smo-004 v1, lure-smo-004 v2, lure-smo-005 |
-| AML.T0083 | Credentials from AI Agent Configuration | lure-cra-004, lure-cra-008, lure-cra-009 |
-| AML.T0086 | Exfiltration via AI Agent Tool Invocation | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-007, lure-cra-008, lure-cra-009, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-014, lure-ipi-015, lure-ipi-018, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-shx-002, lure-shx-003, lure-tab-003, lure-tpo-001, lure-tpo-002, lure-tpo-004 |
+| AML.T0083 | Credentials from AI Agent Configuration | lure-cra-004, lure-cra-008, lure-cra-009, lure-cra-010 |
+| AML.T0086 | Exfiltration via AI Agent Tool Invocation | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-007, lure-cra-008, lure-cra-009, lure-cra-010, lure-cra-012, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-014, lure-ipi-015, lure-ipi-018, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-shx-002, lure-shx-003, lure-tab-003, lure-tpo-001, lure-tpo-002, lure-tpo-004 |
 | AML.T0094 | Delay Execution of LLM Instructions | lure-per-003 |
-| AML.T0098 | AI Agent Tool Credential Harvesting | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-007 |
+| AML.T0098 | AI Agent Tool Credential Harvesting | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-007, lure-cra-010 |
 | AML.T0101 | Data Destruction via AI Agent Tool Invocation | lure-tab-002 |
 | AML.T0110.000 | AI Agent Tool Poisoning: Definition and Instructions | lure-tpo-001, lure-tpo-002, lure-tpo-003, lure-tpo-004 |
-| AML.T0112.000 | Machine Compromise: Local AI Agent | lure-per-001, lure-per-002, lure-shx-004, lure-shx-005 |
+| AML.T0112.000 | Machine Compromise: Local AI Agent | lure-per-001, lure-per-002, lure-per-004, lure-shx-004, lure-shx-005 |
 
 ## ATT&CK techniques in the library
 
@@ -55,19 +55,22 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | --- | --- | --- |
 | T1005 | Data from Local System | lure-dlk-003, lure-tab-003 |
 | T1027 | Obfuscated Files or Information | lure-ipi-004 |
-| T1048 | Exfiltration Over Alternative Protocol | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-007, lure-cra-008, lure-cra-009, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-egr-001, lure-egr-002, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-006, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-014, lure-ipi-015, lure-ipi-018, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-mem-006, lure-shx-002, lure-shx-003, lure-tab-003, lure-tpo-001, lure-tpo-004 |
+| T1048 | Exfiltration Over Alternative Protocol | lure-cra-001, lure-cra-002, lure-cra-003, lure-cra-004, lure-cra-005, lure-cra-007, lure-cra-008, lure-cra-009, lure-cra-010, lure-dlk-001, lure-dlk-002, lure-dlk-003, lure-dpi-002, lure-dpi-003, lure-egr-001, lure-egr-002, lure-egr-003, lure-egr-004, lure-egr-005, lure-egr-006, lure-egr-007, lure-ipi-001, lure-ipi-002, lure-ipi-003, lure-ipi-004, lure-ipi-005, lure-ipi-006, lure-ipi-007 v1, lure-ipi-007 v2, lure-ipi-007 v3, lure-ipi-007 v4, lure-ipi-008, lure-ipi-009, lure-ipi-010, lure-ipi-014, lure-ipi-015, lure-ipi-018, lure-jbk-001, lure-jbk-002 v1, lure-jbk-002 v2, lure-mem-001, lure-mem-003, lure-mem-006, lure-shx-002, lure-shx-003, lure-tab-003, lure-tpo-001, lure-tpo-004 |
 | T1053.003 | Scheduled Task/Job: Cron | lure-per-001 |
 | T1059.004 | Command and Scripting Interpreter: Unix Shell | lure-shx-001, lure-shx-002, lure-shx-003, lure-shx-004, lure-shx-005 |
 | T1070 | Indicator Removal | lure-smo-003 |
 | T1098 | Account Manipulation | lure-cra-006, lure-ipi-012, lure-ipi-017 |
+| T1098.001 | Account Manipulation: Additional Cloud Credentials | lure-cra-012 |
 | T1098.007 | Account Manipulation: Additional Local or Domain Groups | lure-ipi-013, lure-ipi-017 |
 | T1105 | Ingress Tool Transfer | lure-shx-001, lure-shx-004, lure-shx-005 |
+| T1199 | Trusted Relationship | lure-cra-012 |
 | T1204.005 | User Execution: Malicious Library | lure-shx-004, lure-shx-005 |
 | T1213.004 | Data from Information Repositories: Customer Relationship Management Software | lure-egr-007 |
 | T1485 | Data Destruction | lure-tab-002 |
+| T1505.003 | Server Software Component: Web Shell | lure-per-004 |
 | T1546.004 | Event Triggered Execution: Unix Shell Configuration Modification | lure-per-002 |
-| T1552 | Unsecured Credentials | lure-cra-002, lure-cra-005, lure-cra-007 |
-| T1552.001 | Unsecured Credentials: Credentials In Files | lure-cra-001, lure-cra-004, lure-cra-008, lure-cra-009 |
+| T1552 | Unsecured Credentials | lure-cra-002, lure-cra-005, lure-cra-007, lure-cra-010 |
+| T1552.001 | Unsecured Credentials: Credentials In Files | lure-cra-001, lure-cra-004, lure-cra-008, lure-cra-009, lure-cra-011 |
 | T1552.005 | Unsecured Credentials: Cloud Instance Metadata API | lure-cra-003 |
 | T1557 | Adversary-in-the-Middle | lure-smo-004 v1, lure-smo-004 v2, lure-smo-005 |
 | T1562.001 | Impair Defenses: Disable or Modify Tools | lure-smo-001, lure-smo-002, lure-smo-003 |
@@ -91,6 +94,9 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | [lure-cra-007](../attacks/credential_access/lure-cra-007.yaml) | Credential access | high | AML.T0051.001, AML.T0055, AML.T0098, AML.T0086 | T1552, T1048 |
 | [lure-cra-008](../attacks/credential_access/lure-cra-008.yaml) | Credential access | critical | AML.T0051.001, AML.T0083, AML.T0055, AML.T0086 | T1552.001, T1048 |
 | [lure-cra-009](../attacks/credential_access/lure-cra-009.yaml) | Credential access | low | AML.T0051.001, AML.T0083, AML.T0055, AML.T0086 | T1552.001, T1048 |
+| [lure-cra-010](../attacks/credential_access/lure-cra-010.yaml) | Credential access | critical | AML.T0051.001, AML.T0083, AML.T0055, AML.T0098, AML.T0086 | T1552, T1048 |
+| [lure-cra-011](../attacks/credential_access/lure-cra-011.yaml) | Credential access | high | AML.T0051.001, AML.T0055, AML.T0053 | T1552.001 |
+| [lure-cra-012](../attacks/credential_access/lure-cra-012.yaml) | Credential access | critical | AML.T0051.001, AML.T0053, AML.T0012, AML.T0086 | T1098.001, T1199 |
 | [lure-dlk-001](../attacks/data_leakage/lure-dlk-001.yaml) | Data leakage | high | AML.T0057, AML.T0051.001, AML.T0086 | T1048 |
 | [lure-dlk-002](../attacks/data_leakage/lure-dlk-002.yaml) | Data leakage | medium | AML.T0057, AML.T0051.001, AML.T0086 | T1048 |
 | [lure-dlk-003](../attacks/data_leakage/lure-dlk-003.yaml) | Data leakage | high | AML.T0057, AML.T0051.001, AML.T0086 | T1005, T1048 |
@@ -141,6 +147,7 @@ Map what the attack *exercises*, not everything it could lead to. Typical patter
 | [lure-per-001](../attacks/persistence/lure-per-001.yaml) | Persistence | critical | AML.T0051.001, AML.T0053, AML.T0112.000 | T1053.003 |
 | [lure-per-002](../attacks/persistence/lure-per-002.yaml) | Persistence | critical | AML.T0051.001, AML.T0053, AML.T0112.000 | T1546.004 |
 | [lure-per-003](../attacks/persistence/lure-per-003.yaml) | Persistence | critical | AML.T0051.001, AML.T0094, AML.T0053 | T1677 |
+| [lure-per-004](../attacks/persistence/lure-per-004.yaml) | Persistence | critical | AML.T0051.001, AML.T0053, AML.T0112.000 | T1505.003 |
 | [lure-shx-001](../attacks/shell_execution/lure-shx-001.yaml) | Shell and code execution | critical | AML.T0051.001, AML.T0053, AML.T0050 | T1059.004, T1105 |
 | [lure-shx-002](../attacks/shell_execution/lure-shx-002.yaml) | Shell and code execution | high | AML.T0051.001, AML.T0050, AML.T0053, AML.T0086 | T1059.004, T1048 |
 | [lure-shx-003](../attacks/shell_execution/lure-shx-003.yaml) | Shell and code execution | critical | AML.T0051.001, AML.T0050, AML.T0053, AML.T0086 | T1059.004, T1048 |
@@ -192,6 +199,7 @@ The pre-flight configuration check ([`docs/audit.md`](audit.md)) maps each check
 | T1059.004 | Command and Scripting Interpreter: Unix Shell | 3 |
 | T1078 | Valid Accounts | 4 |
 | T1098 | Account Manipulation | 3 |
+| T1098.001 | Account Manipulation: Additional Cloud Credentials | 3 |
 | T1195.001 | Supply Chain Compromise: Compromise Software Dependencies and Development Tools | 7, 12 |
 | T1204.002 | User Execution: Malicious File | 9 |
 | T1485 | Data Destruction | 3 |
