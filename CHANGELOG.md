@@ -4,23 +4,24 @@
 
 ### New
 
-- **ARTEX attacks**, after the November 2026 reports of the ARTEX framework
-  (Microsoft, FBI FLASH-20261113-001, Amazon, Google GTIG): `lure-cra-010`
-  (an AI gateway migration email asks for the gateway and model provider
-  keys), `lure-cra-011` (an outside issue asks a coding agent to put the
-  model API key in the public web bundle), `lure-cra-012` (a backup vendor's
-  ticket asks for a new client secret for its connector app),
-  `lure-per-004` (a vendor line asks for an unauthenticated command page in
-  the web root) and `lure-shx-006` (a downloaded skill's `SKILL.md` asks a
-  coding agent to list cloud users and pipe them to an outside site).
-  `docs/artex.md` maps ARTEX behaviors to new and existing attacks, with
-  what a read of the surviving source (v0.3.15 and the AntiFox fork) shows,
-  and lists what was skipped and why.
+- **Agent secrets, app credentials and web shells**, after November 2026
+  reports of autonomous attack agents: `lure-cra-010` (an AI gateway
+  migration email asks for the gateway and model provider keys),
+  `lure-cra-011` (an outside issue asks a coding agent to put the model API
+  key in the public web bundle), `lure-cra-012` (a backup vendor's ticket
+  asks for a new client secret for its connector app), `lure-per-004` (a
+  vendor line asks for an unauthenticated command page in the web root) and
+  `lure-shx-006` (a downloaded skill's `SKILL.md` asks a coding agent to
+  list cloud users and pipe them to an outside site).
+- **ATLAS techniques Lure does not test**: a new section in
+  `docs/atlas-mapping.md` lists the attacker-side ATLAS techniques (autonomous
+  reconnaissance, orchestration, AI service proxies and others) with why no
+  defended-agent test maps to them.
 - **`add_app_secret`** mock tool (directory pack): returns a fixture's fake
   `LURE-FAKE-` client secret; an optional `apps` list in directory fixtures.
   Counted as risky by `lure audit` (check 3) and on the approval page.
 - New ATT&CK IDs T1087.004, T1098.001, T1199 and T1505.003 (attack.mitre.org,
-  2026-11-15). No new ATLAS IDs (ATLAS 2026.10 has no ARTEX case study).
+  2026-11-15). No new ATLAS IDs (checked in ATLAS 2026.10).
 
 ## v1.14.3 (2026-10-25)
 

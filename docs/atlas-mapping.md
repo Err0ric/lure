@@ -2,7 +2,7 @@
 
 Every attack names the MITRE ATLAS techniques (`atlas:`, required) and ATT&CK techniques (`attack:`, may be empty) it exercises. Every result, report row, Markdown finding and SARIF rule carries the same IDs, copied from the attack file.
 
-All IDs below were checked on https://atlas.mitre.org/ and https://attack.mitre.org/ on 2026-10-23. IDs first used by the credential access and covert egress attacks (AML.T0055, AML.T0067, AML.T0077, AML.T0083, AML.T0098) were checked on 2026-10-24 in MITRE's ATLAS data release 2026.09 ([mitre-atlas/atlas-data](https://github.com/mitre-atlas/atlas-data), `dist/v6/ATLAS-2026.09.yaml`), and T1552, T1552.001 and T1552.005 on attack.mitre.org. The v1.7 scenario packs added AML.T0012 Valid Accounts and AML.T0073 Impersonation (ATLAS 2026.09) and T1098 and T1098.007 (attack.mitre.org, 2026-10-25). The v1.9 sales pack added AML.T0036 Data from Information Repositories (ATLAS 2026.09) and T1213.004 and T1565.001 (attack.mitre.org, 2026-10-25). The ARTEX attacks ([`artex.md`](artex.md)) added T1087.004, T1098.001, T1199 and T1505.003 (attack.mitre.org, 2026-11-15) and no new ATLAS IDs (ATLAS data release 2026.10, checked 2026-11-15). ATLAS adds agent techniques often: re-check before publishing results, and when adding an ID.
+All IDs below were checked on https://atlas.mitre.org/ and https://attack.mitre.org/ on 2026-10-23. IDs first used by the credential access and covert egress attacks (AML.T0055, AML.T0067, AML.T0077, AML.T0083, AML.T0098) were checked on 2026-10-24 in MITRE's ATLAS data release 2026.09 ([mitre-atlas/atlas-data](https://github.com/mitre-atlas/atlas-data), `dist/v6/ATLAS-2026.09.yaml`), and T1552, T1552.001 and T1552.005 on attack.mitre.org. The v1.7 scenario packs added AML.T0012 Valid Accounts and AML.T0073 Impersonation (ATLAS 2026.09) and T1098 and T1098.007 (attack.mitre.org, 2026-10-25). The v1.9 sales pack added AML.T0036 Data from Information Repositories (ATLAS 2026.09) and T1213.004 and T1565.001 (attack.mitre.org, 2026-10-25). `lure-cra-010` to `012`, `lure-per-004` and `lure-shx-006` added T1087.004, T1098.001, T1199 and T1505.003 (attack.mitre.org, 2026-11-15) and no new ATLAS IDs; their ATLAS IDs and the ones in [Not tested](#atlas-techniques-lure-does-not-test) were checked in ATLAS data release 2026.10 on 2026-11-15. ATLAS adds agent techniques often: re-check before publishing results, and when adding an ID.
 
 ## How mapping works
 
@@ -234,6 +234,22 @@ Alongside ATLAS and ATT&CK, every current attack carries codes from the Arcanum 
 | Pinned versions | Not mapped; they stay byte-identical |
 
 Coverage of the taxonomy: [`arcanum-coverage.md`](arcanum-coverage.md), written by `lure coverage`.
+
+## ATLAS techniques Lure does not test
+
+Lure tests the defended agent: whether it does the harmful thing when an attack reaches it. Techniques that describe the attacker's own tooling or infrastructure have no defended-agent decision to score, so no attack maps to them.
+
+| ID | Name | Why not |
+| --- | --- | --- |
+| AML.T0008.005 | AI Service Proxies | Attacker infrastructure (stolen keys resold or routed through proxies) |
+| AML.T0095.000 | Code Repositories | Attacker reconnaissance of public code. `lure-cra-011` tests the agent creating the exposure instead |
+| AML.T0116 | Autonomous Reconnaissance | A trait of the attacking agent |
+| AML.T0117 | Autonomous Attack-Path Adaptation | A trait of the attacking agent. Confirmation gates with `deny_all` ([profiles](profiles.md#confirmation-gates)) show whether a defended agent gets the harm done another way after a decline |
+| AML.T0124 | Autonomous Attack Orchestration | A trait of the attacking agent |
+| AML.T0132 | Misconfigured or Publicly Exposed AI Services | Infrastructure and patching: a vulnerability scanner or the Gate pipeline, not Lure |
+| AML.T0140 | Centralized AI Service Request Routing | Attacker infrastructure |
+
+Known gap: no attack yet tests mass internal email from a compromised mailbox (volume or throttling).
 
 ## Adding or changing an ID
 

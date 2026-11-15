@@ -1,13 +1,11 @@
-"""The ARTEX attacks (docs/artex.md): lure-cra-010, lure-cra-011, lure-cra-012,
-lure-per-004 and lure-shx-006, and the ARTEX crosswalk doc. The coding ones
-(cra-011, shx-006) are tested end to end here; the others are in their
-category's library test. Scripted
-turns only: nothing is written to disk, built, pushed or sent."""
+"""The November 2026 agent secrets attacks: lure-cra-010, lure-cra-011,
+lure-cra-012, lure-per-004 and lure-shx-006. The coding ones (cra-011,
+shx-006) are tested end to end here; the others are in their category's
+library test. Scripted turns only: nothing is written to disk, built, pushed
+or sent."""
 
 import re
 from pathlib import Path
-
-import pytest
 
 from lure.attacks import load_attack
 from lure.judge.rules import Verdict
@@ -17,8 +15,8 @@ from tests.fakes import ScriptedAdapter, call, say
 REPO = Path(__file__).resolve().parent.parent
 ATTACKS = {a.id: a for a in (load_attack(p) for p in sorted((REPO / "attacks").glob("*/*.yaml")))
            if not a.pinned}
-ARTEX = ["lure-cra-010", "lure-cra-011", "lure-cra-012", "lure-per-004", "lure-shx-006"]
-DOC = (REPO / "docs" / "artex.md").read_text(encoding="utf-8")
+NEW = ["lure-cra-010", "lure-cra-011", "lure-cra-012", "lure-per-004", "lure-shx-006"]
+MAPPING = (REPO / "docs" / "atlas-mapping.md").read_text(encoding="utf-8")
 
 ROOT = "/home/dev/src/invoice-portal"
 ISSUE = f"{ROOT}/docs/issues/212.md"
@@ -35,21 +33,18 @@ def run(turns):
     return run_attack(ATTACKS["lure-cra-011"], ScriptedAdapter(*turns))
 
 
-def test_the_artex_attacks_exist_and_carry_atlas_and_attack_ids():
-    for attack_id in ARTEX:
+def test_the_new_attacks_exist_and_carry_atlas_and_attack_ids():
+    for attack_id in NEW:
         a = ATTACKS[attack_id]
         assert a.atlas[0] == "AML.T0051.001" and a.attack and a.plain.endswith(".")
         assert {"input", "intent", "technique"} <= set(a.arcanum)
 
 
-@pytest.mark.parametrize("attack_id", ARTEX)
-def test_the_doc_lists_each_artex_attack_with_its_file(attack_id):
-    assert f"[{attack_id}](../{ATTACKS[attack_id].file})" in DOC
-
-
-def test_every_attack_the_doc_names_exists():
-    named = set(re.findall(r"\blure-[a-z]+-\d{3}\b", DOC))
-    assert named and named <= set(ATTACKS)
+def test_no_attack_maps_to_an_atlas_technique_listed_as_not_tested():
+    section = MAPPING.split("## ATLAS techniques Lure does not test", 1)[1].split("\n## ", 1)[0]
+    untested = set(re.findall(r"^\| (AML\.T\d{4}(?:\.\d{3})?) \|", section, re.MULTILINE))
+    assert len(untested) == 7
+    assert not untested & {t for a in ATTACKS.values() for t in a.atlas}
 
 
 def test_cra_011_clean_change_passes():
