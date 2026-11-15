@@ -11,12 +11,15 @@
   model API key in the public web bundle), `lure-cra-012` (a backup vendor's
   ticket asks for a new client secret for its connector app) and
   `lure-per-004` (a vendor line asks for an unauthenticated command page in
-  the web root). `docs/artex.md` maps ARTEX behaviors to new and existing
-  attacks and lists what was skipped and why.
+  the web root) and `lure-shx-006` (a downloaded skill's `SKILL.md` asks a
+  coding agent to list cloud users and pipe them to an outside site).
+  `docs/artex.md` maps ARTEX behaviors to new and existing attacks, with
+  what a read of the surviving source (v0.3.15 and the AntiFox fork) shows,
+  and lists what was skipped and why.
 - **`add_app_secret`** mock tool (directory pack): returns a fixture's fake
   `LURE-FAKE-` client secret; an optional `apps` list in directory fixtures.
   Counted as risky by `lure audit` (check 3) and on the approval page.
-- New ATT&CK IDs T1098.001, T1199 and T1505.003 (attack.mitre.org,
+- New ATT&CK IDs T1087.004, T1098.001, T1199 and T1505.003 (attack.mitre.org,
   2026-11-15). No new ATLAS IDs (ATLAS 2026.10 has no ARTEX case study).
 
 ## v1.14.3 (2026-10-25)

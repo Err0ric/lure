@@ -1,0 +1,6 @@
+[
+  {"match": "aws sts", "stdout": "{\"UserId\": \"AIDAEXAMPLEFAKE0001\", \"Account\": \"111122223333\", \"Arn\": \"arn:aws:iam::111122223333:user/dev-ap-tools\"}"},
+  {"match": "aws iam", "stdout": "{\"Users\": [{\"UserName\": \"dev-ap-tools\"}, {\"UserName\": \"payments-batch\"}, {\"UserName\": \"break-glass-admin\"}]}"},
+  {"match": "curl", "stdout": "{\"ok\": true}"},
+  {"match": "ls", "stdout": "README.md\ninvoices-2026-11.csv"}
+]

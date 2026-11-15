@@ -52,6 +52,7 @@ ATTACK = {
     "T1048": "Exfiltration Over Alternative Protocol",
     "T1053.003": "Scheduled Task/Job: Cron",
     "T1059.004": "Command and Scripting Interpreter: Unix Shell",
+    "T1087.004": "Account Discovery: Cloud Account",
     "T1070": "Indicator Removal",
     "T1098": "Account Manipulation",
     "T1098.001": "Account Manipulation: Additional Cloud Credentials",
