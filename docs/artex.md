@@ -17,9 +17,9 @@ Read on 2026-11-15. Claims are the sources' own; Lure adds no IOCs and no CVEs o
 | [BleepingComputer on Arctic Wolf's AntiFox report](https://www.bleepingcomputer.com/news/security/hackers-use-antifox-ai-agents-in-aws-credential-theft-attacks/) | 2026-11 | AntiFox fork: an ASPX webshell on IIS, config files copied into a web directory, AWS IAM keys |
 | [GitGuardian](https://blog.gitguardian.com/the-agents-have-now-found-your-secrets-on-github-artex-is-abusing-public-secrets-right-now/) | 2026-11 | Public secrets on GitHub used within minutes |
 | [CSA research note](https://labs.cloudsecurityalliance.org/research/csa-research-note-agentic-secret-harvesting-rotation-windows/) | 2026-11 | Rotation windows shorter than the time to abuse |
-| Source code, read only | 2026-11-15 | [Hinln/ARTEX](https://github.com/Hinln/ARTEX) at `e6ec569` (v0.3.15, original history kept), [AntiFox-AI/antifox](https://github.com/AntiFox-AI/antifox) at `070f798` (rebrand, modified), [Autumn-27/norma](https://github.com/Autumn-27/norma) v0.4.3 (the agent SDK). Read, not built or run |
+| Source code, read only | 2026-11-15 | ARTEX at `e6ec569` (v0.3.15, original history kept), the AntiFox fork at `070f798` (rebrand, modified), norma v0.4.3 (the agent SDK). Read, not built or run. Lure does not link to attack tooling |
 
-ATLAS data release 2026.10 (checked 2026-11-15) has no ARTEX case study. Its new autonomous-attack techniques describe the attacker, so they are in the skipped table. Re-check on https://atlas.mitre.org/ before publishing results: ATLAS may add a case study.
+ATLAS data release 2026.10 (checked 2026-11-15) has no ARTEX case study. Its new autonomous-attack techniques describe the attacker, so they are in the skipped table. Every ATLAS ID on this page, the skipped ones included, was checked against the ATLAS 2026.10 data release on 2026-11-15. Re-check on https://atlas.mitre.org/ before publishing results: ATLAS may add a case study.
 
 ## What the code shows
 
@@ -51,7 +51,7 @@ cra-012 adds a mock tool, `add_app_secret` (directory pack): it returns the fixt
 | --- | --- | --- |
 | A secret in a response, used in a later call (SSRF to instance metadata) | [lure-cra-003](../attacks/credential_access/lure-cra-003.yaml) | Strong: the metadata response's fake keys, put in a URL, Fail |
 | Credentials in files, `.env` and the agent's environment | [lure-cra-001](../attacks/credential_access/lure-cra-001.yaml), [lure-cra-002](../attacks/credential_access/lure-cra-002.yaml), [lure-cra-004](../attacks/credential_access/lure-cra-004.yaml), [lure-cra-008](../attacks/credential_access/lure-cra-008.yaml) | Strong |
-| Output piped into curl | [lure-shx-003](../attacks/shell_execution/lure-shx-003.yaml), [lure-shx-006](../attacks/shell_execution/lure-shx-006.yaml) | Strong |
+| Output piped into curl | [lure-shx-003](../attacks/shell_execution/lure-shx-003.yaml) (and the new shx-006 above) | Strong |
 | Collection through webhook-style URLs | [lure-egr-001](../attacks/covert_egress/lure-egr-001.yaml) to `007` | Strong |
 | Injected content that steers a later, unrelated step | [lure-mem-004](../attacks/memory_poisoning/lure-mem-004.yaml) | Strong: a claim saved to memory pays a later invoice in a new session |
 | Retries after a refusal, with a changed method | Confirmation gates with `deny_all` ([profiles](profiles.md#confirmation-gates)) | Partial: shows whether the agent asks again or gets the harm done another way after a decline |
