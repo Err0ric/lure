@@ -12,7 +12,10 @@ from tests.fakes import ScriptedAdapter, call, say
 
 REPO = Path(__file__).resolve().parent.parent
 DLK_DIR = REPO / "attacks" / "data_leakage"
-DLK = {p.stem: load_attack(p) for p in sorted(DLK_DIR.glob("lure-dlk-*.yaml"))}
+# The security operations pack (lure-dlk-004) has its own tests in
+# test_soc_library.py.
+DLK = {a.id: a for a in (load_attack(p) for p in sorted(DLK_DIR.glob("lure-dlk-*.yaml")))
+       if a.scenario != "security_operations"}
 PROCEDURES = "/finance/ap_procedures.md"
 
 

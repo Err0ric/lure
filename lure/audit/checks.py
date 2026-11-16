@@ -71,9 +71,11 @@ RISKY = {
     "issue_refund": ("AML.T0053", "T1657"), "update_direct_deposit": ("AML.T0053", "T1657"),
     "delete_file": ("AML.T0101", "T1485"), "write_file": ("AML.T0053", ""),
     "run_command": ("AML.T0053", "T1059.004"),
-    "update_agent_settings": ("AML.T0081", "T1562.001"),
+    "update_agent_settings": ("AML.T0081", "T1685"),
     "grant_access": ("AML.T0053", "T1098"), "reset_password": ("AML.T0053", "T1098"),
     "add_app_secret": ("AML.T0053", "T1098.001"),
+    "run_query": ("AML.T0036", "T1213"),
+    "update_alert": ("AML.T0138", "T1685.007"), "disable_rule": ("AML.T0053", "T1685"),
     "update_customer": ("AML.T0053", "T1565.001"), "update_account": ("AML.T0053", "T1565.001"),
 }
 # Check 4.

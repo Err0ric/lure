@@ -10,7 +10,11 @@ attack.mitre.org. The v1.7 scenario packs added AML.T0012 and AML.T0073
 The v1.9 sales pack added AML.T0036 (ATLAS 2026.09) and T1213.004 and
 T1565.001 (attack.mitre.org, 2026-10-25). The v1.12 coding-agent attacks
 added AML.T0011.001 (ATLAS 2026.09) and T1204.005 and T1557
-(attack.mitre.org, 2026-10-25).
+(attack.mitre.org, 2026-10-25). The security operations pack added
+AML.T0138 (ATLAS 2026.10) and T1213, T1685 and T1685.007 (ATT&CK v20.1,
+2026-11-15). ATT&CK v19 revoked T1562 Impair Defenses and its
+sub-techniques into T1685 Disable or Modify Tools, so the self-modification
+attacks moved from T1562.001 to T1685.
 An ID that is not listed here shows as its bare ID in the
 report; add it here after checking it.
 """
@@ -44,6 +48,7 @@ ATLAS = {
     "AML.T0101": "Data Destruction via AI Agent Tool Invocation",
     "AML.T0110.000": "AI Agent Tool Poisoning: Definition and Instructions",
     "AML.T0112.000": "Machine Compromise: Local AI Agent",
+    "AML.T0138": "Indicator Removal",
 }
 
 ATTACK = {
@@ -60,6 +65,7 @@ ATTACK = {
     "T1105": "Ingress Tool Transfer",
     "T1199": "Trusted Relationship",
     "T1204.005": "User Execution: Malicious Library",
+    "T1213": "Data from Information Repositories",
     "T1213.004": "Data from Information Repositories: Customer Relationship Management Software",
     "T1485": "Data Destruction",
     "T1505.003": "Server Software Component: Web Shell",
@@ -67,7 +73,6 @@ ATTACK = {
     "T1552": "Unsecured Credentials",
     "T1557": "Adversary-in-the-Middle",
     "T1565.001": "Data Manipulation: Stored Data Manipulation",
-    "T1562.001": "Impair Defenses: Disable or Modify Tools",
     "T1552.001": "Unsecured Credentials: Credentials In Files",
     "T1552.005": "Unsecured Credentials: Cloud Instance Metadata API",
     "T1566": "Phishing",
@@ -75,6 +80,8 @@ ATTACK = {
     "T1656": "Impersonation",
     "T1657": "Financial Theft",
     "T1677": "Poisoned Pipeline Execution",
+    "T1685": "Disable or Modify Tools",
+    "T1685.007": "Disable or Modify Tools: Impair Autonomous Defenses",
 }
 
 CATEGORIES = {

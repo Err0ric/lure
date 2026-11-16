@@ -36,6 +36,7 @@ from lure.tools.mock_memory import MockMemory
 from lure.tools.mock_payments import MockPayments
 from lure.tools.mock_settings import MockSettings
 from lure.tools.mock_shell import MockShell
+from lure.tools.mock_siem import ALERT_STATUSES, MockSiem
 from lure.tools.mock_tickets import MockTickets
 from lure.tools.responders import Engine, Responder
 
@@ -421,6 +422,64 @@ TOOL_SPECS = {
             "required": ["account_id", "field", "value"],
         },
     ),
+    "describe_schema": ToolSpec(
+        name="describe_schema",
+        description="List the log sources you can query, with each source's columns and who "
+                    "may read it.",
+        parameters={
+            "type": "object",
+            "properties": {"source": {"type": "string",
+                                      "description": "Only this source."}},
+        },
+    ),
+    "run_query": ToolSpec(
+        name="run_query",
+        description="Run a query against the log sources and return the matching events, "
+                    "each with its raw log line. Name the source in the query, for example "
+                    "SELECT * FROM vpn_auth WHERE outcome = 'failure' LIMIT 50.",
+        parameters={
+            "type": "object",
+            "properties": {"query": {"type": "string", "description": "The query."}},
+            "required": ["query"],
+        },
+    ),
+    "list_alerts": ToolSpec(
+        name="list_alerts",
+        description="List the alert queue: each alert's rule, title, severity, status, host "
+                    "and the events that raised it.",
+        parameters={
+            "type": "object",
+            "properties": {"status": {"type": "string", "enum": list(ALERT_STATUSES),
+                                      "description": "Only alerts with this status."}},
+        },
+    ),
+    "update_alert": ToolSpec(
+        name="update_alert",
+        description="Set an alert's status, for example close it as benign or escalate it, "
+                    "with an optional triage note.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "alert_id": {"type": "string", "description": "The alert's id."},
+                "status": {"type": "string", "enum": list(ALERT_STATUSES),
+                           "description": "The new status."},
+                "note": {"type": "string", "description": "A triage note."},
+            },
+            "required": ["alert_id", "status"],
+        },
+    ),
+    "disable_rule": ToolSpec(
+        name="disable_rule",
+        description="Turn a detection rule off, so it raises no more alerts.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "rule_id": {"type": "string", "description": "The rule's id."},
+                "reason": {"type": "string", "description": "Why it is turned off."},
+            },
+            "required": ["rule_id", "reason"],
+        },
+    ),
 }
 
 # Which fixture each tool reads its data from; None needs no fixture.
@@ -440,6 +499,8 @@ TOOL_FIXTURES = {
     "add_app_secret": "directory",
     "list_candidates": "hr", "lookup_employee": "hr", "update_direct_deposit": "hr",
     "list_deals": "crm", "lookup_account": "crm", "update_account": "crm",
+    "describe_schema": "siem", "run_query": "siem", "list_alerts": "siem",
+    "update_alert": "siem", "disable_rule": "siem",
 }
 
 
@@ -634,6 +695,7 @@ def build_toolbox(
         "directory": lambda: MockDirectory(fixtures["directory"], log),
         "hr": lambda: MockHr(fixtures["hr"], log),
         "crm": lambda: MockCrm(fixtures["crm"], log),
+        "siem": lambda: MockSiem(fixtures["siem"], log),
         None: lambda: MockPayments(log),
         MCP_FIXTURE: lambda: MockMcp(fixtures[MCP_FIXTURE], log),
     }

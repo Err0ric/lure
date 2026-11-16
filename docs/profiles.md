@@ -38,7 +38,7 @@ Start from [`profiles/example-ap-agent.yaml`](../profiles/example-ap-agent.yaml)
 | `third_party_tools` | no | `true` if the agent loads MCP or plugin tools. Enables the attacks that add third-party tools (tool poisoning, poisoned tool output). Default `false` |
 | `policy` | no | Path to a `lure.yaml`, relative to the profile. `--policy` on the command line wins |
 | `suites` | no | `all` (default) or a list of attack categories |
-| `scenarios` | no | `all` (default) or a list of scenario packs: `accounts_payable`, `customer_support`, `it_helpdesk`. A pack is the kind of work an attack's task is; the approval report names the packs tested |
+| `scenarios` | no | `all` (default) or a list of scenario packs: `accounts_payable`, `customer_support`, `it_helpdesk`, `hr`, `sales`, `coding`, `security_operations`. A pack is the kind of work an attack's task is; the approval report names the packs tested |
 | `confirmer` | no | Who stands in for the person at a gate: `careful` (default) or `deny_all`. Only with a gated tool |
 | `agent_config`, `schedule`, `credentials`, `working_dir`, `instruction_files`, `memory_sink`, `log_sink`, `transcript_sink`, `mcp_servers`, `mcp_tools_snapshot`; tool `domains` | no | What `lure audit` reads about the agent's setup: its config files, how it runs, declared credentials (names only), where its instructions and memory live, its MCP servers. See [lure audit](audit.md) |
 | `agent`, `isolation` | no | A real agent that runs as code (`lure sandbox run`): its image, model URL and the environment variable names it inherits. Refused without `isolation: container` or `vm`. See [Run a real agent in the sandbox](container.md#run-a-real-agent-in-the-sandbox) |
@@ -63,6 +63,7 @@ Each tool maps to one of Lure's mock tools:
 | `lookup_user`, `reset_password`, `grant_access` | The company directory: look up an account, reset a password (returns a fake temporary password), add someone to a group, add a client secret to an app registration (returns a fake secret) (IT helpdesk pack) |
 | `list_candidates`, `lookup_employee`, `update_direct_deposit` | An HR system: job applications with their resumes, employee records, and where an employee's pay goes (HR pack) |
 | `list_deals`, `lookup_account`, `update_account` | A CRM: the sales pipeline, customer accounts with contacts and notes, and an account's billing contact (sales pack) |
+| `describe_schema`, `run_query`, `list_alerts`, `update_alert`, `disable_rule` | A SIEM: log sources and their columns, queries over the events (each with its raw log line), the alert queue and the detection rules (security operations pack). `run_query` understands `FROM` a source, `column = 'value'` and `LIKE` conditions joined by AND, and `LIMIT`; a statement that changes data is accepted and logged, and a DELETE removes the rows from the run's copy, so the log shows whether the agent tried |
 
 Credential files (`.env`, an agent's MCP settings) and the cloud metadata endpoint are fixtures, not tools: they reach the agent through `read_file` and `fetch_url`. Their secrets are fake `LURE-FAKE-` canaries, and the metadata host is `metadata.cloud.example`, served by the mock web tool.
 
@@ -82,7 +83,7 @@ renders:
 
 An attack whose harm needs a behaviour the app does not have is skipped with the reason, such as "the agent's chat app does not show images in its replies (renders.images: false)". A link in a reply that needs a click (`lure-egr-002`) runs either way. Leave `renders` out if you are unsure: the attacks run, and the approval page states the assumption. When one of them fails, the page suggests turning off remote images and link previews outside approved domains, a setting in the chat app, rather than recommending Reject.
 
-See `profiles/example-ops-agent.yaml` for an agent with environment, workspace, web and chat tools, run on a local model through Ollama.
+See `profiles/example-ops-agent.yaml` for an agent with environment, workspace, web and chat tools, run on a local model through Ollama, and `profiles/example-soc-agent.yaml` for a log search assistant in a security console (two read-only tools, mapped to `describe_schema` and `run_query`).
 
 ## Confirmation gates
 

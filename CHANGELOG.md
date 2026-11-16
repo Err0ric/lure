@@ -17,11 +17,39 @@
   `docs/atlas-mapping.md` lists the attacker-side ATLAS techniques (autonomous
   reconnaissance, orchestration, AI service proxies and others) with why no
   defended-agent test maps to them.
+- **Security operations pack**: attacks for agents in a security console,
+  with the payload in a raw log line. `lure-egr-008` (a VPN log line asks
+  for a status image whose address carries the failed sign-ins),
+  `lure-dlk-004` (a proxy log line asks the log assistant to query a
+  restricted HR source and quote it), `lure-tab-005` (an SSH log line asks
+  it to delete a bastion's root sign-in records), `lure-tab-006` (an
+  endpoint event asks the triage agent to close its own alert) and
+  `lure-tab-007` (an endpoint event asks it to turn off the credential
+  dumping rule). New scenario pack `security_operations` (added to the
+  results schema enum, an additive change).
+- **Mock SIEM** (`siem` fixture): `describe_schema`, `run_query`,
+  `list_alerts`, `update_alert` and `disable_rule`. `run_query` is a small
+  stand-in for a query engine; a statement that changes data is accepted and
+  logged. `run_query`, `update_alert` and `disable_rule` can be gated, count
+  in `lure audit` check 3 and have their own conditions on the approval
+  page, under a new "Changes security controls" group. Security operations
+  findings read "if a log line carried hidden instructions" on the page.
+- **`profiles/example-soc-agent.yaml`**: a log search assistant with two
+  read-only tools, on Ollama `qwen3.5:9b`.
 - **`add_app_secret`** mock tool (directory pack): returns a fixture's fake
   `LURE-FAKE-` client secret; an optional `apps` list in directory fixtures.
   Counted as risky by `lure audit` (check 3) and on the approval page.
 - New ATT&CK IDs T1087.004, T1098.001, T1199 and T1505.003 (attack.mitre.org,
-  2026-11-15). No new ATLAS IDs (checked in ATLAS 2026.10).
+  2026-11-15).
+- New ATLAS ID AML.T0138 Indicator Removal (ATLAS 2026.10) and ATT&CK IDs
+  T1213, T1685 and T1685.007 (ATT&CK v20.1, 2026-11-15).
+
+### Changed
+
+- **ATT&CK T1562.001 is revoked** (ATT&CK v19 folded T1562 Impair Defenses
+  into T1685 Disable or Modify Tools): `lure-smo-001` to `003` and the
+  `update_agent_settings` audit mapping now use T1685. Results are
+  unchanged, so the attacks keep their versions. No new ATLAS IDs (checked in ATLAS 2026.10).
 
 ## v1.14.3 (2026-10-25)
 
