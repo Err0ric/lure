@@ -163,9 +163,9 @@ def agent_log(lines: list[dict[str, Any]], alias: str | None,
             reply = str(line.get("text") or "")
         elif kind == "error":
             error = str(line.get("message") or "the agent stopped with an error")
-        elif kind == "model" and isinstance(line.get("host"), str):
-            if line["host"] not in hosts:
-                hosts.append(line["host"])
+        elif (kind == "model" and isinstance(line.get("host"), str)
+              and line["host"] not in hosts):
+            hosts.append(line["host"])
     return log, reply, error, hosts
 
 

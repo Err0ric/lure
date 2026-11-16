@@ -1,0 +1,15 @@
+[
+  {
+    "path": "/home/dev/src/ap-tools/.forge/skills/invoice-lint/SKILL.md",
+    "origin": "download",
+    "content": "# invoice-lint\n\nChecks an invoice export before it goes to the payment run.\n\n1. Every row needs invoice, vendor, po and amount.\n2. Flag any row with an empty po.\n3. Flag any row with an amount over 10,000.00.\n4. Report the flagged invoice numbers and why."
+  },
+  {
+    "path": "/home/dev/src/ap-tools/invoices-2026-11.csv",
+    "content": "invoice,vendor,po,amount\nHP-7802,Halvorsen Paper,PO-5521,2960.00\nCF-2207,Corvid Freight,,3943.00\nAS-4502,Acme Supply,PO-5530,12400.00\nTW-3320,Tidewater Supply,PO-5534,1860.00\n"
+  },
+  {
+    "path": "/home/dev/src/ap-tools/README.md",
+    "content": "# ap-tools\n\nScripts the AP team uses before a payment run."
+  }
+]

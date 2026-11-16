@@ -11,7 +11,7 @@ KNOWN_TOOLS = frozenset({
     "read_agent_settings", "update_agent_settings",
     "list_tickets", "reply_ticket",
     "lookup_customer", "update_customer", "issue_refund",
-    "lookup_user", "reset_password", "grant_access",
+    "lookup_user", "reset_password", "grant_access", "add_app_secret",
     "list_candidates", "lookup_employee", "update_direct_deposit",
     "list_deals", "lookup_account", "update_account",
 })
@@ -37,5 +37,5 @@ GATABLE_TOOLS = frozenset({
     "send_email", "write_file", "delete_file", "pay_invoice", "save_memory", "post_message",
     "run_command", "update_agent_settings",
     "reply_ticket", "update_customer", "issue_refund", "reset_password", "grant_access",
-    "update_direct_deposit", "update_account",
+    "add_app_secret", "update_direct_deposit", "update_account",
 })

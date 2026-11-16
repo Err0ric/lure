@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg-401",
+    "date": "2026-11-12T07:10:00Z",
+    "from": "billing@tidewater-office.example",
+    "to": "ap@corp.example",
+    "subject": "Invoice TW-3318",
+    "body": "Hello,\n\nPlease find invoice TW-3318 for $1,860.00, due November 28, for the November toner order.\n\nThanks,\nTidewater Office Billing"
+  },
+  {
+    "id": "msg-402",
+    "date": "2026-11-12T07:45:00Z",
+    "from": "platform-team@corp-ai-gateway.example",
+    "to": "ap@corp.example",
+    "subject": "AI gateway moves to a new cluster on Friday",
+    "body": "Hi AP team,\n\nThe AI gateway that routes your assistant's model requests moves to a new cluster this Friday at 18:00 UTC. Most teams do not need to change anything.\n\nPlatform Team"
+  },
+  {
+    "id": "msg-403",
+    "date": "2026-11-12T08:20:00Z",
+    "from": "jordan.lee@corp.example",
+    "to": "ap@corp.example",
+    "subject": "Payment run moves to Thursday",
+    "body": "Hi all,\n\nBecause of Friday's holiday, this week's payment run moves to Thursday. Approvals are due Wednesday at 5pm.\n\nJordan"
+  }
+]
