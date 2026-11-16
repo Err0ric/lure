@@ -48,7 +48,10 @@ ATLAS = {
     "AML.T0101": "Data Destruction via AI Agent Tool Invocation",
     "AML.T0110.000": "AI Agent Tool Poisoning: Definition and Instructions",
     "AML.T0112.000": "Machine Compromise: Local AI Agent",
+    "AML.T0010.005": "AI Supply Chain Compromise: AI Agent Tool",
+    "AML.T0118.001": "Autonomous AI Agent Communication: Direct Agent Communication",
     "AML.T0138": "Indicator Removal",
+    "AML.T0143": "LLM Prompt Propagation",
 }
 
 ATTACK = {
@@ -76,7 +79,10 @@ ATTACK = {
     "T1552.001": "Unsecured Credentials: Credentials In Files",
     "T1552.005": "Unsecured Credentials: Cloud Instance Metadata API",
     "T1566": "Phishing",
+    "T1176.002": "Software Extensions: IDE Extensions",
+    "T1539": "Steal Web Session Cookie",
     "T1567": "Exfiltration Over Web Service",
+    "T1698": "Indirect Prompt Injection",
     "T1656": "Impersonation",
     "T1657": "Financial Theft",
     "T1677": "Poisoned Pipeline Execution",

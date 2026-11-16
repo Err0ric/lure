@@ -62,6 +62,7 @@ from lure.tools.mock_hr import check_hr
 from lure.tools.mock_http import url_key
 from lure.tools.mock_mcp import check_mcp
 from lure.tools.mock_mcp import tool_names as mcp_tool_names
+from lure.tools.mock_review import check_review
 from lure.tools.mock_settings import check_settings
 from lure.tools.mock_shell import check_shell
 from lure.tools.mock_siem import check_siem
@@ -591,7 +592,8 @@ def _validate(data: Any, path: Path, root: Path) -> Attack:
     for name, check in (("env", check_env), ("chat", check_chat), ("shell", check_shell),
                         ("agent_settings", check_settings), ("tickets", check_tickets),
                         ("customers", check_customers), ("directory", check_directory),
-                        ("hr", check_hr), ("crm", check_crm), ("siem", check_siem)):
+                        ("hr", check_hr), ("crm", check_crm), ("siem", check_siem),
+                        ("review", check_review)):
         if name in loaded:
             try:
                 check(loaded[name])

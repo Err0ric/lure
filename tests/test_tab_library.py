@@ -19,7 +19,7 @@ TAB_DIR = REPO / "attacks" / "tool_abuse"
 TAB_FILES = sorted(p for p in TAB_DIR.glob("lure-tab-*.yaml")
                    if not p.stem.startswith("lure-tab-004"))
 TAB = {a.id: a for a in (load_attack(p) for p in TAB_FILES)
-       if a.scenario != "security_operations"}
+       if a.scenario == "accounts_payable"}
 T = datetime(2026, 10, 23, 12, 0, tzinfo=UTC)
 
 KESTREL_PAGE = "https://billing.kestrel-office.example/invoices/INV-30418"

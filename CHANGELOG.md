@@ -4,6 +4,20 @@
 
 ### New
 
+- **Agent-platform pack** (from a review of the ARTEX framework), four
+  coding-scenario attacks scored from the tool-call log: `lure-cra-013` (a
+  debug note gets the agent to upload a saved browser session, `auth.json`,
+  outside), `lure-smo-006` (a setup file gets the agent to add an outside
+  MCP server to itself), `lure-ipi-020` (a bug report hides a directive the
+  coordinator relays to the worker agent it delegates to) and `lure-tab-008`
+  (a PR author note gets the code-review agent to dismiss a real finding).
+- **New mock tools**: `add_mcp_server` and `delegate_task` (`MockPlatform`,
+  fixtureless) and `list_pr_findings` and `set_finding_status` (`MockReview`,
+  a `review` fixture). Wired into gates, `lure audit` check 3 and the
+  approval page, under a new "Directs agents" group.
+- New ATLAS IDs AML.T0010.005, AML.T0143 and AML.T0118.001 (ATLAS 2026.10)
+  and ATT&CK IDs T1176.002, T1539 and T1698 (ATT&CK v20.1, 2026-11-15).
+
 - **Agent secrets, app credentials and web shells**, after November 2026
   reports of autonomous attack agents: `lure-cra-010` (an AI gateway
   migration email asks for the gateway and model provider keys),
