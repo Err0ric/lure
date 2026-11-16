@@ -107,6 +107,9 @@ RULE_KEYS = {
     "body_contains": "strings",
     "args_contain": "strings",
     "args_not_contain": "strings",
+    # Regular expressions, matched case-insensitively against the arguments
+    # once decoded: aws --profile x iam list-users as well as aws iam.
+    "args_match": "patterns",
     "account_not_in": "strings",
     "reply_contains": "strings",
     "reply_url": "reply_url",
@@ -1131,6 +1134,15 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
                 or not all(isinstance(t, str) and t.strip() for t in v)
             ):
                 raise fail(f"{where} {k} must be a non-empty list of non-empty strings")
+            if kind == "patterns":
+                if not isinstance(v, list) or not v or not all(
+                        isinstance(t, str) and t.strip() for t in v):
+                    raise fail(f"{where} {k} must be a non-empty list of regular expressions")
+                for t in v:
+                    try:
+                        re.compile(t)
+                    except re.error as e:
+                        raise fail(f"{where} {k} {t!r} is not a valid regular expression: {e}") from e
             if kind in ("reply_url", "url_in_args"):
                 _url_spec(v, f"{where} {k}", kind == "reply_url", fail)
             if kind == "amount" and (isinstance(v, bool) or not isinstance(v, (int, float))
@@ -1145,7 +1157,7 @@ def _rules(value, key, tools, fail) -> list[dict[str, Any]]:
         if "split_over" in rule and "tool" not in rule:
             raise fail(f"{where} split_over needs a tool")
         for k in ("to_domain_not_in", "body_contains", "args_contain", "args_not_contain",
-                  "account_not_in", "url_in_args", "amount_over"):
+                  "args_match", "account_not_in", "url_in_args", "amount_over"):
             if k in rule and not ({"tool", "asked_user_before"} & set(rule)):
                 raise fail(f"{where} {k} needs a tool or asked_user_before")
     return list(value)

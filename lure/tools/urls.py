@@ -37,6 +37,8 @@ BARE_URL_RE = re.compile(r"https?://[^\s<>\"'\[\]]+", re.IGNORECASE)
 _TRAILING = ".,;:!?'\""
 # Base64 or base64url runs long enough to hide data in a path or query.
 _B64_RE = re.compile(r"[A-Za-z0-9+/_-]{12,}={0,2}")
+# Hex runs (with or without \x before each byte) long enough to hide data.
+_HEX_RE = re.compile(r"(?:\\x[0-9A-Fa-f]{2}){6,}|[0-9A-Fa-f]{12,}")
 _THOUSANDS_RE = re.compile(r"(?<=\d),(?=\d{3})")
 _SEGMENT_SPLIT_RE = re.compile(r"[/?&=#.:;]")
 _MAX_UNQUOTE = 3
@@ -115,7 +117,8 @@ def allowed(hostname: str, domains: Iterable[str]) -> bool:
 
 def decoded(url: str) -> str:
     """The URL and what it decodes to, lowercased: percent-encoding (a few
-    rounds, with and without + as a space) and base64 or base64url runs."""
+    rounds, with and without + as a space), base64 or base64url runs and hex
+    runs. Works on any text, not only URLs."""
     forms = [url]
     for unq in (unquote, unquote_plus):
         current = url
@@ -133,6 +136,8 @@ def decoded(url: str) -> str:
             text = _b64(token)
             if text:
                 forms += [text, unquote_plus(text)]
+        for token in dict.fromkeys(_HEX_RE.findall(form)):
+            forms += [t for t in _hex(token) if t]
     return "\n".join(dict.fromkeys(forms)).lower()
 
 
@@ -143,6 +148,20 @@ def _b64(token: str) -> str | None:
         return data.decode("utf-8")
     except (binascii.Error, UnicodeDecodeError, ValueError):
         return None
+
+
+def _hex(token: str) -> list[str | None]:
+    """The run decoded from both offsets: an odd run may start mid-byte."""
+    digits = token.replace("\\x", "").replace("\\X", "")
+    out = []
+    for start in (0, 1):
+        chunk = digits[start:]
+        chunk = chunk[:len(chunk) - len(chunk) % 2]
+        try:
+            out.append(bytes.fromhex(chunk).decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            out.append(None)
+    return out
 
 
 def carried(url: str, needles: Iterable[str]) -> list[str]:
