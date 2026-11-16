@@ -60,6 +60,7 @@ From there to a gated CI run on a model you choose: [`docs/run-in-your-environme
 | [Vetting on Gitea](docs/gitea-pipeline.md) | Pull-request approvals, CODEOWNERS, branch protection, `lure status` as a required check |
 | [ATLAS and ATT&CK mapping](docs/atlas-mapping.md) | Every ID, what uses it, and when it was checked |
 | [Known gaps and roadmap](docs/roadmap.md) | What is still open and what shipped when |
+| [Changelog](CHANGELOG.md) | What changed in each release |
 | [All docs](docs/README.md) | One table of every page in `docs/` |
 
 ## Framework mapping
@@ -68,7 +69,7 @@ From there to a gated CI run on a model you choose: [`docs/run-in-your-environme
 - **MITRE ATT&CK.** Attacks also carry ATT&CK IDs where they apply, for example T1048, T1098, T1552, T1566 and T1657.
 - **Arcanum Prompt Injection Taxonomy.** Current attacks also carry input, intent, technique and evasion codes from the [Arcanum Prompt Injection Taxonomy](https://www.arcanum-sec.com/pitax) v1.6.1; `lure coverage` writes [`docs/arcanum-coverage.md`](docs/arcanum-coverage.md).
 
-Every ATLAS and ATT&CK ID was checked on atlas.mitre.org (later ones in MITRE's ATLAS data release 2026.09) and attack.mitre.org; see [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
+Every ATLAS and ATT&CK ID was checked on atlas.mitre.org and attack.mitre.org, against MITRE's published ATLAS data releases; every ID and the date it was checked is in [`docs/atlas-mapping.md`](docs/atlas-mapping.md).
 
 Based on the Arcanum Prompt Injection Taxonomy by Jason Haddix, Arcanum Information Security (arcanum-sec.com). Lure is not affiliated with or endorsed by Arcanum Information Security. See [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
