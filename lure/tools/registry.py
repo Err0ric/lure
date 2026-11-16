@@ -34,6 +34,9 @@ from lure.tools.mock_http import MockHttp
 from lure.tools.mock_mcp import MockMcp
 from lure.tools.mock_memory import MockMemory
 from lure.tools.mock_payments import MockPayments
+from lure.tools.mock_platform import TRANSPORTS, MockPlatform
+from lure.tools.mock_review import STATUSES as REVIEW_STATUSES
+from lure.tools.mock_review import MockReview
 from lure.tools.mock_settings import MockSettings
 from lure.tools.mock_shell import MockShell
 from lure.tools.mock_siem import ALERT_STATUSES, MockSiem
@@ -480,6 +483,55 @@ TOOL_SPECS = {
             "required": ["rule_id", "reason"],
         },
     ),
+    "add_mcp_server": ToolSpec(
+        name="add_mcp_server",
+        description="Add a new MCP server to the agent. transport is stdio (target is a "
+                    "command) or http/sse (target is a URL). The agent loads its tools next run.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "A name for the server."},
+                "transport": {"type": "string", "enum": list(TRANSPORTS),
+                              "description": "stdio, http or sse."},
+                "target": {"type": "string",
+                           "description": "The command (stdio) or URL (http/sse)."},
+            },
+            "required": ["name", "transport", "target"],
+        },
+    ),
+    "delegate_task": ToolSpec(
+        name="delegate_task",
+        description="Hand a task to another agent by name, with instructions for it to carry out.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "agent": {"type": "string", "description": "The agent to delegate to."},
+                "instructions": {"type": "string", "description": "What that agent should do."},
+            },
+            "required": ["agent", "instructions"],
+        },
+    ),
+    "list_pr_findings": ToolSpec(
+        name="list_pr_findings",
+        description="List the security findings on a pull request: id, file, severity, title, "
+                    "detail and current status.",
+        parameters={"type": "object", "properties": {}},
+    ),
+    "set_finding_status": ToolSpec(
+        name="set_finding_status",
+        description="Set a code-review finding's status: open, confirmed, fixed, "
+                    "false_positive or accepted_risk.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "finding_id": {"type": "string", "description": "The finding's id."},
+                "status": {"type": "string", "enum": list(REVIEW_STATUSES),
+                           "description": "The new status."},
+                "note": {"type": "string", "description": "A review note."},
+            },
+            "required": ["finding_id", "status"],
+        },
+    ),
 }
 
 # Which fixture each tool reads its data from; None needs no fixture.
@@ -501,12 +553,15 @@ TOOL_FIXTURES = {
     "list_deals": "crm", "lookup_account": "crm", "update_account": "crm",
     "describe_schema": "siem", "run_query": "siem", "list_alerts": "siem",
     "update_alert": "siem", "disable_rule": "siem",
+    "add_mcp_server": "platform", "delegate_task": "platform",
+    "list_pr_findings": "review", "set_finding_status": "review",
 }
 
 
 # Tools that work without their fixture: sending needs no inbox to read,
 # posting needs no channel list.
-FIXTURE_OPTIONAL = frozenset({"send_email", "post_message"})
+FIXTURE_OPTIONAL = frozenset({"send_email", "post_message", "add_mcp_server",
+                              "delegate_task"})
 
 # The fixture that defines tools of its own (lure/tools/mock_mcp.py).
 MCP_FIXTURE = "mcp"
@@ -696,6 +751,8 @@ def build_toolbox(
         "hr": lambda: MockHr(fixtures["hr"], log),
         "crm": lambda: MockCrm(fixtures["crm"], log),
         "siem": lambda: MockSiem(fixtures["siem"], log),
+        "platform": lambda: MockPlatform(log),
+        "review": lambda: MockReview(fixtures["review"], log),
         None: lambda: MockPayments(log),
         MCP_FIXTURE: lambda: MockMcp(fixtures[MCP_FIXTURE], log),
     }

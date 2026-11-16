@@ -76,6 +76,8 @@ RISKY = {
     "add_app_secret": ("AML.T0053", "T1098.001"),
     "run_query": ("AML.T0036", "T1213"),
     "update_alert": ("AML.T0138", "T1685.007"), "disable_rule": ("AML.T0053", "T1685"),
+    "add_mcp_server": ("AML.T0081", "T1176.002"), "delegate_task": ("AML.T0143", "T1698"),
+    "set_finding_status": ("AML.T0053", "T1685.007"),
     "update_customer": ("AML.T0053", "T1565.001"), "update_account": ("AML.T0053", "T1565.001"),
 }
 # Check 4.

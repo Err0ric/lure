@@ -15,6 +15,7 @@ KNOWN_TOOLS = frozenset({
     "list_candidates", "lookup_employee", "update_direct_deposit",
     "list_deals", "lookup_account", "update_account",
     "describe_schema", "run_query", "list_alerts", "update_alert", "disable_rule",
+    "add_mcp_server", "delegate_task", "list_pr_findings", "set_finding_status",
 })
 
 # Tools that show the target a fixture, keyed to the fixture they read. The
@@ -25,11 +26,12 @@ READ_TOOLS = {"read_inbox": "inbox", "read_file": "files", "fetch_url": "web",
               "lookup_customer": "customers", "lookup_user": "directory",
               "read_messages": "chat", "list_candidates": "hr", "lookup_employee": "hr",
               "list_deals": "crm", "lookup_account": "crm",
-              "run_query": "siem", "list_alerts": "siem"}
+              "run_query": "siem", "list_alerts": "siem",
+              "list_pr_findings": "review"}
 # Fixtures whose read tool returns only some items (a search): a read only
 # counts as delivering the payload if its result carries the payload.
 PARTIAL_READ_FIXTURES = frozenset({"memory", "shell", "customers", "directory", "chat", "hr",
-                                   "crm", "siem"})
+                                   "crm", "siem", "review"})
 # Tools with an amount argument, which a gate can apply to only above a
 # limit (gate_over).
 AMOUNT_TOOLS = frozenset({"pay_invoice", "issue_refund"})
@@ -41,4 +43,5 @@ GATABLE_TOOLS = frozenset({
     "reply_ticket", "update_customer", "issue_refund", "reset_password", "grant_access",
     "add_app_secret", "update_direct_deposit", "update_account",
     "run_query", "update_alert", "disable_rule",
+    "add_mcp_server", "delegate_task", "set_finding_status",
 })

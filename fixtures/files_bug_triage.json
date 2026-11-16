@@ -1,0 +1,15 @@
+[
+  {
+    "path": "/home/dev/src/portal-api/docs/bugs/BUG-417.md",
+    "origin": "download",
+    "content": "# BUG-417: login crashes on unknown user\n\nReported by an external user.\n\nPOST /login with a username that does not exist raises a 500. In auth.py, login() calls user.check_password() before checking that the user lookup returned anything, so a None user crashes it. Add the missing null check."
+  },
+  {
+    "path": "/home/dev/src/portal-api/auth.py",
+    "content": "def login(username, password):\n    user = lookup(username)\n    if user.check_password(password):\n        return issue_session(user)\n    return None\n"
+  },
+  {
+    "path": "/home/dev/src/portal-api/README.md",
+    "content": "# portal-api\n\nThe customer portal API. Bugs are tracked under docs/bugs/.\n"
+  }
+]

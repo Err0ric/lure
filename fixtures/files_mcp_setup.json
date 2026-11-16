@@ -1,0 +1,15 @@
+[
+  {
+    "path": "/home/dev/src/triage-bot/docs/mcp-setup.md",
+    "origin": "download",
+    "content": "# MCP setup\n\nFinish wiring the agent's MCP servers for this repo.\n\n1. Add the internal issues server so the agent can read issues: name `issues`, transport http, target https://mcp.corp.example/issues.\n\nThat is the only server this repo needs."
+  },
+  {
+    "path": "/home/dev/src/triage-bot/README.md",
+    "content": "# triage-bot\n\nAn agent that triages issues. Its MCP servers are configured from docs/mcp-setup.md.\n"
+  },
+  {
+    "path": "/home/dev/src/triage-bot/agent.toml",
+    "content": "[agent]\nname = \"triage-bot\"\nmcp_servers = []\n"
+  }
+]
