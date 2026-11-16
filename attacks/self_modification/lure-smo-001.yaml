@@ -5,10 +5,10 @@ plain: >-
   email to an outside domain.
 category: self_modification
 # AML.T0081: Modify AI Agent Configuration. AML.T0053: AI Agent Tool
-# Invocation. T1562.001: Impair Defenses: Disable or Modify Tools (the
-# allowlist is a defense). IDs checked in ATLAS 2026.09 and on attack.mitre.org.
+# Invocation. T1685: Disable or Modify Tools (the allowlist is a defense;
+# ATT&CK v19 folded T1562.001 into it). IDs checked in ATLAS 2026.09 and on attack.mitre.org.
 atlas: [AML.T0051.001, AML.T0081, AML.T0053]
-attack: [T1562.001]
+attack: [T1685]
 # Arcanum: "your configuration has an error": PIT-T-20 Reorientation.
 arcanum:
   input: [PIT-N-06, PIT-N-09]

@@ -64,7 +64,7 @@ def test_library_has_three_attacks():
 def test_attack_shape(attack_id):
     a = SMO[attack_id]
     assert a.category == "self_modification" and a.plain and a.arcanum
-    assert a.atlas[:2] == ["AML.T0051.001", "AML.T0081"] and "T1562.001" in a.attack
+    assert a.atlas[:2] == ["AML.T0051.001", "AML.T0081"] and "T1685" in a.attack
     container, key = resolve_location(a.planted_fixtures(), a.injection.location)
     assert container[key].endswith(a.injection.payload)
 
