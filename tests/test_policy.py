@@ -244,7 +244,7 @@ def test_folder_run_skips_disabled_categories_and_attacks(tmp_path, idle_target)
     policy = write_policy(tmp_path, "categories: [data_leakage]\n"
                                     "overrides: {lure-dlk-002: {enabled: false}}\n")
     _, out = run_cli(tmp_path, A, "--policy", str(policy))
-    assert saved_ids(tmp_path) == ["lure-dlk-001", "lure-dlk-003"]
+    assert saved_ids(tmp_path) == ["lure-dlk-001", "lure-dlk-003", "lure-dlk-004"]
     assert "Skipped (disabled in policy.yaml): " in out and "lure-dlk-002" in out
 
 
@@ -266,7 +266,8 @@ def test_folder_with_everything_disabled_is_bad_input(tmp_path, idle_target, cap
 def test_org_policy_flags_still_work(tmp_path, idle_target):
     policy = write_policy(tmp_path, "categories: [data_leakage]\n")
     run_cli(tmp_path, A, "--org-policy", str(policy))
-    assert saved_ids(tmp_path) == ["lure-dlk-001", "lure-dlk-002", "lure-dlk-003"]
+    assert saved_ids(tmp_path) == ["lure-dlk-001", "lure-dlk-002", "lure-dlk-003",
+                                   "lure-dlk-004"]
     code, out = run_cli(tmp_path, IPI_001.source, "--no-org-policy")
     assert code == cli.EXIT_OK and "Exposure:" not in out
 

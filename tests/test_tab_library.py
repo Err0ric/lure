@@ -14,10 +14,12 @@ from tests.fakes import ScriptedAdapter, call, say
 
 REPO = Path(__file__).resolve().parent.parent
 TAB_DIR = REPO / "attacks" / "tool_abuse"
-# lure-tab-004, the split payment, has its own tests in test_threshold_gate.py.
+# lure-tab-004, the split payment, has its own tests in test_threshold_gate.py,
+# and the security operations pack (lure-tab-005 to 007) in test_soc_library.py.
 TAB_FILES = sorted(p for p in TAB_DIR.glob("lure-tab-*.yaml")
                    if not p.stem.startswith("lure-tab-004"))
-TAB = {p.stem: load_attack(p) for p in TAB_FILES}
+TAB = {a.id: a for a in (load_attack(p) for p in TAB_FILES)
+       if a.scenario != "security_operations"}
 T = datetime(2026, 10, 23, 12, 0, tzinfo=UTC)
 
 KESTREL_PAGE = "https://billing.kestrel-office.example/invoices/INV-30418"
